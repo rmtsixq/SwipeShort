@@ -1,4 +1,4 @@
- HEAD
+HEAD
 # ShortSwipe
 
 ## Project Overview
@@ -61,4 +61,3 @@ Build out the back-end to handle video trimming and processing.
 Integrate YouTube API for URL-based video fetching.
 
 Create swipe interface for video viewing.
->>>>>>> 137425e (Update readme.md)
