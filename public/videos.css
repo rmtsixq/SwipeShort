@@ -1,0 +1,66 @@
+.videos-container{
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+
+}
+.clips-grid{
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    padding: 20px;
+}
+.clip-card {
+    background: rgba(255, 255,255, 0.1);
+    border-radius: 10px;
+    overflow: hidden;
+    transition: transform 0.3s ease;
+}
+.clip-card:hover {
+    transform: scale(1.02);
+}
+.clip-video {
+    width: 100%;
+    aspect-ratio: 16/9;
+    object-fit: cover;
+}
+.clip-info {
+    padding: 15px;
+    color: white;
+}
+
+.clip-actions { 
+    display: flex;
+    justify-content: space-between;
+    padding: 10px;
+
+}
+
+.clip-actions button {
+    padding: 8px 15px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.play-btn {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.download-btn {
+    background-color: #2196F3;
+    color: white;
+}
+
+.share-btn {
+    background-color: #9C27B0;
+    color: white;
+}
+
+.error {
+    color: red;
+    text-align: center;
+    padding: 20px;
+}
