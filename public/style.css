@@ -148,38 +148,29 @@ body, html {
     margin: 0 auto;
 }
 
-.drag-drop {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 300px;
-    margin: 20px;
-}
-
-.drop-zone {
-    margin-top: 0;
-    padding: 40px 20px;
+.drag-drop, .youtube-url {
+    flex: 1;
+    margin: 30px;
+    background-color: rgba(255, 255, 255, 0.05);
     border: 2px dashed white;
-    border-radius: 15px;
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-width: 250px;
-    min-height: 200px;
-    background: #181818;
-}
-
-.drop-zone p {
-    margin: 0;
-    color: #fff;
-    font-size: 1.1rem;
+    border-radius: 20px;
+    padding: 30px;
+    text-align: center;
+    color: white;
+    font-family: 'Roboto', sans-serif;
+    transition: background-color 0.5s;
 }
 
 .drag-drop:hover, .youtube-url:hover {
     background-color: rgba(255, 255, 255, 0.1);
+}
+
+.drop-zone {
+    margin-top: 20px;
+    padding: 40px;
+    border: 2px dashed white;
+    border-radius: 15px;
+    cursor: pointer;
 }
 
 .drop-zone input {
