@@ -7,7 +7,8 @@ const fetch = require('node-fetch');
 const { exec } = require('child_process');
 const util = require('util');
 const execPromise = util.promisify(exec);
-const speech = require('@google-cloud/speech');
+const { v4: uuidv4 } = require('uuid');
+const ytdl = require('ytdl-core');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -242,28 +243,35 @@ async function splitVideoIntoClips(videoPath, transcript) {
         const breakPoints = [];
         let currentTime = 0;
         let sentenceCount = 0;
+        let currentClipSegments = [];
 
         for (const segment of transcript) {
-            // Add break point every 2-3 sentences
             if (sentenceCount >= 2 && segment.start - currentTime >= 15 && segment.start - currentTime <= 25) {
-                breakPoints.push(segment.start);
+                breakPoints.push({
+                    time: segment.start,
+                    segments: currentClipSegments
+                });
                 currentTime = segment.start;
                 sentenceCount = 0;
+                currentClipSegments = [];
             }
+            currentClipSegments.push(segment);
             sentenceCount++;
         }
 
-        console.log('Break points:', breakPoints);
-
         // If no break points found, split into 20-second clips
         if (breakPoints.length === 0) {
-            console.log('No break points found, splitting into 20-second clips');
             const totalClips = Math.ceil(duration / 20);
             for (let i = 0; i < totalClips; i++) {
                 const startTime = i * 20;
                 const endTime = Math.min((i + 1) * 20, duration);
                 const outputPath = path.join(outputDir, `clip_${i + 1}.mp4`);
-
+                const subtitlePath = path.join(outputDir, `clip_${i + 1}.vtt`);
+                const clipSegments = transcript.filter(seg => seg.start >= startTime && seg.start < endTime);
+                if (clipSegments.length > 0) {
+                    const vttContent = createVTTFile(clipSegments, startTime, endTime - startTime);
+                    fs.writeFileSync(subtitlePath, vttContent);
+                }
                 await new Promise((resolve, reject) => {
                     ffmpeg(videoPath)
                         .setStartTime(startTime)
@@ -283,10 +291,15 @@ async function splitVideoIntoClips(videoPath, transcript) {
         // Split video at break points
         let clipNumber = 1;
         for (let i = 0; i < breakPoints.length; i++) {
-            const startTime = i === 0 ? 0 : breakPoints[i - 1];
-            const endTime = breakPoints[i];
+            const startTime = i === 0 ? 0 : breakPoints[i - 1].time;
+            const endTime = breakPoints[i].time;
             const outputPath = path.join(outputDir, `clip_${clipNumber}.mp4`);
-
+            const subtitlePath = path.join(outputDir, `clip_${clipNumber}.vtt`);
+            const clipSegments = breakPoints[i].segments;
+            if (clipSegments.length > 0) {
+                const vttContent = createVTTFile(clipSegments, startTime, endTime - startTime);
+                fs.writeFileSync(subtitlePath, vttContent);
+            }
             await new Promise((resolve, reject) => {
                 ffmpeg(videoPath)
                     .setStartTime(startTime)
@@ -303,10 +316,15 @@ async function splitVideoIntoClips(videoPath, transcript) {
         }
 
         // Process final clip
-        if (breakPoints.length > 0 && breakPoints[breakPoints.length - 1] < duration) {
-            const startTime = breakPoints[breakPoints.length - 1];
+        if (breakPoints.length > 0 && breakPoints[breakPoints.length - 1].time < duration) {
+            const startTime = breakPoints[breakPoints.length - 1].time;
             const outputPath = path.join(outputDir, `clip_${clipNumber}.mp4`);
-
+            const subtitlePath = path.join(outputDir, `clip_${clipNumber}.vtt`);
+            const finalSegments = transcript.filter(seg => seg.start >= startTime);
+            if (finalSegments.length > 0) {
+                const vttContent = createVTTFile(finalSegments, startTime, duration - startTime);
+                fs.writeFileSync(subtitlePath, vttContent);
+            }
             await new Promise((resolve, reject) => {
                 ffmpeg(videoPath)
                     .setStartTime(startTime)
@@ -320,11 +338,33 @@ async function splitVideoIntoClips(videoPath, transcript) {
                     .run();
             });
         }
-
     } catch (error) {
         console.error('Error in splitVideoIntoClips:', error);
         throw error;
     }
+}
+
+function createVTTFile(segments, offset, clipDuration) {
+    let vtt = 'WEBVTT\n\n';
+    for (let i = 0; i < segments.length; i++) {
+        const start = Math.max(0, segments[i].start - offset);
+        const end = (i < segments.length - 1)
+            ? Math.max(0, segments[i + 1].start - offset)
+            : clipDuration !== undefined ? clipDuration : start + 5;
+        if (end > start) {
+            vtt += `${formatTime(start)} --> ${formatTime(end)}\n${segments[i].text}\n\n`;
+        }
+    }
+    return vtt;
+}
+
+function formatTime(seconds) {
+    const date = new Date(seconds * 1000);
+    const hh = date.getUTCHours().toString().padStart(2, '0');
+    const mm = date.getUTCMinutes().toString().padStart(2, '0');
+    const ss = date.getUTCSeconds().toString().padStart(2, '0');
+    const ms = date.getUTCMilliseconds().toString().padStart(3, '0');
+    return `${hh}:${mm}:${ss}.${ms}`;
 }
 
 app.get('/api/clips', async (req, res) => {
@@ -346,11 +386,22 @@ app.get('/api/clips', async (req, res) => {
                             }
                         });
                     });
+
+                    const baseName = file.replace('.mp4', '');
+                    const subtitleFile = `${baseName}.vtt`;
+                    const subtitlePath = path.join(clipsDir, subtitleFile);
+                    const hasSubtitle = fs.existsSync(subtitlePath);
+
+                    if (hasSubtitle) {
+                        console.log(`Found subtitle file for ${file}: ${subtitleFile}`); // Debug log
+                    }
+
                     return {
-                        id: file.replace('.mp4', ''),
+                        id: baseName,
                         filename: file,
-                        title: `Clip ${file.replace('.mp4', '')}`,
-                        duration: duration
+                        title: `Clip ${baseName}`,
+                        duration: duration,
+                        subtitle: hasSubtitle ? subtitleFile : null
                     };
                 })
         );
@@ -396,68 +447,5 @@ app.get('/api/youtube/info/:videoId', async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch video information' });
     }
 });
-
-async function findNaturalBreakPoints(videoPath) {
-    const client = new speech.SpeechClient();
-    const audioPath = path.join(__dirname, 'temp_audio.flac');
-    
-    // Extract audio from video
-    await new Promise((resolve, reject) => {
-        ffmpeg(videoPath)
-            .toFormat('flac')
-            .output(audioPath)
-            .on('end', resolve)
-            .on('error', reject)
-            .run();
-    });
-
-    // Read audio file
-    const audioBytes = fs.readFileSync(audioPath).toString('base64');
-
-    // Configure request
-    const request = {
-        audio: {
-            content: audioBytes,
-        },
-        config: {
-            encoding: 'FLAC',
-            sampleRateHertz: 16000,
-            languageCode: 'en-US',
-            enableWordTimeOffsets: true,
-        },
-    };
-
-    // Perform speech recognition
-    const [response] = await client.recognize(request);
-    const words = response.results
-        .map(result => result.alternatives[0].words)
-        .flat();
-
-    // Find natural break points (pauses between sentences)
-    const breakPoints = [];
-    let currentTime = 0;
-    let lastWordEnd = 0;
-
-    for (let i = 0; i < words.length; i++) {
-        const word = words[i];
-        const wordStart = word.startTime.seconds + word.startTime.nanos / 1e9;
-        const wordEnd = word.endTime.seconds + word.endTime.nanos / 1e9;
-
-        // If there's a significant pause (more than 0.5 seconds) between words
-        if (wordStart - lastWordEnd > 0.5) {
-            // If we're close to our target duration (20 seconds)
-            if (wordStart - currentTime >= 15 && wordStart - currentTime <= 25) {
-                breakPoints.push(wordStart);
-                currentTime = wordStart;
-            }
-        }
-        lastWordEnd = wordEnd;
-    }
-
-    // Clean up temporary audio file
-    fs.unlinkSync(audioPath);
-
-    return breakPoints;
-}
 
 
