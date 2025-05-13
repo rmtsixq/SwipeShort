@@ -38,3 +38,11 @@ async function fetchVideoData(videoId) {
         console.log("An error occurred: ", error);
     }
 }
+
+// PreUploaded Videos: Movie card click error -> Şimdi kullanıcıyı videoya yönlendir
+const movieCards = document.querySelectorAll('.movie-card:not(.arrow-card)');
+movieCards.forEach(card => {
+  card.addEventListener('click', () => {
+    window.location.href = '/videos/cars2.mp4';
+  });
+});
