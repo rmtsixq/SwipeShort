@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Your Video Clips - ShortSwipe</title>
+        <link rel="stylesheet" href="/style.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+        <style>
+            body, html {
+                margin: 0;
+                padding: 0;
+                background: #111;
+                color: #fff;
+                font-family: 'Roboto', sans-serif;
+            }
+            .swiper-container {
+                width: 100vw;
+                height: 100vh;
+            }
+            .swiper-slide {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-direction: column;
+                background: #181818;
+            }
+            .video-container {
+                width: 100vw;
+                max-width: 420px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+            }
+            video {
+                width: 100%;
+                max-width: 360px;
+                aspect-ratio: 9/16;
+                border-radius: 12px;
+                background: #222;
+                margin-bottom: 12px;
+            }
+            .clip-title {
+                font-size: 1.1rem;
+                margin-bottom: 8px;
+                text-align: center;
+                font-weight: 500;
+            }
+            .play-pause-overlay {
+                position: absolute;
+                left: 50%;
+                top: 50%;
+                transform: translate(-50%, -50%);
+                font-size: 3rem;
+                color: #fff;
+                opacity: 0.8;
+                pointer-events: none;
+                z-index: 2;
+                display: none;
+            }
+            .play-pause-overlay.show {
+                display: block;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="swiper-container">
+            <div class="swiper-wrapper" id="clipsContainer">
+                <!-- Clips will be dynamically added here -->
+            </div>
+            <div class="swiper-pagination"></div>
+        </div>
+        <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+        <script src="/scripts/videoViewer.js"></script>
+    </body>
+</html>
