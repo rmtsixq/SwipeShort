@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ShortSwipe!</title>
+    <link rel="stylesheet" href="style.css" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+
+    <script src="scripts/scripts.js" defer></script>
+</head>
+<body>
+    <header class="big-pic">
+        <h1>
+            ShortS<span class="glitch-w">w</span>ipe
+        </h1>
+        <h3>
+            Transform your long videos into engaging short clips
+        </h3>
+        <button id="startBtn" class="button1">
+            Get Started
+        </button>
+
+        <section class="syf2">
+            <h3>About ShortSwipe</h3>
+            <p>
+                Discover bite-sized videos tailored for you.
+                Quick entertainment, memorable moments, and fresh content with every swipe.
+                Stay a bit longer... you might just find yourself watching the full video.
+            </p>
+        </section>
+    </header>
+
+    <main class="divir">
+        <section class="drag-drop" aria-label="Drag and Drop Section">
+            <h2>Drag your <code>.mp4</code> file here</h2>
+            <label class="drop-zone" for="fileInput">
+                <p>or click to upload</p>
+                <input type="file" id="fileInput" accept=".mp4" hidden />
+            </label>
+        </section>
+
+        <section class="youtube-url" aria-label="YouTube URL Submission">
+            <h2>Enter your YouTube URL</h2>
+            <input type="text" id="youtubeInput" placeholder="https://youtube.com/..." aria-label="YouTube video URL" />
+            <button id="submitBtn">Submit</button>
+        </section>
+    </main>
+</body>
+</html>
