@@ -11,37 +11,127 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
 
+    <script src="https://code.jquery.com/jquery-2.1.1.js"></script>
     <script src="scripts/scripts.js" defer></script>
 </head>
 <body>
     <header class="big-pic">
+      <div class="gradient-pic">
         <h1>
             ShortS<span class="glitch-w">w</span>ipe
         </h1>
         <h3>
             Transform your long videos into engaging short clips
         </h3>
-        <button id="startBtn" class="button1">
-            Get Started
-        </button>
+        <div class="button-row">
+
+            <button id="youtubeBtn" class="button2" onclick="scrollToMainSection()">
+                Let's get started!
+            </button>
+        </div>
+      </div>
 
         <section class="syf2">
-            <h3>About ShortSwipe</h3>
+            <h3>
+              Swipe to Discover 
+              <span class="slottt-machine-recipe">
+                <span class="slottt-machine-recipe__mask" id="wordbox">
+                  <span class="slottt-machine-recipe__items_container recipe_if"></span>
+                </span>
+              </span>
+            </h3>
             <p>
                 Discover bite-sized videos tailored for you.
-                Quick entertainment, memorable moments, and fresh content with every swipe.
+                Quick entertainment , memorable moments, and fresh content with every swipe.
                 Stay a bit longer... you might just find yourself watching the full video.
             </p>
         </section>
-    </header>
+        <div class="features-grid">
+            <section class="feature-card">
+                <div class="feature-card__content">
+                    <h3>Watch it Anywhere</h3>
+                    <p>
+                        Download and watch offline.<br>
+                        No internet connection required.<br>
+                        Always have your favorite videos with you.
+                    </p>
+                </div>
+                <div class="feature-card__image">
+                    <img 
+                        src="images/79a5e8ebc138b774ed4e8079da85858d.gif" 
+                        alt="Watch anywhere animation"
+                        width="400"
+                        height="300"
+                        loading="eager"
+                    >
+                </div>
+            </section>
 
-    <main class="divir">
+            <section class="feature-card">
+                <div class="feature-card__content">
+                    <h3>Interaction with Others</h3>
+                    <p>
+                        Connect with others in pre-uploaded videos.<br>
+                        Engage in comment sections.<br>
+                        Like and interact with content creators.
+                    </p>
+                </div>
+                <div class="feature-card__image">
+                    <img 
+                        src="images/0b1bff36918c2e231d1a980b2c4c3cef.gif" 
+                        alt="Social interaction illustration"
+                        width="400"
+                        height="300"
+                        loading="lazy"
+                    >
+                </div>
+            </section>
+
+            <section class="feature-card">
+                <div class="feature-card__content">
+                    <h3>Turn Addiction into Advantage</h3>
+                    <p>
+                        ShortSwipe transforms our brain's dopamine-seeking scroll habit into a learning advantage.<br>
+                        We break down long videos into 20-second clips in a TikTok-like format.<br>
+                        Learn while scrolling, without distraction, presenting valuable content as a reward to your brain.
+                    </p>
+                </div>
+                <div class="feature-card__image">
+                    <img 
+                        src="images/Untitled design.gif" 
+                        alt="Brain reward system illustration"
+                        width="400"
+                        height="300"
+                        loading="lazy"
+                    >
+                </div>
+            </section>
+        </div>
+    </header>
+    <div>
+
+    </div>
+
+    <main class="divir" id="mainSection">
         <section class="drag-drop" aria-label="Drag and Drop Section">
-            <h2>Drag your <code>.mp4</code> file here</h2>
-            <label class="drop-zone" for="fileInput">
-                <p>or click to upload</p>
-                <input type="file" id="fileInput" accept=".mp4" hidden />
-            </label>
+            <form class="upload-box" method="post" action="/upload" enctype="multipart/form-data">
+                <input class="upload-box__file" type="file" name="video" id="fileInput" accept="video/*" hidden />
+                <label for="fileInput" class="upload-box__label">
+                  <div class="upload-box__icon">
+                    <svg width="64" height="64" fill="none" stroke="#7ca1a6" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M32 12v32"/>
+                      <path d="M20 36l12 12 12-12"/>
+                      <rect x="8" y="52" width="48" height="4" rx="2"/>
+                    </svg>
+                  </div>
+                  <span>
+                    <strong>Choose a file</strong> or drag it here
+                  </span>
+                </label>
+                <button type="submit" class="upload-button" style="display: none;">
+                    Upload Video
+                </button>
+            </form>
         </section>
 
         <section class="youtube-url" aria-label="YouTube URL Submission">
@@ -50,5 +140,54 @@
             <button id="submitBtn">Submit</button>
         </section>
     </main>
+
+    <section class="preuploaded-section">
+      <h2 class="preuploaded-title">PreUploaded Videos <span class="preuploaded-desc">comment and liking feature with other peoples</span></h2>
+      <div class="preuploaded-category">
+        <div class="category-title">Animation</div>
+        <div class="movie-row">
+          <div class="movie-card" onclick="window.location.href='cars1feed.html'">
+            <div class="movie-inner">
+              <img src="images/Cars-Vintage-Movie-Poster-Original_2b5b5635 (1).webp" alt="Cars 2">
+              <div class="movie-hover">
+                <div class="movie-name">Cars 2</div>
+                <div class="movie-description">Lightning McQueen and Mater head overseas to compete in the World Grand Prix.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Processing Overlay -->
+    <div class="processing-overlay" style="display: none;">
+        <div class="processing-modal">
+            <div class="processing-spinner"></div>
+            <h2>Processing...</h2>
+            <p>Please wait, the screen will be blurred while processing.</p>
+        </div>
+    </div>
+
+    <!-- Clip Duration Modal -->
+    <div class="clip-duration-modal" style="display: none;">
+        <div class="modal-content">
+            <h2>Select the duration of the clip</h2>
+            <div class="slider-container">
+                <input type="range" class="duration-slider" min="10" max="40" value="25" step="1">
+                <div class="slider-value">25 seconds</div>
+            </div>
+            <button class="confirm-button">Confirm and Start Processing</button>
+        </div>
+        <div class="pre-uploaded-video-container">
+            
+        </div>
+        <script>
+    function scrollToMainSection() {
+      const section = document.getElementById('mainSection');
+      if(section) {
+        section.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+    </script>
 </body>
 </html>

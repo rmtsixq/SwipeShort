@@ -11,9 +11,10 @@ document.addEventListener('DOMContentLoaded', () => {
 /* Load and display video clips */
 async function loadClips() {
     try {
-        const response = await fetch('/data/videos.json');
-        const data = await response.json();
-        const clips = data.movies[0].clips; // Cars 1 kliplerini al
+        const clips = [];
+        for(let i = 1; i <= 329; i++) {
+            clips.push({ filename: `cars1_clip_${i}.mp4`, title: `Cars 2 Clip ${i}` });
+        }
 
         const container = document.getElementById('clipsContainer');
         container.innerHTML = '';
@@ -22,7 +23,6 @@ async function loadClips() {
             const slide = document.createElement('div');
             slide.className = 'swiper-slide';
             
-            // Ambiant background effect for visual depth
             const ambiant = document.createElement('div');
             ambiant.className = 'ambiant-effect';
             ambiant.style.position = 'absolute';
@@ -32,7 +32,7 @@ async function loadClips() {
             ambiant.style.height = '100%';
             ambiant.style.zIndex = 0;
             ambiant.style.filter = 'blur(40px) brightness(0.7)';
-            ambiant.style.background = `center / cover no-repeat url('${clip.thumbnail}')`;
+            ambiant.style.background = `center / cover no-repeat url('/clips/${clip.filename}')`;
             slide.appendChild(ambiant);
 
             const videoContainer = document.createElement('div');
@@ -40,70 +40,108 @@ async function loadClips() {
             videoContainer.style.position = 'relative';
             videoContainer.style.zIndex = 1;
 
-            // Google Drive iframe oynatıcı
-            const iframe = document.createElement('iframe');
-            iframe.src = clip.url.replace('/uc?export=download&id=', '/file/d/') + '/preview';
-            iframe.width = '100%';
-            iframe.height = '100%';
-            iframe.allowFullscreen = true;
-            iframe.style.border = 'none';
-            iframe.style.background = '#222';
-            applyAspectMode(iframe, globalAspectMode, globalFitMode);
+            const video = document.createElement('video');
+            video.src = `/clips/${clip.filename}`;
+            video.loop = true;
+            video.muted = false;
+            video.playsInline = true;
+            video.autoplay = true;
+            video.style.background = '#222';
+            applyAspectMode(video, globalAspectMode, globalFitMode);
 
             // Add video controls
-            const controls = document.createElement('div');
-            controls.className = 'video-controls';
-            controls.style.position = 'absolute';
-            controls.style.bottom = '0';
-            controls.style.left = '0';
-            controls.style.right = '0';
-            controls.style.padding = '10px';
-            controls.style.background = 'linear-gradient(transparent, rgba(0,0,0,0.7))';
-            controls.style.opacity = '0';
-            controls.style.transition = 'opacity 0.3s';
-            controls.style.zIndex = '10';
+            const videoTime = document.createElement('div');
+            videoTime.className = 'video-time';
+            videoTime.innerHTML = `
+                <span class="current-time">0:00</span>
+                <span class="total-time">0:00</span>
+            `;
+
+            const progressBar = document.createElement('div');
+            progressBar.className = 'progress-bar';
+            progressBar.innerHTML = '<div class="progress"></div>';
+
+            const endOverlay = document.createElement('div');
+            endOverlay.className = 'video-end-overlay';
+            endOverlay.innerHTML = `
+                <i class="replay-icon">↻</i>
+                <div class="replay-text">Tekrar İzle</div>
+            `;
+
+            const overlay = document.createElement('div');
+            overlay.className = 'play-pause-overlay';
+            overlay.innerHTML = '<i class="fas fa-pause"></i>';
 
             const title = document.createElement('div');
             title.className = 'clip-title';
             title.textContent = clip.title;
-            title.style.color = '#fff';
-            title.style.padding = '10px';
-            title.style.fontSize = '1.2rem';
-            title.style.textShadow = '0 1px 2px rgba(0,0,0,0.5)';
             
-            videoContainer.appendChild(iframe);
-            videoContainer.appendChild(controls);
+            videoContainer.appendChild(video);
+            videoContainer.appendChild(videoTime);
+            videoContainer.appendChild(progressBar);
+            videoContainer.appendChild(endOverlay);
+            videoContainer.appendChild(overlay);
             videoContainer.appendChild(title);
             slide.appendChild(videoContainer);
             container.appendChild(slide);
 
-            // Show/hide controls on mouse move
-            let controlsTimeout;
-            videoContainer.addEventListener('mousemove', () => {
-                controls.style.opacity = '1';
-                clearTimeout(controlsTimeout);
-                controlsTimeout = setTimeout(() => {
-                    controls.style.opacity = '0';
-                }, 3000);
-            });
+            // Setup video controls
+            setupVideoControls(video, videoTime, progressBar, endOverlay, overlay);
         });
 
-        /* Initialize Swiper */
+        /* Initialize Swiper with video controls and animation */
         swiperInstance = new Swiper('.swiper-container', {
             direction: 'vertical',
             slidesPerView: 1,
             spaceBetween: 0,
             mousewheel: true,
-            pagination: {
-                el: '.swiper-pagination',
-                clickable: true,
-            },
             speed: 600,
             effect: 'slide',
-            fadeEffect: { crossFade: true }
+            fadeEffect: { crossFade: true },
+            on: {
+                slideChange: function () {
+                    document.querySelectorAll('video').forEach((video, idx) => {
+                        if (this.slides[this.activeIndex].contains(video)) {
+                            video.muted = false;
+                            video.play().catch(e => console.log('Playback prevented:', e));
+                        } else {
+                            video.pause();
+                            video.muted = true;
+                        }
+                    });
+                }
+            }
         });
 
-        // Side buttons (aspect, fit)
+        // --- DÜZELTME: İlk yüklemede sadece ilk video oynasın, diğerleri sessiz ve duraklatılmış olsun ---
+        const allVideos = document.querySelectorAll('video');
+        allVideos.forEach((video, idx) => {
+            if (idx === 0) {
+                video.muted = false;
+                video.play().catch(e => {});
+            } else {
+                video.muted = true;
+                video.pause();
+            }
+        });
+        // --- DÜZELTME SONU ---
+
+        // Listen for fullscreen change to lock/unlock Swiper
+        document.addEventListener('fullscreenchange', () => {
+            if (document.fullscreenElement) {
+                if (swiperInstance) {
+                    swiperInstance.allowSlideNext = false;
+                    swiperInstance.allowSlidePrev = false;
+                }
+            } else {
+                if (swiperInstance) {
+                    swiperInstance.allowSlideNext = true;
+                    swiperInstance.allowSlidePrev = true;
+                }
+            }
+        });
+
+        // Side buttons (mute, download, share, aspect, fit)
         setupSideButtons();
         
     } catch (error) {
@@ -305,5 +343,60 @@ function applyAspectMode(video, mode, fit) {
 }
 
 function addAspectRatioToggle() { /* No-op, handled inline above */ }
-    
-    
+
+function setupVideoControls(video, timeDisplay, progressBar, endOverlay, playPauseOverlay) {
+    const currentTime = timeDisplay.querySelector('.current-time');
+    const totalTime = timeDisplay.querySelector('.total-time');
+    const progress = progressBar.querySelector('.progress');
+
+    function formatTime(seconds) {
+        const minutes = Math.floor(seconds / 60);
+        seconds = Math.floor(seconds % 60);
+        return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    }
+
+    video.addEventListener('timeupdate', () => {
+        currentTime.textContent = formatTime(video.currentTime);
+        totalTime.textContent = formatTime(video.duration);
+        
+        const progressPercent = (video.currentTime / video.duration) * 100;
+        progress.style.width = `${progressPercent}%`;
+
+        if (video.currentTime >= video.duration - 0.1) {
+            endOverlay.classList.add('show');
+        } else {
+            endOverlay.classList.remove('show');
+        }
+    });
+
+    video.addEventListener('play', () => {
+        playPauseOverlay.innerHTML = '<i class="fas fa-pause"></i>';
+    });
+
+    video.addEventListener('pause', () => {
+        playPauseOverlay.innerHTML = '<i class="fas fa-play"></i>';
+    });
+
+    endOverlay.addEventListener('click', () => {
+        video.currentTime = 0;
+        video.play().catch(e => console.log('Playback prevented:', e));
+        endOverlay.classList.remove('show');
+    });
+
+    video.parentElement.addEventListener('click', () => {
+        if (video.paused) {
+            video.play().catch(e => console.log('Playback prevented:', e));
+        } else {
+            video.pause();
+        }
+        playPauseOverlay.classList.add('show');
+        setTimeout(() => {
+            playPauseOverlay.classList.remove('show');
+        }, 1000);
+    });
+}
+
+// Initialize video time display for each video
+document.querySelectorAll('.video-player').forEach(video => {
+    updateVideoTime(video);
+}); 
