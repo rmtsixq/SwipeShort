@@ -1,0 +1,23 @@
+{
+  "movies": [
+    {
+      "id": "cars1",
+      "title": "Cars 1",
+      "poster": "/images/Cars-Vintage-Movie-Poster-Original_2b5b5635 (1).webp",
+      "clips": [
+        {
+          "id": "cars1_clip_1",
+          "title": "Cars 1 - Opening Scene",
+          "url": "https://drive.google.com/uc?export=download&id=YOUR_FILE_ID_1",
+          "thumbnail": "/images/cars.jpg"
+        },
+        {
+          "id": "cars1_clip_2",
+          "title": "Cars 1 - Race Scene",
+          "url": "https://drive.google.com/uc?export=download&id=YOUR_FILE_ID_2",
+          "thumbnail": "/images/cars.jpg"
+        }
+      ]
+    }
+  ]
+} 
