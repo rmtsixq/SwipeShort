@@ -21,11 +21,11 @@
         <span class="main-header__brand">ShortSwipe</span>
       </div>
       <nav class="main-header__nav">
-        <a href="#preuploaded-section">Preuploaded Videos</a>
+        <a href="#discover">Discover</a>
         <span class="main-header__divider">|</span>
-        <a href="#divir">Upload Your Own File</a>
+        <a href="#trending">Trending</a>
         <span class="main-header__divider">|</span>
-        <a href="#divir">Upload a YouTube Video</a>
+        <a href="#profile">Profile</a>
       </nav>
     </header>
     <header class="big-pic">
@@ -34,12 +34,12 @@
             ShortS<span class="glitch-w">w</span>ipe
         </h1>
         <h3>
-            Transform your long videos into engaging short clips
+            Discover the best scenes from movies and TV shows
         </h3>
         <div class="button-row">
 
-            <button id="youtubeBtn" class="button2" onclick="scrollToMainSection()">
-                Let's get started!
+            <button id="discoverBtn" class="button2" onclick="scrollToDiscover()">
+                Start Exploring!
             </button>
         </div>
       </div>
@@ -49,128 +49,205 @@
               Swipe to Discover 
               <span class="slottt-machine-recipe">
                 <span class="slottt-machine-recipe__mask" id="wordbox">
-                  <span class="slottt-machine-recipe__items_container recipe_if"></span>
+                  <span class="slottt-machine-recipe__items_container recipe_if">
+                    <span class="slottt-machine-recipe__item">Movies</span>
+                    <span class="slottt-machine-recipe__item">TV Shows</span>
+                    <span class="slottt-machine-recipe__item">Series</span>
+                    <span class="slottt-machine-recipe__item">Films</span>
+                    <span class="slottt-machine-recipe__item">Cinema</span>
+                  </span>
                 </span>
               </span>
             </h3>
             <p>
-                Discover bite-sized videos tailored for you.
-                Quick entertainment , memorable moments, and fresh content with every swipe.
-                Stay a bit longer... you might just find yourself watching the full video.
+                Discover the best scenes from movies and TV shows.
+                New adventures, unforgettable moments, and fresh content with every swipe.
+                Stay a bit longer... you might just want to watch the whole thing.
             </p>
         </section>
         <div class="features-grid">
-            <section class="feature-card">
-                <div class="feature-card__content">
-                    <h3>Watch it Anywhere</h3>
-                    <p>
-                        Download and watch offline.<br>
-                        No internet connection required.<br>
-                        Always have your favorite videos with you.
-                    </p>
-                </div>
-                <div class="feature-card__image">
-                    <img 
-                        src="images/79a5e8ebc138b774ed4e8079da85858d.gif" 
-                        alt="Watch anywhere animation"
-                        width="400"
-                        height="300"
-                        loading="eager"
-                    >
-                </div>
-            </section>
-
-            <section class="feature-card">
-                <div class="feature-card__content">
-                    <h3>Interaction with Others</h3>
-                    <p>
-                        Connect with others in pre-uploaded videos.<br>
-                        Engage in comment sections.<br>
-                        Like and interact with content creators.
-                    </p>
-                </div>
-                <div class="feature-card__image">
-                    <img 
-                        src="images/0b1bff36918c2e231d1a980b2c4c3cef.gif" 
-                        alt="Social interaction illustration"
-                        width="400"
-                        height="300"
-                        loading="lazy"
-                    >
-                </div>
-            </section>
-
-            <section class="feature-card">
-                <div class="feature-card__content">
-                    <h3>Turn Addiction into Advantage</h3>
-                    <p>
-                        ShortSwipe transforms our brain's dopamine-seeking scroll habit into a learning advantage.<br>
-                        We break down long videos into 20-second clips in a TikTok-like format.<br>
-                        Learn while scrolling, without distraction, presenting valuable content as a reward to your brain.
-                    </p>
-                </div>
-                <div class="feature-card__image">
-                    <img 
-                        src="images/Untitled design.gif" 
-                        alt="Brain reward system illustration"
-                        width="400"
-                        height="300"
-                        loading="lazy"
-                    >
-                </div>
-            </section>
+            <div class="feature-card">
+                <i class="fas fa-brain"></i>
+                <h3>Watch Smarter</h3>
+                <p>Discover long films through short clips. Feel the soul of movies in minutes, decide what to watch in seconds.</p>
+            </div>
+            <div class="feature-card">
+                <i class="fas fa-bolt"></i>
+                <h3>Fast & Focused</h3>
+                <p>Reach the right scene without wasting time. Move forward randomly or by choice, shape your movie experience your way.</p>
+            </div>
+            <div class="feature-card">
+                <i class="fas fa-share-alt"></i>
+                <h3>Connect & Share</h3>
+                <p>Like clips, comment, share your favorites with friends. Cinema is not just watching, it's sharing.</p>
+            </div>
         </div>
     </header>
     <div>
 
     </div>
 
-    <main class="divir" id="divir">
-        <section class="drag-drop" aria-label="Drag and Drop Section">
-            <form class="upload-box" method="post" action="/upload" enctype="multipart/form-data">
-                <input class="upload-box__file" type="file" name="video" id="fileInput" accept="video/*" hidden />
-                <label for="fileInput" class="upload-box__label">
-                  <div class="upload-box__icon">
-                    <svg width="64" height="64" fill="none" stroke="#7ca1a6" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M32 12v32"/>
-                      <path d="M20 36l12 12 12-12"/>
-                      <rect x="8" y="52" width="48" height="4" rx="2"/>
-                    </svg>
-                  </div>
-                  <span>
-                    <strong>Choose a file</strong> or drag it here
-                  </span>
-                </label>
-                <button type="submit" class="upload-button" style="display: none;">
-                    Upload Video
-                </button>
-            </form>
-        </section>
-
-        <section class="youtube-url" aria-label="YouTube URL Submission">
-            <h2>Enter your YouTube URL</h2>
-            <input type="text" id="youtubeInput" placeholder="https://youtube.com/..." aria-label="YouTube video URL" />
-            <button id="submitBtn">Submit</button>
-        </section>
-    </main>
-
-    <section class="preuploaded-section" id="preuploaded-section">
-      <h2 class="preuploaded-title">PreUploaded Videos <span class="preuploaded-desc">comment and liking feature with other peoples</span></h2>
-      <div class="preuploaded-category">
-        <div class="category-title">Animation</div>
-        <div class="movie-row">
-          <div class="movie-card" onclick="window.location.href='cars1feed.html'">
-            <div class="movie-inner">
-              <img src="images/Cars-Vintage-Movie-Poster-Original_2b5b5635 (1).webp" alt="Cars 2">
-              <div class="movie-hover">
-                <div class="movie-name">Cars 2</div>
-                <div class="movie-description">Lightning McQueen and Mater head overseas to compete in the World Grand Prix.</div>
-              </div>
-            </div>
-          </div>
+    <main class="discover-section" id="discover">
+      <h2 class="section-title">Keşfet</h2>
+      <div class="category-grid">
+        <div class="category-card" onclick="window.location.href='feed.html?type=movie&category=new'">
+          <h3>Yeni Filmler</h3>
+          <p>En yeni film sahneleri</p>
+        </div>
+        <div class="category-card" onclick="window.location.href='feed.html?type=tv&category=new'">
+          <h3>Yeni Diziler</h3>
+          <p>En yeni dizi sahneleri</p>
+        </div>
+        <div class="category-card" onclick="window.location.href='feed.html?type=movie&category=trending'">
+          <h3>Trend Filmler</h3>
+          <p>Popüler film sahneleri</p>
+        </div>
+        <div class="category-card" onclick="window.location.href='feed.html?type=tv&category=trending'">
+          <h3>Trend Diziler</h3>
+          <p>Popüler dizi sahneleri</p>
         </div>
       </div>
-    </section>
+    </main>
+
+    <div class="movie-slider">
+        <div class="movie-slider__track">
+            <div class="movie-slider__slide">
+                <img src="images/movie1.jpg" alt="Movie 1">
+            </div>
+            <div class="movie-slider__slide">
+                <img src="images/movie2.jpg" alt="Movie 2">
+            </div>
+            <div class="movie-slider__slide">
+                <img src="images/movie3.jpg" alt="Movie 3">
+            </div>
+            <div class="movie-slider__slide">
+                <img src="images/movie4.jpg" alt="Movie 4">
+            </div>
+            <div class="movie-slider__slide">
+                <img src="images/movie5.jpg" alt="Movie 5">
+            </div>
+            <div class="movie-slider__slide">
+                <img src="images/movie6.jpg" alt="Movie 6">
+            </div>
+            <div class="movie-slider__slide">
+                <img src="images/movie7.jpg" alt="Movie 7">
+            </div>
+            <div class="movie-slider__slide">
+                <img src="images/movie8.jpg" alt="Movie 8">
+            </div>
+            <div class="movie-slider__slide">
+                <img src="images/movie9.jpg" alt="Movie 9">
+            </div>
+            <div class="movie-slider__slide">
+                <img src="images/movie10.jpg" alt="Movie 10">
+            </div>
+            <!-- Duplicate slides for infinite loop -->
+            <div class="movie-slider__slide">
+                <img src="images/movie1.jpg" alt="Movie 1">
+            </div>
+            <div class="movie-slider__slide">
+                <img src="images/movie2.jpg" alt="Movie 2">
+            </div>
+            <div class="movie-slider__slide">
+                <img src="images/movie3.jpg" alt="Movie 3">
+            </div>
+            <div class="movie-slider__slide">
+                <img src="images/movie4.jpg" alt="Movie 4">
+            </div>
+            <div class="movie-slider__slide">
+                <img src="images/movie5.jpg" alt="Movie 5">
+            </div>
+            <div class="movie-slider__slide">
+                <img src="images/movie6.jpg" alt="Movie 6">
+            </div>
+            <div class="movie-slider__slide">
+                <img src="images/movie7.jpg" alt="Movie 7">
+            </div>
+            <div class="movie-slider__slide">
+                <img src="images/movie8.jpg" alt="Movie 8">
+            </div>
+            <div class="movie-slider__slide">
+                <img src="images/movie9.jpg" alt="Movie 9">
+            </div>
+            <div class="movie-slider__slide">
+                <img src="images/movie10.jpg" alt="Movie 10">
+            </div>
+        </div>
+    </div>
+
+    <div class="watch-clever-section">
+        <h2>Watch Clever</h2>
+        <p>Discover the best moments from your favorite movies and TV shows. Let us guide you through the most impactful scenes.</p>
+        <div class="button-row">
+            <button class="button2" onclick="scrollToDiscover()">Start Watching</button>
+        </div>
+    </div>
+
+    <div class="movie-slider movie-slider--reverse">
+        <div class="movie-slider__track">
+            <div class="movie-slider__slide">
+                <img src="images/movie11.jpg" alt="Movie 11">
+            </div>
+            <div class="movie-slider__slide">
+                <img src="images/movie12.jpg" alt="Movie 12">
+            </div>
+            <div class="movie-slider__slide">
+                <img src="images/movie13.jpg" alt="Movie 13">
+            </div>
+            <div class="movie-slider__slide">
+                <img src="images/movie14.jpg" alt="Movie 14">
+            </div>
+            <div class="movie-slider__slide">
+                <img src="images/movie15.jpg" alt="Movie 15">
+            </div>
+            <div class="movie-slider__slide">
+                <img src="images/movie16.jpg" alt="Movie 16">
+            </div>
+            <div class="movie-slider__slide">
+                <img src="images/movie17.jpg" alt="Movie 17">
+            </div>
+            <div class="movie-slider__slide">
+                <img src="images/movie18.jpg" alt="Movie 18">
+            </div>
+            <div class="movie-slider__slide">
+                <img src="images/movie19.jpg" alt="Movie 19">
+            </div>
+            <div class="movie-slider__slide">
+                <img src="images/movie20.jpg" alt="Movie 20">
+            </div>
+            <!-- Duplicate slides for infinite loop -->
+            <div class="movie-slider__slide">
+                <img src="images/movie11.jpg" alt="Movie 11">
+            </div>
+            <div class="movie-slider__slide">
+                <img src="images/movie12.jpg" alt="Movie 12">
+            </div>
+            <div class="movie-slider__slide">
+                <img src="images/movie13.jpg" alt="Movie 13">
+            </div>
+            <div class="movie-slider__slide">
+                <img src="images/movie14.jpg" alt="Movie 14">
+            </div>
+            <div class="movie-slider__slide">
+                <img src="images/movie15.jpg" alt="Movie 15">
+            </div>
+            <div class="movie-slider__slide">
+                <img src="images/movie16.jpg" alt="Movie 16">
+            </div>
+            <div class="movie-slider__slide">
+                <img src="images/movie17.jpg" alt="Movie 17">
+            </div>
+            <div class="movie-slider__slide">
+                <img src="images/movie18.jpg" alt="Movie 18">
+            </div>
+            <div class="movie-slider__slide">
+                <img src="images/movie19.jpg" alt="Movie 19">
+            </div>
+            <div class="movie-slider__slide">
+                <img src="images/movie20.jpg" alt="Movie 20">
+            </div>
+        </div>
+    </div>
 
     <!-- Processing Overlay -->
     <div class="processing-overlay" style="display: none;">
@@ -195,8 +272,8 @@
             
         </div>
         <script>
-    function scrollToMainSection() {
-      const section = document.getElementById('mainSection');
+    function scrollToDiscover() {
+      const section = document.getElementById('discover');
       if(section) {
         section.scrollIntoView({ behavior: 'smooth' });
       }
