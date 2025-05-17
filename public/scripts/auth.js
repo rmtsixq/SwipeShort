@@ -37,7 +37,7 @@ if (loginForm) {
         const password = document.getElementById('loginPassword').value;
         try {
             await firebase.auth().signInWithEmailAndPassword(email, password);
-            window.location.href = '/index.html';
+            window.location.href = '/dashboard.html';
         } catch (error) {
             alert(error.message);
         }
@@ -61,7 +61,7 @@ if (signupForm) {
             const userCredential = await firebase.auth().createUserWithEmailAndPassword(email, password);
             // Kullanıcı adı kaydet
             await userCredential.user.updateProfile({ displayName: username });
-            window.location.href = '/index.html';
+            window.location.href = '/dashboard.html';
         } catch (error) {
             alert(error.message);
         }
@@ -82,7 +82,7 @@ googleButtons.forEach(button => {
                     await result.user.updateProfile({ displayName: username });
                 }
             }
-            window.location.href = '/index.html';
+            window.location.href = '/dashboard.html';
         } catch (error) {
             alert(error.message);
         }

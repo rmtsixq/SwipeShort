@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - ShortSwipe</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="dashboard.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <span class="sidebar-brand">ShortSwipe</span>
+            </div>
+            <div class="sidebar-search">
+                <input type="text" placeholder="Search...">
+            </div>
+            <nav class="sidebar-menu">
+                <a href="#" class="sidebar-link active"><i class="fas fa-fire"></i> Popular Movies</a>
+                <a href="#" class="sidebar-link"><i class="fas fa-star"></i> New Releases</a>
+                <a href="#" class="sidebar-link"><i class="fas fa-comments"></i> Messages</a>
+                <a href="#" class="sidebar-link"><i class="fas fa-user"></i> Profile</a>
+            </nav>
+        </aside>
+        <main class="dashboard-main">
+            <header class="dashboard-header">
+                <h2>Welcome, <span id="dashboard-username">User</span>!</h2>
+                <button class="logout-btn">Logout</button>
+            </header>
+            <section class="swipe-section">
+                <div class="swipe-placeholder">
+                    <h3>Swipe Area</h3>
+                    <p>Here you will be able to swipe through movie clips soon!</p>
+                </div>
+            </section>
+        </main>
+    </div>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="scripts/firebase-config.js"></script>
+    <script src="dashboard.js"></script>
+    <script src="https://kit.fontawesome.com/4e7b8e7e2a.js" crossorigin="anonymous"></script>
+</body>
+</html> 
