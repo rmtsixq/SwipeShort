@@ -12,52 +12,41 @@
     <div class="dashboard-container">
         <aside class="sidebar">
             <div class="sidebar-header">
-                <span class="sidebar-brand">ShortSwipe</span>
+                <div class="sidebar-brand">ShortSwipe</div>
             </div>
             <div class="sidebar-search">
-                <input type="text" placeholder="Search...">
+                <input type="text" placeholder="Search movies...">
             </div>
             <nav class="sidebar-menu">
-                <a href="#" class="sidebar-link active"><i class="fas fa-fire"></i> Popular Movies</a>
-                <a href="#" class="sidebar-link"><i class="fas fa-star"></i> New Releases</a>
-                <a href="#" class="sidebar-link"><i class="fas fa-comments"></i> Messages</a>
-                <a href="#" class="sidebar-link"><i class="fas fa-user"></i> Profile</a>
-                <a href="#" class="sidebar-link" id="discover-link"><i class="fas fa-compass"></i> Discover</a>
+                <a href="#" class="sidebar-link active">
+                    <i class="fas fa-home"></i>
+                    <span>Home</span>
+                </a>
+                <a href="#" class="sidebar-link">
+                    <i class="fas fa-fire"></i>
+                    <span>Trending</span>
+                </a>
+                <a href="#" class="sidebar-link">
+                    <i class="fas fa-star"></i>
+                    <span>Favorites</span>
+                </a>
+                <a href="#" class="sidebar-link">
+                    <i class="fas fa-history"></i>
+                    <span>History</span>
+                </a>
             </nav>
         </aside>
+        
         <main class="dashboard-main">
             <header class="dashboard-header">
-                <h2>Welcome, <span id="dashboard-username">User</span>!</h2>
-                <button class="logout-btn">Logout</button>
+                <h2>Welcome to ShortSwipe</h2>
+                <button class="logout-btn" onclick="logout()">Logout</button>
             </header>
-            <section class="film-player-section">
-                <div id="film-player" class="film-player">
-                    <!-- Seçilen film burada oynatılacak (iframe/embed) -->
-                    <div class="film-player-placeholder">Select a movie to watch</div>
-                </div>
-            </section>
-            <section class="film-grid-section">
-                <h3 class="film-grid-title">Popular Films</h3>
-                <div class="film-grid-container">
-                    <button class="grid-nav-btn grid-nav-left">
-                        <i class="fas fa-chevron-left"></i>
-                    </button>
-                    <div id="film-grid" class="film-grid">
-                        <!-- Film thumbnail kartları buraya gelecek -->
-                        <div class="film-thumb-card placeholder"></div>
-                        <div class="film-thumb-card placeholder"></div>
-                        <div class="film-thumb-card placeholder"></div>
-                        <div class="film-thumb-card placeholder"></div>
-                        <div class="film-thumb-card placeholder"></div>
-                        <div class="film-thumb-card placeholder"></div>
-                    </div>
-                    <button class="grid-nav-btn grid-nav-right">
-                        <i class="fas fa-chevron-right"></i>
-                    </button>
-                </div>
-            </section>
+            
+            <!-- Film kategorileri buraya dinamik olarak eklenecek -->
         </main>
     </div>
+
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="scripts/firebase-config.js"></script>

@@ -28,94 +28,88 @@ document.addEventListener('DOMContentLoaded', function() {
 // TMDB API
 const TMDB_API_KEY = 'fda9bed2dd52a349ecb7cfe38b050ca5';
 
-// Popüler filmleri çek
-async function loadPopularMovies() {
-    try {
-        const res = await fetch(`https://api.themoviedb.org/3/movie/popular?api_key=${TMDB_API_KEY}`);
-        const data = await res.json();
-        console.log('Popular Movies:', data.results.slice(0, 5)); // İlk 5 filmi göster
-        return data.results;
-    } catch (error) {
-        console.error('TMDB API Error:', error);
-        return [];
+// Kategoriler ve ID'leri
+const categories = [
+    { id: 'popular', name: 'Popular Films' },
+    { id: 'top_rated', name: 'Top Rated Films' },
+    { id: 'upcoming', name: 'Upcoming Films' },
+    { id: 'now_playing', name: 'Now Playing' }
+];
+
+// Her kategori için filmleri yükle
+async function loadMoviesByCategory() {
+    for (const category of categories) {
+        try {
+            const res = await fetch(`https://api.themoviedb.org/3/movie/${category.id}?api_key=${TMDB_API_KEY}`);
+            const data = await res.json();
+            
+            // Kategori başlığını oluştur
+            const sectionTitle = document.createElement('h2');
+            sectionTitle.className = 'film-grid-title';
+            sectionTitle.textContent = category.name;
+            
+            // Film grid container'ı oluştur
+            const gridContainer = document.createElement('div');
+            gridContainer.className = 'film-grid-container';
+            
+            // Film grid'i oluştur
+            const grid = document.createElement('div');
+            grid.className = 'film-grid';
+            
+            // Filmleri ekle
+            data.results.forEach(movie => {
+                const card = document.createElement('div');
+                card.className = 'film-thumb-card';
+                
+                card.innerHTML = `
+                    <img src="https://image.tmdb.org/t/p/w500${movie.poster_path}" alt="${movie.title}">
+                    <h3>${movie.title}</h3>
+                `;
+                
+                // Karta tıklama özelliği ekle
+                card.onclick = () => {
+                    window.location.href = `movie.html?id=${movie.id}`;
+                };
+                
+                grid.appendChild(card);
+            });
+            
+            // Navigasyon butonlarını ekle
+            const leftBtn = document.createElement('button');
+            leftBtn.className = 'grid-nav-btn grid-nav-left';
+            leftBtn.innerHTML = '❮';
+            leftBtn.onclick = () => {
+                grid.scrollBy({ left: -220, behavior: 'smooth' });
+            };
+            
+            const rightBtn = document.createElement('button');
+            rightBtn.className = 'grid-nav-btn grid-nav-right';
+            rightBtn.innerHTML = '❯';
+            rightBtn.onclick = () => {
+                grid.scrollBy({ left: 220, behavior: 'smooth' });
+            };
+            
+            // Elementleri sayfaya ekle
+            gridContainer.appendChild(leftBtn);
+            gridContainer.appendChild(grid);
+            gridContainer.appendChild(rightBtn);
+            
+            const section = document.createElement('section');
+            section.className = 'film-grid-section';
+            section.appendChild(sectionTitle);
+            section.appendChild(gridContainer);
+            
+            document.querySelector('.dashboard-main').appendChild(section);
+            
+        } catch (error) {
+            console.error(`Error loading ${category.name}:`, error);
+        }
     }
 }
 
-// Player'ı güncelle
-function updatePlayer(tmdbId) {
-    const player = document.getElementById('film-player');
-    if (!player) return;
-    
-    player.innerHTML = `
-        <iframe 
-            src="https://vidsrc.to/embed/movie/${tmdbId}" 
-            width="100%" 
-            height="400" 
-            frameborder="0" 
-            allowfullscreen
-        ></iframe>
-    `;
-}
-
-// Grid'i doldur
-async function loadBasicGrid() {
-    const grid = document.getElementById('film-grid');
-    if (!grid) return;
-    
-    grid.innerHTML = '<div class="film-thumb-card">Loading...</div>';
-    
-    const movies = await loadPopularMovies();
-    
-    grid.innerHTML = ''; // Grid'i temizle
-    
-    movies.forEach(movie => {
-        const card = document.createElement('div');
-        card.className = 'film-thumb-card';
-        card.innerHTML = `
-            <img src="https://image.tmdb.org/t/p/w200${movie.poster_path}" class="film-thumb-img" />
-            <div class="film-thumb-title">${movie.title}</div>
-            <div class="film-thumb-year">${movie.release_date.split('-')[0]}</div>
-        `;
-        
-        // Karta tıklama özelliği ekle
-        card.onclick = () => {
-            window.location.href = `movie.html?id=${movie.id}`;
-        };
-        
-        grid.appendChild(card);
-    });
-}
-
-// Grid navigasyon
-function initGridNavigation() {
-    const grid = document.getElementById('film-grid');
-    const leftBtn = document.querySelector('.grid-nav-left');
-    const rightBtn = document.querySelector('.grid-nav-right');
-    
-    if (!grid || !leftBtn || !rightBtn) return;
-    
-    const cardWidth = 220; // Kart genişliği + gap
-    const cardsToScroll = 3;
-    
-    leftBtn.addEventListener('click', () => {
-        grid.scrollBy({
-            left: -cardWidth * cardsToScroll,
-            behavior: 'smooth'
-        });
-    });
-    
-    rightBtn.addEventListener('click', () => {
-        grid.scrollBy({
-            left: cardWidth * cardsToScroll,
-            behavior: 'smooth'
-        });
-    });
-}
-
-// Sayfa yüklenince grid'i ve navigasyonu yükle
-window.addEventListener('DOMContentLoaded', () => {
-    loadBasicGrid();
-    initGridNavigation();
+// Sayfa yüklendiğinde filmleri yükle
+document.addEventListener('DOMContentLoaded', () => {
+    loadMoviesByCategory();
 });
 
 // TMDB API Test
