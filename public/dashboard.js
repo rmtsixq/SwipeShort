@@ -42,6 +42,35 @@ async function testTMDB() {
 // Test fonksiyonunu çağır
 testTMDB();
 
+// Vidsrc ID'leri
+const vidsrcIds = [
+    "dawQCziL2v",
+    "E1KyOcIMf9v7XHg",
+    "gMvO97yE1cfKIXH",
+    "thDz4uPKGSYW",
+    "ZSsbx4NtMpOoCh"
+];
+
+// Grid Temel Yapısı
+function loadBasicGrid() {
+    const grid = document.getElementById('film-grid');
+    if (!grid) return;
+    
+    grid.innerHTML = ''; // Grid'i temizle
+    
+    vidsrcIds.forEach(id => {
+        const card = document.createElement('div');
+        card.className = 'film-thumb-card';
+        card.innerHTML = `
+            <div class="film-thumb-title">${id}</div>
+        `;
+        grid.appendChild(card);
+    });
+}
+
+// Sayfa yüklenince grid'i yükle
+window.addEventListener('DOMContentLoaded', loadBasicGrid);
+
 /* Geçici olarak yorum satırına alındı
 // Film gridini doldur
 async function loadMovies() {
