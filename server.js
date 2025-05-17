@@ -41,6 +41,12 @@ app.use((err, req, res, next) => {
     res.status(500).json({ error: 'Internal server error', details: err.message });
 });
 
+// CORS header ekle (güvenli test için)
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  next();
+});
+
 // Start server
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
@@ -383,7 +389,7 @@ function formatTime(seconds) {
 app.get('/api/clips', (req, res) => {
     const clipsDir = path.join(__dirname, 'clips');
     fs.readdir(clipsDir, (err, files) => {
-        if (err) {
+                            if (err) {
             console.error('Error reading clips directory:', err);
             return res.status(500).json({ error: 'Error reading clips directory' });
         }
@@ -432,6 +438,17 @@ app.get('/api/youtube/info/:videoId', async (req, res) => {
     } catch (error) {
         console.error('Error fetching video info:', error);
         res.status(500).json({ error: 'Failed to fetch video information' });
+    }
+});
+
+// Film listesi proxy endpointi
+app.get('/api/movies', async (req, res) => {
+  try {
+    const response = await fetch('https://vidsrc.to/vapi/movie/new');
+    const data = await response.json();
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to fetch movies' });
     }
 });
 
