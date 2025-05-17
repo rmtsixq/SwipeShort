@@ -56,24 +56,44 @@ async function loadMoviesByCategory() {
             const grid = document.createElement('div');
             grid.className = 'film-grid';
             
-            // Filmleri ekle
-            data.results.forEach(movie => {
+            // Filmleri ekle (ilk 20 film)
+            for (const movie of data.results.slice(0, 20)) {
+                // Detay endpointinden ülke kodunu al
+                let countryCode = null;
+                try {
+                    const detailRes = await fetch(`https://api.themoviedb.org/3/movie/${movie.id}?api_key=${TMDB_API_KEY}`);
+                    const detailData = await detailRes.json();
+                    if (detailData.production_countries && detailData.production_countries.length > 0) {
+                        countryCode = detailData.production_countries[0].iso_3166_1.toLowerCase();
+                    }
+                } catch (e) {
+                    countryCode = null;
+                }
+                
                 const card = document.createElement('div');
                 card.className = 'film-thumb-card';
-                
                 card.innerHTML = `
-                    <img src="https://image.tmdb.org/t/p/w500${movie.poster_path}" alt="${movie.title}">
-                    <h3>${movie.title}</h3>
+                    <div class="film-thumb-img-wrap">
+                        <img src="https://image.tmdb.org/t/p/w500${movie.poster_path}" alt="${movie.title}" class="film-thumb-img" />
+                        <div class="film-thumb-overlay">
+                            <div class="film-thumb-meta">
+                                <span>${movie.release_date ? movie.release_date.split('-')[0] : ''}</span>
+                                <span><i class='fas fa-comment'></i> 0</span>
+                                <span><i class='fas fa-star'></i> ${movie.vote_average ? movie.vote_average.toFixed(1) : '-'}</span>
+                            </div>
+                            <div class="film-thumb-title">${movie.title}</div>
+                            <div class="film-thumb-extra">
+                                <span class="film-thumb-label">Dubbed & Subtitled</span>
+                            </div>
+                        </div>
+                    </div>
                 `;
-                
                 // Karta tıklama özelliği ekle
                 card.onclick = () => {
                     window.location.href = `movie.html?id=${movie.id}`;
                 };
-                
                 grid.appendChild(card);
-            });
-            
+            }
             // Navigasyon butonlarını ekle
             const leftBtn = document.createElement('button');
             leftBtn.className = 'grid-nav-btn grid-nav-left';
@@ -81,26 +101,21 @@ async function loadMoviesByCategory() {
             leftBtn.onclick = () => {
                 grid.scrollBy({ left: -220, behavior: 'smooth' });
             };
-            
             const rightBtn = document.createElement('button');
             rightBtn.className = 'grid-nav-btn grid-nav-right';
             rightBtn.innerHTML = '❯';
             rightBtn.onclick = () => {
                 grid.scrollBy({ left: 220, behavior: 'smooth' });
             };
-            
             // Elementleri sayfaya ekle
             gridContainer.appendChild(leftBtn);
             gridContainer.appendChild(grid);
             gridContainer.appendChild(rightBtn);
-            
             const section = document.createElement('section');
             section.className = 'film-grid-section';
             section.appendChild(sectionTitle);
             section.appendChild(gridContainer);
-            
             document.querySelector('.dashboard-main').appendChild(section);
-            
         } catch (error) {
             console.error(`Error loading ${category.name}:`, error);
         }

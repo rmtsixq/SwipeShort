@@ -452,4 +452,3 @@ app.get('/api/movies', async (req, res) => {
     }
 });
 
-
