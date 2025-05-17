@@ -30,22 +30,39 @@ const TMDB_API_KEY = 'fda9bed2dd52a349ecb7cfe38b050ca5';
 const FILMS_PER_PAGE = 20;
 let allMovies = [];
 let currentPage = 1;
+let currentTab = 'popular';
 
-// Filmleri çek ve kaydet
-async function fetchMovies() {
-    const res = await fetch(`https://api.themoviedb.org/3/movie/popular?api_key=${TMDB_API_KEY}&page=1`);
+const tabEndpoints = {
+    'New Releases': { endpoint: 'now_playing', minVote: 0 },
+    'Recommended': { endpoint: 'popular', minVote: 0 },
+    'IMDB 7+ Films': { endpoint: 'top_rated', minVote: 7 },
+    'Most Commented': { endpoint: 'popular', minVote: 0, sort: 'vote_count.desc' },
+    'Most Liked': { endpoint: 'popular', minVote: 0, sort: 'vote_average.desc' }
+};
+
+async function fetchMovies(tabName = 'New Releases', page = 1) {
+    const tab = tabEndpoints[tabName];
+    let url = `https://api.themoviedb.org/3/movie/${tab.endpoint}?api_key=${TMDB_API_KEY}&page=${page}`;
+    if (tab.sort) {
+        url = `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_API_KEY}&sort_by=${tab.sort}&page=${page}`;
+    }
+    const res = await fetch(url);
     const data = await res.json();
-    allMovies = data.results;
+    let movies = data.results;
+    if (tab.minVote > 0) {
+        movies = movies.filter(m => m.vote_average >= tab.minVote);
+    }
+    allMovies = movies;
     renderGrid();
-    renderPagination();
+    renderPagination(data.total_pages);
 }
 
 // Grid render
 function renderGrid() {
     const grid = document.getElementById('film-grid');
     grid.innerHTML = '';
-    const start = (currentPage - 1) * FILMS_PER_PAGE;
-    const end = start + FILMS_PER_PAGE;
+    const start = 0;
+    const end = FILMS_PER_PAGE;
     const movies = allMovies.slice(start, end);
     movies.forEach(movie => {
         const card = document.createElement('div');
@@ -74,10 +91,9 @@ function renderGrid() {
 }
 
 // Pagination render
-function renderPagination() {
+function renderPagination(totalPages = 5) {
     const pagination = document.getElementById('pagination');
     pagination.innerHTML = '';
-    const totalPages = Math.ceil(allMovies.length / FILMS_PER_PAGE);
     const createBtn = (label, page, active = false, disabled = false) => {
         const btn = document.createElement('button');
         btn.textContent = label;
@@ -85,8 +101,7 @@ function renderPagination() {
         if (disabled) btn.disabled = true;
         btn.onclick = () => {
             currentPage = page;
-            renderGrid();
-            renderPagination();
+            fetchMovies(currentTab, currentPage);
         };
         return btn;
     };
@@ -104,7 +119,39 @@ function renderPagination() {
     pagination.appendChild(createBtn('Last', totalPages, false, currentPage === totalPages));
 }
 
-document.addEventListener('DOMContentLoaded', fetchMovies);
+async function renderGenreButtons() {
+    const res = await fetch(`https://api.themoviedb.org/3/genre/movie/list?api_key=${TMDB_API_KEY}&language=en`);
+    const data = await res.json();
+    const genres = data.genres;
+    const container = document.getElementById('genre-buttons');
+    container.innerHTML = '';
+    genres.forEach(genre => {
+        const btn = document.createElement('button');
+        btn.className = 'genre-btn';
+        btn.textContent = genre.name;
+        btn.onclick = function() {
+            document.querySelectorAll('.genre-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            // Şimdilik sadece görsel olarak aktif, filtreleme yok
+        };
+        container.appendChild(btn);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Tab click events
+    document.querySelectorAll('.film-tab').forEach(tab => {
+        tab.addEventListener('click', function() {
+            document.querySelectorAll('.film-tab').forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+            currentTab = this.textContent.trim();
+            currentPage = 1;
+            fetchMovies(currentTab, currentPage);
+        });
+    });
+    fetchMovies('New Releases', 1);
+    renderGenreButtons();
+});
 
 // TMDB API Test
 const testMovie = "Fast X";
