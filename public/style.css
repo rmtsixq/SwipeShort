@@ -1402,6 +1402,40 @@ body, html {
   padding: 0 2px;
 }
 
+.main-header__auth-btn {
+  background: transparent;
+  border: 2px solid #fff;
+  color: #fff;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-left: 10px;
+  text-decoration: none;
+  display: inline-block;
+  line-height: 1.2;
+}
+
+.main-header__auth-btn.login {
+  background: transparent;
+}
+
+.main-header__auth-btn.login:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.main-header__auth-btn.signup {
+  background: #fff;
+  color: #000;
+}
+
+.main-header__auth-btn.signup:hover {
+  background: rgba(255, 255, 255, 0.9);
+  transform: translateY(-2px);
+}
+
 @media (max-width: 900px) {
   .main-header {
     padding: 0 10px;
@@ -1487,6 +1521,7 @@ body, html {
     padding: 80px 20px;
     background: linear-gradient(79deg, rgba(81, 112, 255, 0.1) 6%, rgba(255, 102, 196, 0.1) 87%);
     margin: 40px 0;
+    font-family: roboto;
 }
 
 .watch-clever-section h2 {
@@ -1494,6 +1529,7 @@ body, html {
     color: white;
     margin-bottom: 20px;
     text-shadow: 2px 2px 10px rgba(0, 0, 0, 0.3);
+    font-family: roboto;
 }
 
 .watch-clever-section p {
@@ -1502,6 +1538,7 @@ body, html {
     max-width: 600px;
     margin: 0 auto 40px;
     line-height: 1.6;
+    font-family: roboto;
 }
 
 .watch-clever-section .button-row {
