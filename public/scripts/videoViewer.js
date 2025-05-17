@@ -41,7 +41,7 @@ async function loadClips() {
             videoContainer.style.zIndex = 1;
 
             // Video element
-            const video = document.createElement('video');
+    const video = document.createElement('video');
             video.src = `/clips/${clip.filename}`;
             video.loop = true;
             video.muted = false;
@@ -84,7 +84,7 @@ async function loadClips() {
             // Setup video controls
             setupVideoControls(video, videoTime, progressBar, overlay, videoContainer);
         });
-
+        
         /* Initialize Swiper */
         swiperInstance = new Swiper('.swiper-container', {
             direction: 'vertical',
@@ -255,7 +255,7 @@ function setupSideButtons() {
                     video.msRequestFullscreen();
                 }
             }
-        } else {
+            } else {
             globalAspectMode = 'portrait';
             aspectBtn.innerHTML = '<i class="fas fa-mobile-alt"></i>';
             // Exit fullscreen
