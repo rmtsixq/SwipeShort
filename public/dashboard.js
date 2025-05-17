@@ -25,8 +25,103 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// TMDB API Test
+// TMDB API
 const TMDB_API_KEY = 'fda9bed2dd52a349ecb7cfe38b050ca5';
+
+// Popüler filmleri çek
+async function loadPopularMovies() {
+    try {
+        const res = await fetch(`https://api.themoviedb.org/3/movie/popular?api_key=${TMDB_API_KEY}`);
+        const data = await res.json();
+        console.log('Popular Movies:', data.results.slice(0, 5)); // İlk 5 filmi göster
+        return data.results;
+    } catch (error) {
+        console.error('TMDB API Error:', error);
+        return [];
+    }
+}
+
+// Player'ı güncelle
+function updatePlayer(tmdbId) {
+    const player = document.getElementById('film-player');
+    if (!player) return;
+    
+    player.innerHTML = `
+        <iframe 
+            src="https://vidsrc.to/embed/movie/${tmdbId}" 
+            width="100%" 
+            height="400" 
+            frameborder="0" 
+            allowfullscreen
+        ></iframe>
+    `;
+}
+
+// Grid'i doldur
+async function loadBasicGrid() {
+    const grid = document.getElementById('film-grid');
+    if (!grid) return;
+    
+    grid.innerHTML = '<div class="film-thumb-card">Loading...</div>';
+    
+    const movies = await loadPopularMovies();
+    
+    grid.innerHTML = ''; // Grid'i temizle
+    
+    movies.forEach(movie => {
+        const card = document.createElement('div');
+        card.className = 'film-thumb-card';
+        card.innerHTML = `
+            <img src="https://image.tmdb.org/t/p/w200${movie.poster_path}" class="film-thumb-img" />
+            <div class="film-thumb-title">${movie.title}</div>
+            <div class="film-thumb-year">${movie.release_date.split('-')[0]}</div>
+        `;
+        
+        // Karta tıklama özelliği ekle
+        card.onclick = () => {
+            updatePlayer(movie.id);
+            // Aktif kartı vurgula
+            document.querySelectorAll('.film-thumb-card').forEach(c => c.classList.remove('active'));
+            card.classList.add('active');
+        };
+        
+        grid.appendChild(card);
+    });
+}
+
+// Grid navigasyon
+function initGridNavigation() {
+    const grid = document.getElementById('film-grid');
+    const leftBtn = document.querySelector('.grid-nav-left');
+    const rightBtn = document.querySelector('.grid-nav-right');
+    
+    if (!grid || !leftBtn || !rightBtn) return;
+    
+    const cardWidth = 220; // Kart genişliği + gap
+    const cardsToScroll = 3;
+    
+    leftBtn.addEventListener('click', () => {
+        grid.scrollBy({
+            left: -cardWidth * cardsToScroll,
+            behavior: 'smooth'
+        });
+    });
+    
+    rightBtn.addEventListener('click', () => {
+        grid.scrollBy({
+            left: cardWidth * cardsToScroll,
+            behavior: 'smooth'
+        });
+    });
+}
+
+// Sayfa yüklenince grid'i ve navigasyonu yükle
+window.addEventListener('DOMContentLoaded', () => {
+    loadBasicGrid();
+    initGridNavigation();
+});
+
+// TMDB API Test
 const testMovie = "Fast X";
 
 async function testTMDB() {
@@ -50,26 +145,6 @@ const vidsrcIds = [
     "thDz4uPKGSYW",
     "ZSsbx4NtMpOoCh"
 ];
-
-// Grid Temel Yapısı
-function loadBasicGrid() {
-    const grid = document.getElementById('film-grid');
-    if (!grid) return;
-    
-    grid.innerHTML = ''; // Grid'i temizle
-    
-    vidsrcIds.forEach(id => {
-        const card = document.createElement('div');
-        card.className = 'film-thumb-card';
-        card.innerHTML = `
-            <div class="film-thumb-title">${id}</div>
-        `;
-        grid.appendChild(card);
-    });
-}
-
-// Sayfa yüklenince grid'i yükle
-window.addEventListener('DOMContentLoaded', loadBasicGrid);
 
 /* Geçici olarak yorum satırına alındı
 // Film gridini doldur
