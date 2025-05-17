@@ -36,17 +36,36 @@
                 </a>
             </nav>
         </aside>
-        
-        <main class="dashboard-main">
-            <header class="dashboard-header">
-                <h2>Welcome to ShortSwipe</h2>
-                <button class="logout-btn" onclick="logout()">Logout</button>
-            </header>
-            
-            <!-- Film kategorileri buraya dinamik olarak eklenecek -->
+        <main class="dashboard-main dashboard-flex">
+            <section class="main-content">
+                <div class="film-tabs">
+                    <button class="film-tab active">New Releases</button>
+                    <button class="film-tab">Recommended</button>
+                    <button class="film-tab">IMDB 7+ Films</button>
+                    <button class="film-tab">Most Commented</button>
+                    <button class="film-tab">Most Liked</button>
+                </div>
+                <div id="film-grid" class="film-grid-new"></div>
+                <div id="pagination" class="pagination"></div>
+            </section>
+            <aside class="filter-panel">
+                <h3>Filter</h3>
+                <div class="filter-group">
+                    <label>Genre</label>
+                    <select disabled><option>All</option></select>
+                </div>
+                <div class="filter-group">
+                    <label>Year</label>
+                    <select disabled><option>All</option></select>
+                </div>
+                <div class="filter-group">
+                    <label>Language</label>
+                    <select disabled><option>All</option></select>
+                </div>
+                <button class="filter-btn" disabled>Apply</button>
+            </aside>
         </main>
     </div>
-
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="scripts/firebase-config.js"></script>

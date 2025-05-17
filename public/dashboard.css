@@ -389,4 +389,140 @@
     .film-thumb-img {
         height: 140px;
     }
+}
+
+.dashboard-flex {
+    display: flex;
+    flex-direction: row;
+    gap: 32px;
+}
+
+.main-content {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+.filter-panel {
+    width: 260px;
+    background: #23232b;
+    border-radius: 16px;
+    padding: 24px 18px;
+    color: #fff;
+    margin-top: 32px;
+    box-shadow: 0 2px 16px #0002;
+    height: fit-content;
+}
+
+.filter-panel h3 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 18px;
+}
+
+.filter-group {
+    margin-bottom: 18px;
+}
+
+.filter-group label {
+    display: block;
+    font-size: 1rem;
+    margin-bottom: 6px;
+    color: #bbb;
+}
+
+.filter-group select {
+    width: 100%;
+    padding: 7px 10px;
+    border-radius: 6px;
+    border: none;
+    background: #292938;
+    color: #fff;
+    font-size: 1rem;
+}
+
+.filter-btn {
+    width: 100%;
+    padding: 10px 0;
+    border-radius: 8px;
+    border: none;
+    background: #ff66c4;
+    color: #fff;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.film-tabs {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.film-tab {
+    background: #23232b;
+    color: #fff;
+    border: none;
+    border-radius: 8px 8px 0 0;
+    padding: 10px 22px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.18s, color 0.18s;
+}
+
+.film-tab.active, .film-tab:hover {
+    background: #ff66c4;
+    color: #fff;
+}
+
+.film-grid-new {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+    margin-bottom: 32px;
+}
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 24px;
+}
+
+.pagination button {
+    background: #23232b;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 7px 16px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.18s, color 0.18s;
+}
+
+.pagination button.active, .pagination button:hover {
+    background: #ff66c4;
+    color: #fff;
+}
+
+@media (max-width: 1200px) {
+    .film-grid-new {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    .filter-panel {
+        display: none;
+    }
+}
+@media (max-width: 800px) {
+    .film-grid-new {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+@media (max-width: 600px) {
+    .film-grid-new {
+        grid-template-columns: 1fr;
+    }
 } 
