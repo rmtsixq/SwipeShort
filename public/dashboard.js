@@ -79,10 +79,7 @@ async function loadBasicGrid() {
         
         // Karta tıklama özelliği ekle
         card.onclick = () => {
-            updatePlayer(movie.id);
-            // Aktif kartı vurgula
-            document.querySelectorAll('.film-thumb-card').forEach(c => c.classList.remove('active'));
-            card.classList.add('active');
+            window.location.href = `movie.html?id=${movie.id}`;
         };
         
         grid.appendChild(card);
