@@ -3,11 +3,23 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(79deg, rgba(81, 112, 255, 0.1) 6%, rgba(255, 102, 196, 0.1) 87%);
+    background: url('images/n_HWYen-E1lvLm0Gu_M0loIFdmHth4lk0fRY096ul9Y.webp') center center/cover no-repeat;
+    position: relative;
     padding: 20px;
 }
 
+.auth-container::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(24, 24, 28, 0.85);
+    backdrop-filter: blur(6px);
+    z-index: 0;
+}
+
 .auth-box {
+    position: relative;
+    z-index: 1;
     background: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(10px);
     border-radius: 20px;

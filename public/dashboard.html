@@ -22,6 +22,7 @@
                 <a href="#" class="sidebar-link"><i class="fas fa-star"></i> New Releases</a>
                 <a href="#" class="sidebar-link"><i class="fas fa-comments"></i> Messages</a>
                 <a href="#" class="sidebar-link"><i class="fas fa-user"></i> Profile</a>
+                <a href="#" class="sidebar-link" id="discover-link"><i class="fas fa-compass"></i> Discover</a>
             </nav>
         </aside>
         <main class="dashboard-main">
@@ -29,10 +30,22 @@
                 <h2>Welcome, <span id="dashboard-username">User</span>!</h2>
                 <button class="logout-btn">Logout</button>
             </header>
-            <section class="swipe-section">
-                <div class="swipe-placeholder">
-                    <h3>Swipe Area</h3>
-                    <p>Here you will be able to swipe through movie clips soon!</p>
+            <section class="film-player-section">
+                <div id="film-player" class="film-player">
+                    <!-- Seçilen film burada oynatılacak (iframe/embed) -->
+                    <div class="film-player-placeholder">Select a movie to watch</div>
+                </div>
+            </section>
+            <section class="film-grid-section">
+                <h3 class="film-grid-title">Movies</h3>
+                <div id="film-grid" class="film-grid">
+                    <!-- Film thumbnail kartları buraya gelecek -->
+                    <div class="film-thumb-card placeholder"></div>
+                    <div class="film-thumb-card placeholder"></div>
+                    <div class="film-thumb-card placeholder"></div>
+                    <div class="film-thumb-card placeholder"></div>
+                    <div class="film-thumb-card placeholder"></div>
+                    <div class="film-thumb-card placeholder"></div>
                 </div>
             </section>
         </main>
