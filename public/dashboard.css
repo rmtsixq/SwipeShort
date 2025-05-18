@@ -154,6 +154,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
+    margin-left: 10px;
 }
 
 .film-grid {
@@ -164,6 +165,7 @@
     scroll-behavior: smooth;
     -webkit-overflow-scrolling: touch;
     width: 100%;
+    margin-left: 10px;
 }
 
 .grid-nav-btn {
@@ -457,6 +459,8 @@
     display: flex;
     gap: 12px;
     margin-bottom: 24px;
+    margin-left: 10px;
+    margin-top: 20px;
 }
 
 .film-tab {
