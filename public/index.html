@@ -248,6 +248,23 @@
         </div>
       </div>
 
+    <!-- Movie20 Popup Modal -->
+    <div id="movie20Modal" class="movie20-modal" style="display: none;">
+        <div class="movie20-modal-content">
+            <div class="movie20-modal-header">
+                <h2> Secret</h2>
+                <button class="movie20-modal-close">&times;</button>
+            </div>
+            <div class="movie20-modal-body">
+                <p>Go to dashboard and search for "MAJIK" to discover a hidden secret!</p>
+                <div class="movie20-modal-buttons">
+
+                    <button class="movie20-modal-btn movie20-modal-close">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Processing Overlay -->
     <div class="processing-overlay" style="display: none;">
         <div class="processing-modal">
@@ -277,6 +294,37 @@
         section.scrollIntoView({ behavior: 'smooth' });
       }
     }
+
+    // Movie20 Popup Functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        const modal = document.getElementById('movie20Modal');
+        const closeButtons = document.querySelectorAll('.movie20-modal-close');
+        
+        // Find movie20 slide and add click event
+        const movie20Slides = document.querySelectorAll('.movie-slider__slide img[alt="Movie 20"]');
+        movie20Slides.forEach(slide => {
+            slide.parentElement.addEventListener('click', function() {
+                modal.style.display = 'flex';
+                setTimeout(() => modal.classList.add('show'), 10);
+            });
+        });
+
+        // Close modal when clicking close buttons
+        closeButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                modal.classList.remove('show');
+                setTimeout(() => modal.style.display = 'none', 300);
+            });
+        });
+
+        // Close modal when clicking outside
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                modal.classList.remove('show');
+                setTimeout(() => modal.style.display = 'none', 300);
+            }
+        });
+    });
     </script>
 </body>
 </html>

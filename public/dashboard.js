@@ -1,20 +1,20 @@
-// Firebase'i başlatmak için config dosyasını ve CDN'i eklediğinden emin olmalısın!
-// Bu dosya dashboard.html'de en altta çağrılmalı.
+// Firebase initialization requires config file and CDN!
+// This file should be called at the bottom of dashboard.html
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Kullanıcı login mi kontrol et
+    // Check if user is logged in
     firebase.auth().onAuthStateChanged(function(user) {
         if (user) {
-            // Kullanıcı adı varsa göster, yoksa email göster
+            // Show username if available, otherwise show email
             const name = user.displayName || user.email || 'User';
             document.getElementById('dashboard-username').textContent = name;
         } else {
-            // Login yoksa auth.html'e yönlendir
+            // Redirect to auth.html if not logged in
             window.location.href = 'auth.html?tab=login';
         }
     });
 
-    // Logout butonu
+    // Logout button
     const logoutBtn = document.querySelector('.logout-btn');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', function() {
@@ -518,9 +518,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const MAX_SEARCH_HISTORY = 10;
     let showAdultMovies = false;
 
-    // Başlıkta geçen kelimeler için ayrı liste (daha sıkı kontrol)
+    // Title-specific keywords (strict control)
     const titleFilteredKeywords = [
-        // Tek kelimeler
+        // Single words
         'rape', 'sex', 'orgasm', 'cum', 'porn', 'xxx', 'adult', 'erotic',
         'nude', 'naked', 'pornographic', 'explicit', 'mature', 'adult content',
         'carpenter\'s shop', 'fuck', 'cock', 'dick', 'pussy', 'ass', 'whore',
@@ -529,17 +529,20 @@ document.addEventListener('DOMContentLoaded', function() {
         'escort', 'stripper', 'striptease', 'lapdance', 'brothel', 'whorehouse',
         'bordello', 'sexuality', 'sexual', 'intercourse', 'coitus', 'copulation',
         'fornication', 'prostitution', 'pornography', 'obscenity', 'lewdness',
-        'indecency', 'vulgarity', 'crudeness', 'filth', 'smut', 'dirt',
-        // Çoklu kelimeler ve isimler (tam eşleşme için)
+        'indecency', 'vulgarity', 'crudeness', 'filth', 'smut', 'dirt', 'squirt',
+        // Multi-word phrases and names (exact match)
         'Ultimate DFC Slender',
-        'Mikako Abe'
+        "Moms's Friend",
+        'Mikako Abe',
+        'Leggings Mania'
     ];
 
-    // Genel içerik filtreleme için kelimeler (açıklamada da kontrol edilir)
+    // General content filtering keywords (checked in both title and overview)
     const contentFilteredKeywords = [
         'porn', 'xxx', 'adult', 'erotic', 'sex', 'nude', 'naked',
-        'pornographic', 'explicit', 'mature', 'adult content', 'rape', "Carpenter's Shop", 'Ultimate DFC Slender ',
-        // Buraya istediğiniz kelimeleri ekleyebilirsiniz
+        'pornographic', 'explicit', 'mature', 'adult content', 'rape', "Carpenter's Shop",
+        'Ultimate DFC Slender'
+        // Add more keywords here if needed
     ];
 
     // Firebase auth state listener
@@ -564,58 +567,58 @@ document.addEventListener('DOMContentLoaded', function() {
     const adultContentToggle = document.getElementById('adultContentToggle');
     adultContentToggle.addEventListener('change', function() {
         showAdultMovies = this.checked;
-        // Eğer arama kutusunda bir terim varsa, yeni filtreyle tekrar ara
+        // If there's a search term, search again with new filter
         const currentSearch = searchInput.value.trim();
         if (currentSearch) {
             searchMovies(currentSearch);
         }
     });
 
-    // Film filtreleme fonksiyonu
+    // Movie filtering function
     function filterMovies(movies) {
         return movies.filter(movie => {
             const title = movie.title.toLowerCase();
             const overview = (movie.overview || '').toLowerCase();
             
-            // Başlıkta geçen kelimeleri kontrol et (daha sıkı kontrol)
+            // Check title-specific keywords (strict control)
             const hasFilteredTitle = titleFilteredKeywords.some(keyword => {
                 const keywordLower = keyword.toLowerCase();
                 
-                // Çoklu kelime kontrolü (tam eşleşme)
+                // Multi-word check (exact match)
                 if (keyword.includes(' ')) {
-                    // Tam eşleşme için başlığın içinde bu kelime grubu var mı?
+                    // Check if the title contains this exact phrase
                     return title.includes(keywordLower);
                 }
                 
-                // Tek kelime kontrolü (kelime sınırlarında eşleşme)
+                // Single word check (word boundary match)
                 const regex = new RegExp(`\\b${keywordLower}\\b`, 'i');
                 return regex.test(title);
             });
 
-            // Eğer başlıkta filtrelenecek kelimelerden biri varsa, filmi gösterme
+            // Filter out if title contains filtered keywords
             if (hasFilteredTitle) {
                 console.log('Filtered movie:', movie.title, 'due to title match');
                 return false;
             }
 
-            // İçerikte geçen kelimeleri kontrol et
+            // Check content keywords
             const hasFilteredContent = contentFilteredKeywords.some(keyword => {
                 const keywordLower = keyword.toLowerCase();
-                // Çoklu kelime kontrolü
+                // Multi-word check
                 if (keyword.includes(' ')) {
                     return title.includes(keywordLower) || overview.includes(keywordLower);
                 }
-                // Tek kelime kontrolü
+                // Single word check
                 return title.includes(keywordLower) || overview.includes(keywordLower);
             });
 
-            // Eğer içerikte filtrelenecek kelimelerden biri varsa, filmi gösterme
+            // Filter out if content contains filtered keywords
             if (hasFilteredContent) {
                 console.log('Filtered movie:', movie.title, 'due to content match');
                 return false;
             }
 
-            // 18+ film kontrolü
+            // 18+ content check
             if (!showAdultMovies && movie.adult) {
                 console.log('Filtered movie:', movie.title, 'due to adult content');
                 return false;
@@ -659,7 +662,7 @@ document.addEventListener('DOMContentLoaded', function() {
             );
             const data = await response.json();
             
-            // Filtrelenmiş sonuçları al
+            // Get filtered results
             const filteredResults = filterMovies(data.results);
             
             // Update search count
