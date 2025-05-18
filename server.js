@@ -11,6 +11,7 @@ const { v4: uuidv4 } = require('uuid');
 const ytdl = require('ytdl-core');
 const axios = require('axios');
 const cheerio = require('cheerio');
+const puppeteer = require('puppeteer');
 require('dotenv').config();
 
 const app = express();
@@ -454,40 +455,69 @@ app.get('/api/movies', async (req, res) => {
   }
 });
 
-// TMDb ID ile stream linki çeken endpoint
+// TMDb ID (örneğin tt20969586) ile vidsrc.xyz embed sayfasından .m3u8 linkini çeken endpoint
 app.get('/api/stream/:tmdb_id', async (req, res) => {
+    let browser = null;
     try {
         const tmdbID = req.params.tmdb_id;
+        // vidsrc.xyz embed linki oluştur (örneğin tt20969586 için: https://vidsrc.xyz/embed/movie/tt20969586)
+        const embedUrl = `https://vidsrc.xyz/embed/movie/${tmdbID}`;
+        console.log("embedUrl:", embedUrl);
 
-        // 1. TMDb API'den film adını çek
-        const tmdbApiKey = process.env.TMDB_API_KEY; // .env'de olmalı!
-        const tmdbUrl = `https://api.themoviedb.org/3/movie/${tmdbID}?api_key=${tmdbApiKey}&language=en-US`;
-        const tmdbResp = await axios.get(tmdbUrl);
-        const title = tmdbResp.data.title;
+        // Puppeteer ile headless browser başlat
+        browser = await puppeteer.launch({ headless: "new" });
+        const page = await browser.newPage();
 
-        // 2. Sflix'te ara
-        const searchUrl = `https://sflix.to/search/${encodeURIComponent(title)}`;
-        const searchHtml = await axios.get(searchUrl).then(r => r.data);
-        const $ = cheerio.load(searchHtml);
-        const filmPage = $("a.film-poster").attr("href");
-        if (!filmPage) return res.status(404).json({error: "Film bulunamadı"});
+        // embed sayfasına git
+        await page.goto(embedUrl, { waitUntil: "networkidle0" });
+        console.log("embed sayfası yüklendi.");
 
-        // 3. Film sayfasına git
-        const embedPage = `https://sflix.to${filmPage}`;
-        const embedHtml = await axios.get(embedPage).then(r => r.data);
-
-        // 4. m3u8 linkini bul (örnek regex, gerekirse güncellenir)
-        const m3u8Match = embedHtml.match(/file:\"(https:[^\"]+\\.m3u8)\"/);
-        const streamSrc = m3u8Match ? m3u8Match[1] : null;
-
-        if (!streamSrc) return res.status(404).json({error: "Stream linki bulunamadı"});
-
-        res.json({
-            title,
-            streamSrc
+        // iframe'leri tespit et (örneğin cloudnestra.com veya multiembed.mov gibi video sağlayıcı iframe'i)
+        const iframeSrcs = await page.evaluate(() => {
+            const iframes = Array.from(document.querySelectorAll("iframe"));
+            return iframes.map(iframe => iframe.src).filter(src => src && (src.includes("cloudnestra.com") || src.includes("multiembed.mov")));
         });
+        if (iframeSrcs.length === 0) {
+            throw new Error("Video sağlayıcı iframe bulunamadı.");
+        }
+        console.log("Video sağlayıcı iframe src:", iframeSrcs[0]);
+
+        // Video sağlayıcı iframe'ini aç (yeni bir sayfa olarak)
+        const iframePage = await browser.newPage();
+        // iframe sayfasına git ve yüklenmesini bekle
+        await iframePage.goto(iframeSrcs[0], { waitUntil: "networkidle0" });
+        console.log("iframe sayfası yüklendi.");
+
+        // Network isteklerini dinle ve .m3u8 linkini yakala
+        let m3u8Link = null;
+        iframePage.on("response", (response) => {
+            const url = response.url();
+            if (url.includes(".m3u8")) {
+                m3u8Link = url;
+            }
+        });
+        // (iframe sayfası yüklendiğinde, video oynatıcı genellikle .m3u8 isteği gönderir, bu yüzden biraz bekleyelim)
+        await iframePage.waitForTimeout(5000);
+
+        if (!m3u8Link) {
+            throw new Error("iframe sayfasında .m3u8 linki bulunamadı.");
+        }
+        console.log("m3u8 linki bulundu:", m3u8Link);
+
+        // TMDb API'den film adını çek (opsiyonel, sadece bilgi amaçlı)
+        const tmdbApiKey = process.env.TMDB_API_KEY;
+        let title = "Unknown";
+        if (tmdbApiKey) {
+            const tmdbUrl = `https://api.themoviedb.org/3/movie/${tmdbID}?api_key=${tmdbApiKey}&language=en-US`;
+            const tmdbResp = await axios.get(tmdbUrl).catch(() => ({ data: { title: "Unknown" } }));
+            title = tmdbResp.data.title;
+        }
+
+        res.json({ title, streamSrc: m3u8Link });
     } catch (err) {
-        console.error(err);
-        res.status(500).json({error: "Bir hata oluştu", details: err.message});
+        console.error("Hata:", err);
+        res.status(500).json({ error: "Bir hata oluştu", details: err.message });
+    } finally {
+        if (browser) await browser.close();
     }
 });
