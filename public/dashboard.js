@@ -513,35 +513,27 @@ document.addEventListener('DOMContentLoaded', function() {
     const searchResultsGrid = document.getElementById('searchResultsGrid');
     const searchCount = document.getElementById('searchCount');
 
-    // Sample movie data (will be replaced with Firebase data in Part 2)
-    const sampleMovies = [
-        { id: 1, title: 'House', year: 2020, rating: 8.5, image: 'images/movie1.jpg' },
-        { id: 2, title: 'House of Cards', year: 2019, rating: 8.2, image: 'images/movie2.jpg' },
-        { id: 3, title: 'House of Gucci', year: 2021, rating: 7.8, image: 'images/movie3.jpg' },
-        { id: 4, title: 'House of the Dragon', year: 2022, rating: 8.7, image: 'images/movie4.jpg' },
-        { id: 5, title: 'House of Wax', year: 2005, rating: 7.1, image: 'images/movie5.jpg' },
-        // Add more sample movies as needed
-    ];
+    let searchTimeout;
 
-    // Search input event listener
+    // Search input event listener with debounce
     searchInput.addEventListener('input', function(e) {
         const searchTerm = e.target.value.toLowerCase().trim();
         
+        // Clear previous timeout
+        if (searchTimeout) {
+            clearTimeout(searchTimeout);
+        }
+        
         if (searchTerm.length > 0) {
-            // Show search results, hide main content
+            // Show loading state
             searchResults.style.display = 'block';
             mainContent.style.display = 'none';
+            searchResultsGrid.innerHTML = '<div class="search-loading">Searching...</div>';
             
-            // Filter movies based on search term
-            const filteredMovies = sampleMovies.filter(movie => 
-                movie.title.toLowerCase().includes(searchTerm)
-            );
-            
-            // Update search count
-            searchCount.textContent = filteredMovies.length;
-            
-            // Display filtered results
-            displaySearchResults(filteredMovies);
+            // Debounce search to avoid too many API calls
+            searchTimeout = setTimeout(() => {
+                searchMovies(searchTerm);
+            }, 300);
         } else {
             // Hide search results, show main content
             searchResults.style.display = 'none';
@@ -549,22 +541,52 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    // Function to search movies using TMDB API
+    async function searchMovies(query) {
+        try {
+            const response = await fetch(
+                `https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}&language=en-US&page=1&include_adult=false`
+            );
+            const data = await response.json();
+            
+            // Update search count
+            searchCount.textContent = data.total_results;
+            
+            // Display filtered results
+            displaySearchResults(data.results);
+        } catch (error) {
+            console.error('Error searching movies:', error);
+            searchResultsGrid.innerHTML = '<div class="search-error">Error loading movies. Please try again.</div>';
+        }
+    }
+
     // Function to display search results
     function displaySearchResults(movies) {
         searchResultsGrid.innerHTML = '';
         
+        if (movies.length === 0) {
+            searchResultsGrid.innerHTML = '<div class="search-no-results">No movies found</div>';
+            return;
+        }
+        
         movies.forEach(movie => {
             const movieCard = document.createElement('div');
             movieCard.className = 'search-film-card';
+            
+            // Get poster path with fallback
+            const posterPath = movie.poster_path 
+                ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+                : 'https://via.placeholder.com/500x750?text=No+Poster';
+            
             movieCard.innerHTML = `
-                <img src="${movie.image}" alt="${movie.title}">
+                <img src="${posterPath}" alt="${movie.title}" onerror="this.src='https://via.placeholder.com/500x750?text=No+Poster'">
                 <div class="search-film-info">
                     <h3 class="search-film-title">${movie.title}</h3>
                     <div class="search-film-meta">
-                        <span class="search-film-year">${movie.year}</span>
+                        <span class="search-film-year">${movie.release_date ? movie.release_date.split('-')[0] : 'N/A'}</span>
                         <span class="search-film-rating">
                             <i class="fas fa-star"></i>
-                            ${movie.rating}
+                            ${movie.vote_average ? movie.vote_average.toFixed(1) : 'N/A'}
                         </span>
                     </div>
                 </div>
@@ -572,8 +594,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Add click event to movie card
             movieCard.addEventListener('click', () => {
-                // Will be implemented in Part 2
-                console.log('Movie clicked:', movie.title);
+                window.location.href = `movie.html?id=${movie.id}`;
             });
             
             searchResultsGrid.appendChild(movieCard);

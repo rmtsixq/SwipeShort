@@ -813,6 +813,9 @@
     overflow: hidden;
     transition: transform 0.2s, box-shadow 0.2s;
     cursor: pointer;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
 }
 
 .search-film-card:hover {
@@ -822,12 +825,17 @@
 
 .search-film-card img {
     width: 100%;
-    height: 280px;
+    aspect-ratio: 2/3;
     object-fit: cover;
+    background: #1a1a1f;
 }
 
 .search-film-info {
     padding: 16px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
 }
 
 .search-film-title {
@@ -835,9 +843,12 @@
     font-size: 1.1rem;
     font-weight: 500;
     margin-bottom: 8px;
-    white-space: nowrap;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
     overflow: hidden;
     text-overflow: ellipsis;
+    line-height: 1.4;
 }
 
 .search-film-meta {
@@ -846,6 +857,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    margin-top: auto;
 }
 
 .search-film-year {
@@ -862,15 +874,37 @@
     color: #ffd700;
 }
 
+/* Loading and Error States */
+.search-loading,
+.search-error,
+.search-no-results {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 40px 20px;
+    color: #fff;
+    font-size: 1.1rem;
+    background: #2a2a35;
+    border-radius: 12px;
+    margin: 20px 0;
+}
+
+.search-loading {
+    color: #ff66c4;
+}
+
+.search-error {
+    color: #ff6666;
+}
+
+.search-no-results {
+    color: #ccc;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
     #searchResultsGrid {
         grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
         gap: 16px;
-    }
-
-    .search-film-card img {
-        height: 200px;
     }
 
     .search-film-info {
