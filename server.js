@@ -9,6 +9,8 @@ const util = require('util');
 const execPromise = util.promisify(exec);
 const { v4: uuidv4 } = require('uuid');
 const ytdl = require('ytdl-core');
+const axios = require('axios');
+const cheerio = require('cheerio');
 require('dotenv').config();
 
 const app = express();
@@ -449,5 +451,43 @@ app.get('/api/movies', async (req, res) => {
     res.json(data);
   } catch (e) {
     res.status(500).json({ error: 'Failed to fetch movies' });
+  }
+});
+
+// TMDb ID ile stream linki çeken endpoint
+app.get('/api/stream/:tmdb_id', async (req, res) => {
+    try {
+        const tmdbID = req.params.tmdb_id;
+
+        // 1. TMDb API'den film adını çek
+        const tmdbApiKey = process.env.TMDB_API_KEY; // .env'de olmalı!
+        const tmdbUrl = `https://api.themoviedb.org/3/movie/${tmdbID}?api_key=${tmdbApiKey}&language=en-US`;
+        const tmdbResp = await axios.get(tmdbUrl);
+        const title = tmdbResp.data.title;
+
+        // 2. Sflix'te ara
+        const searchUrl = `https://sflix.to/search/${encodeURIComponent(title)}`;
+        const searchHtml = await axios.get(searchUrl).then(r => r.data);
+        const $ = cheerio.load(searchHtml);
+        const filmPage = $("a.film-poster").attr("href");
+        if (!filmPage) return res.status(404).json({error: "Film bulunamadı"});
+
+        // 3. Film sayfasına git
+        const embedPage = `https://sflix.to${filmPage}`;
+        const embedHtml = await axios.get(embedPage).then(r => r.data);
+
+        // 4. m3u8 linkini bul (örnek regex, gerekirse güncellenir)
+        const m3u8Match = embedHtml.match(/file:\"(https:[^\"]+\\.m3u8)\"/);
+        const streamSrc = m3u8Match ? m3u8Match[1] : null;
+
+        if (!streamSrc) return res.status(404).json({error: "Stream linki bulunamadı"});
+
+        res.json({
+            title,
+            streamSrc
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({error: "Bir hata oluştu", details: err.message});
     }
 });

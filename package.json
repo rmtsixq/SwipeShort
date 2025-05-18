@@ -20,6 +20,8 @@
   "homepage": "https://github.com/rmtsixq/SwipeShort#readme",
   "dependencies": {
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "axios": "^1.9.0",
+    "cheerio": "^1.0.0",
     "dotenv": "^16.5.0",
     "express": "^4.18.2",
     "firebase": "^11.7.3",
