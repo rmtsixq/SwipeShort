@@ -70,6 +70,27 @@
             </aside>
         </main>
     </div>
+    <div id="majik-modal" class="majik-modal" style="display:none;">
+        <div class="majik-terminal">
+            <div id="majik-terminal-content" class="majik-terminal-content"></div>
+            <div id="majik-game-root" class="majik-game-root" style="display:none;"></div>
+        </div>
+    </div>
+    <div id="linux-modal" class="linux-modal" style="display:none;">
+        <div class="pccase">
+            <div class="screen oldscreeneffect">
+                <div class="terminal-bar">
+                    <span class="terminal-title">majik@neighborhood:~$</span>
+                    <button id="tip-btn" class="tip-btn">tip</button>
+                </div>
+                <div id="terminal-content" class="screentext"></div>
+                <form id="terminal-form" autocomplete="off">
+                    <span class="prompt">$</span>
+                    <input id="terminal-input" type="text" autofocus autocomplete="off" />
+                </form>
+            </div>
+        </div>
+    </div>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="scripts/firebase-config.js"></script>

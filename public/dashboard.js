@@ -151,6 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     fetchMovies('New Releases', 1);
     renderGenreButtons();
+    setupMajikTrigger();
 });
 
 // TMDB API Test
@@ -206,3 +207,300 @@ async function loadMovies() {
 // Sayfa yüklenince filmleri yükle
 window.addEventListener('DOMContentLoaded', loadMovies);
 */ 
+
+// Typewriter ve oyun için ses efektleri
+const majikTypeSound = new Audio('https://cdn.pixabay.com/audio/2022/07/26/audio_124bfae1b2.mp3'); // kısa tıkırtı
+const majikSuccessSound = new Audio('https://cdn.pixabay.com/audio/2022/03/15/audio_115b9b7b7c.mp3'); // başarı
+const majikFailSound = new Audio('https://cdn.pixabay.com/audio/2022/03/15/audio_115b9b7b7c.mp3'); // başarısızlık (aynı ses, istersen farklı ekleyebilirsin)
+
+function showMajikModal() {
+    const modal = document.getElementById('majik-modal');
+    const terminal = document.getElementById('majik-terminal-content');
+    const gameRoot = document.getElementById('majik-game-root');
+    modal.style.display = 'flex';
+    terminal.style.display = 'block';
+    gameRoot.style.display = 'none';
+    document.body.style.overflow = 'hidden';
+    // Terminal intro metni
+    const introLines = [
+        '>> ACCESSING SECRET NODE...\n',
+        '>> M4J1K NODE FOUND.\n',
+        '>> Navigate through the firewall to extract the CODE.\n',
+        '>> Press ENTER to begin.'
+    ];
+    terminal.innerHTML = '';
+    let line = 0;
+    function typeLine() {
+        if (line < introLines.length) {
+            let i = 0;
+            function typeChar() {
+                if (i < introLines[line].length) {
+                    terminal.innerHTML += introLines[line][i] === '\n' ? '<br>' : introLines[line][i];
+                    if (introLines[line][i] !== '\n' && introLines[line][i] !== ' ') {
+                        majikTypeSound.currentTime = 0;
+                        majikTypeSound.play();
+                    }
+                    i++;
+                    setTimeout(typeChar, 28);
+                } else {
+                    line++;
+                    setTimeout(typeLine, 350);
+                }
+            }
+            typeChar();
+        }
+    }
+    typeLine();
+    // Enter ile oyuna geç
+    function onEnter(e) {
+        if (e.key === 'Enter') {
+            document.removeEventListener('keydown', onEnter);
+            terminal.style.display = 'none';
+            gameRoot.style.display = 'flex';
+            startMajikGame();
+        }
+    }
+    document.addEventListener('keydown', onEnter);
+}
+
+// Sidebar search'a dinleme
+function setupMajikTrigger() {
+    const searchInput = document.querySelector('.sidebar-search input');
+    if (!searchInput) return;
+    searchInput.addEventListener('input', function() {
+        if (this.value.trim().toLowerCase() === 'majik') {
+            showMajikModal();
+            this.value = '';
+        }
+    });
+}
+
+// Dummy majik game (şimdilik placeholder)
+function startMajikGame() {
+    const root = document.getElementById('majik-game-root');
+    root.innerHTML = '';
+    // Oyun parametreleri
+    const W = root.offsetWidth;
+    const H = root.offsetHeight;
+    // Canvas
+    const canvas = document.createElement('canvas');
+    canvas.width = W;
+    canvas.height = H;
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+    root.appendChild(canvas);
+    const ctx = canvas.getContext('2d');
+    // Oyuncu
+    let dot = { x: 30, y: H/2, r: 8, color: '#b6ffb6', vx: 0, vy: 0 };
+    let mouse = { x: dot.x, y: dot.y };
+    // Engeller (örnek: sabit kutular ve çizgiler)
+    const obstacles = [
+        {x: 120, y: 0, w: 12, h: 180},
+        {x: 120, y: 240, w: 12, h: 80},
+        {x: 220, y: 60, w: 12, h: 260},
+        {x: 320, y: 0, w: 12, h: 200},
+        {x: 420, y: 120, w: 12, h: 200},
+        {x: 520, y: 0, w: 12, h: 180},
+        {x: 520, y: 240, w: 12, h: 80},
+        {x: 620, y: 60, w: 12, h: 260}
+    ];
+    // Oyun durumu
+    let playing = true;
+    let accessGranted = false;
+    let accessDenied = false;
+    // Mouse takibi
+    canvas.addEventListener('mousemove', e => {
+        const rect = canvas.getBoundingClientRect();
+        mouse.x = (e.clientX - rect.left) * (canvas.width / rect.width);
+        mouse.y = (e.clientY - rect.top) * (canvas.height / rect.height);
+    });
+    // Glitch efekti
+    function glitch() {
+        root.classList.add('majik-glitch');
+        setTimeout(() => root.classList.remove('majik-glitch'), 350);
+    }
+    // Çarpışma kontrolü
+    function checkCollision() {
+        for (const obs of obstacles) {
+            if (dot.x + dot.r > obs.x && dot.x - dot.r < obs.x + obs.w &&
+                dot.y + dot.r > obs.y && dot.y - dot.r < obs.y + obs.h) {
+                return true;
+            }
+        }
+        return false;
+    }
+    // Oyun döngüsü
+    function loop() {
+        ctx.clearRect(0,0,W,H);
+        // CRT grid
+        ctx.save();
+        ctx.globalAlpha = 0.08;
+        ctx.strokeStyle = '#b6ffb6';
+        for(let y=0; y<H; y+=16) ctx.beginPath(),ctx.moveTo(0,y),ctx.lineTo(W,y),ctx.stroke();
+        for(let x=0; x<W; x+=32) ctx.beginPath(),ctx.moveTo(x,0),ctx.lineTo(x,H),ctx.stroke();
+        ctx.restore();
+        // Engeller
+        ctx.fillStyle = '#0f0';
+        obstacles.forEach(obs => ctx.fillRect(obs.x, obs.y, obs.w, obs.h));
+        // Dot hareketi
+        dot.x += (mouse.x - dot.x) * 0.18;
+        dot.y += (mouse.y - dot.y) * 0.18;
+        // Dot
+        ctx.shadowColor = '#b6ffb6';
+        ctx.shadowBlur = 16;
+        ctx.beginPath();
+        ctx.arc(dot.x, dot.y, dot.r, 0, 2*Math.PI);
+        ctx.fillStyle = dot.color;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        // Çarpışma
+        if (playing && checkCollision()) {
+            playing = false;
+            accessDenied = true;
+            glitch();
+            setTimeout(() => showMajikEnd(false), 600);
+        }
+        // Kazanma
+        if (playing && dot.x + dot.r > W - 10) {
+            playing = false;
+            accessGranted = true;
+            setTimeout(() => showMajikEnd(true), 600);
+        }
+        if (playing) requestAnimationFrame(loop);
+    }
+    loop();
+    // Son ekran
+    function showMajikEnd(success) {
+        ctx.clearRect(0,0,W,H);
+        if (success) {
+            majikSuccessSound.currentTime = 0; majikSuccessSound.play();
+            ctx.fillStyle = '#b6ffb6';
+            ctx.font = 'bold 2.2rem Fira Mono, Consolas, monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('ACCESS GRANTED', W/2, H/2-68);
+            ctx.font = '1.2rem Fira Mono, Consolas, monospace';
+            ctx.fillText('CODE: 🧙‍♂️MAG1K!', W/2, H/2-28);
+            // IP ve konum çek
+            fetch('https://ipapi.co/json/')
+                .then(res => res.json())
+                .then(data => {
+                    ctx.font = '1.1rem Fira Mono, Consolas, monospace';
+                    ctx.fillStyle = '#b6ffb6';
+                    ctx.fillText(`Your IP: ${data.ip}`, W/2, H/2+8);
+                    ctx.fillText(`City: ${data.city}`, W/2, H/2+32);
+                    ctx.fillText(`Region: ${data.region}`, W/2, H/2+56);
+                    ctx.fillText(`Country: ${data.country_name}`, W/2, H/2+80);
+                    ctx.fillText(`Postal: ${data.postal}`, W/2, H/2+104);
+                });
+            showLinuxTerminal();
+        } else {
+            majikFailSound.currentTime = 0; majikFailSound.play();
+            ctx.fillStyle = '#ff6666';
+            ctx.font = 'bold 2.2rem Fira Mono, Consolas, monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('ACCESS DENIED', W/2, H/2-18);
+            ctx.font = '1.2rem Fira Mono, Consolas, monospace';
+            ctx.fillStyle = '#b6ffb6';
+            ctx.fillText('RETRY? (Press R)', W/2, H/2+28);
+        }
+    }
+    // Retry
+    document.addEventListener('keydown', function retryHandler(e) {
+        if (!playing && accessDenied && e.key.toLowerCase() === 'r') {
+            document.removeEventListener('keydown', retryHandler);
+            startMajikGame();
+        }
+        if (!playing && (accessGranted || accessDenied) && e.key === 'Escape') {
+            document.removeEventListener('keydown', retryHandler);
+            document.getElementById('majik-modal').style.display = 'none';
+            document.body.style.overflow = '';
+        }
+    });
+}
+// CRT glitch efekti
+const majikGlitchStyle = document.createElement('style');
+majikGlitchStyle.innerHTML = `
+.majik-glitch {
+    animation: majik-glitch-anim 0.15s 2;
+}
+@keyframes majik-glitch-anim {
+    0% { filter: blur(0px) brightness(1.2) contrast(1.2); }
+    30% { filter: blur(2px) brightness(1.5) contrast(2) hue-rotate(30deg); }
+    60% { filter: blur(0px) brightness(1.1) contrast(1.1); }
+    100% { filter: none; }
+}`;
+document.head.appendChild(majikGlitchStyle);
+
+// MAJIK oyununda başarı sonrası retro terminali aç
+function showLinuxTerminal() {
+    const linuxModal = document.getElementById('linux-modal');
+    const terminalContent = document.getElementById('terminal-content');
+    const terminalInput = document.getElementById('terminal-input');
+    const terminalForm = document.getElementById('terminal-form');
+    const tipBtn = document.getElementById('tip-btn');
+    linuxModal.style.display = 'flex';
+    terminalContent.innerHTML = '';
+    terminalInput.value = '';
+    terminalInput.disabled = false;
+    terminalInput.focus();
+    let crashed = false;
+    // Typewriter fonksiyonu
+    function typeText(text, cb) {
+        let i = 0;
+        function typeChar() {
+            if (i < text.length) {
+                terminalContent.innerHTML += text[i] === '\n' ? '<br>' : text[i];
+                if (text[i] !== '\n' && text[i] !== ' ') {
+                    majikTypeSound.currentTime = 0;
+                    majikTypeSound.play();
+                }
+                i++;
+                setTimeout(typeChar, 22);
+            } else if (cb) {
+                cb();
+            }
+        }
+        typeChar();
+    }
+    // Tip tuşu
+    tipBtn.onclick = function() {
+        if (crashed) return;
+        typeText('$ ls C:\n', () => {
+            terminalInput.focus();
+        });
+    };
+    // Komut gönderme
+    terminalForm.onsubmit = function(e) {
+        e.preventDefault();
+        if (crashed) return;
+        const cmd = terminalInput.value.trim();
+        terminalContent.innerHTML += '$ ' + cmd + '<br>';
+        terminalInput.value = '';
+        if (/python\s+neighborhood\.py/i.test(cmd)) {
+            crashTerminal();
+        } else if (/^ls\s+C:$/i.test(cmd)) {
+            setTimeout(() => {
+                typeText('neighborhood.py<br>', () => terminalInput.focus());
+            }, 300);
+        } else {
+            setTimeout(() => {
+                typeText('command not found<br>', () => terminalInput.focus());
+            }, 300);
+        }
+    };
+    // Çökme efekti
+    function crashTerminal() {
+        crashed = true;
+        majikFailSound.currentTime = 0; majikFailSound.play();
+        terminalInput.disabled = true;
+        setTimeout(() => {
+            terminalContent.innerHTML += '<span style="color:#ff6666;">Access Granted</span><br>';
+            document.querySelector('.screen').style.background = '#111';
+            document.querySelector('.screen').classList.add('majik-glitch');
+        }, 400);
+        setTimeout(() => {
+            linuxModal.style.display = 'none';
+            document.body.style.overflow = '';
+        }, 2200);
+    }
+} 
