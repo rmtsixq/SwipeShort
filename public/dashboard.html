@@ -62,24 +62,39 @@
                 </div>
             </section>
             <aside class="filter-panel">
-                <h3>Filter</h3>
+                <h3>Filter Movies</h3>
                 <div class="filter-group">
-                    <label>Genre</label>
-                    <select disabled><option>All</option></select>
+                    <label for="genre">Genre</label>
+                    <select name="genre" id="genre">
+                        <option value="">All Genres</option>
+                        <!-- Genres will be populated by JavaScript -->
+                    </select>
                 </div>
                 <div class="filter-group">
-                    <label>Year</label>
-                    <select disabled><option>All</option></select>
+                    <label for="year">Release Year</label>
+                    <select name="year" id="year">
+                        <option value="">All Years</option>
+                        <!-- Generate years from current year to 1950 -->
+                        <script>
+                            const currentYear = new Date().getFullYear();
+                            for(let year = currentYear; year >= 1950; year--) {
+                                document.write(`<option value="${year}">${year}</option>`);
+                            }
+                        </script>
+                    </select>
                 </div>
                 <div class="filter-group">
-                    <label>Language</label>
-                    <select disabled><option>All</option></select>
+                    <label for="rating">Minimum Rating</label>
+                    <select name="rating" id="rating">
+                        <option value="">Any Rating</option>
+                        <option value="9">9+ Stars</option>
+                        <option value="8">8+ Stars</option>
+                        <option value="7">7+ Stars</option>
+                        <option value="6">6+ Stars</option>
+                        <option value="5">5+ Stars</option>
+                    </select>
                 </div>
-                <button class="filter-btn" disabled>Apply</button>
-                <div class="genre-filter-section">
-                    <h4 class="genre-filter-title">By Genre</h4>
-                    <div id="genre-buttons" class="genre-buttons"></div>
-                </div>
+                <button class="filter-btn">Apply Filters</button>
             </aside>
         </main>
     </div>

@@ -30,55 +30,249 @@ const TMDB_API_KEY = 'fda9bed2dd52a349ecb7cfe38b050ca5';
 const FILMS_PER_PAGE = 20;
 let allMovies = [];
 let currentPage = 1;
-let currentTab = 'popular';
+let currentTab = 'New Releases'; // Default tab
 
 const tabEndpoints = {
-    'New Releases': { endpoint: 'now_playing', minVote: 0 },
-    'Recommended': { endpoint: 'popular', minVote: 0 },
-    'IMDB 7+ Films': { endpoint: 'top_rated', minVote: 7 },
-    'Most Commented': { endpoint: 'popular', minVote: 0, sort: 'vote_count.desc' },
-    'Most Liked': { endpoint: 'popular', minVote: 0, sort: 'vote_average.desc' }
+    'New Releases': { endpoint: 'discover', sort: 'release_date.desc', minVote: 0 },
+    'Recommended': { endpoint: 'discover', sort: 'popularity.desc', minVote: 0 },
+    'IMDB 7+ Films': { endpoint: 'discover', sort: 'vote_average.desc', minVote: 7 },
+    'Most Commented': { endpoint: 'discover', sort: 'vote_count.desc', minVote: 0 },
+    'Most Liked': { endpoint: 'discover', sort: 'vote_average.desc', minVote: 0 }
 };
 
+// Filter state
+let activeFilters = {
+    genre: null,
+    year: null,
+    rating: null
+};
+
+// Update filter button state
+function updateFilterButton() {
+    const filterBtn = document.querySelector('.filter-btn');
+    if (!filterBtn) return;
+    
+    const hasActiveFilters = Object.values(activeFilters).some(value => value !== null);
+    filterBtn.disabled = !hasActiveFilters;
+    filterBtn.style.cursor = hasActiveFilters ? 'pointer' : 'not-allowed';
+    filterBtn.style.opacity = hasActiveFilters ? '1' : '0.7';
+}
+
+// Apply filters to movies
+function applyFilters(movies) {
+    if (!movies || movies.length === 0) {
+        console.log('No movies to filter');
+        return [];
+    }
+    
+    console.log('Applying filters to', movies.length, 'movies');
+    console.log('Active filters:', activeFilters);
+
+    const filteredMovies = movies.filter(movie => {
+        // Genre filter
+        if (activeFilters.genre) {
+            console.log('Checking genre for movie:', movie.title, 'Genre IDs:', movie.genre_ids);
+            if (!movie.genre_ids || !Array.isArray(movie.genre_ids)) {
+                console.log('No genre_ids for movie:', movie.title);
+                return false;
+            }
+            // Check if movie has the selected genre
+            const hasGenre = movie.genre_ids.includes(activeFilters.genre);
+            console.log(`Movie ${movie.title} ${hasGenre ? 'has' : 'does not have'} genre ${activeFilters.genre}`);
+            if (!hasGenre) return false;
+        }
+
+        // Year filter
+        if (activeFilters.year && movie.release_date) {
+            const movieYear = movie.release_date.split('-')[0];
+            const currentYear = new Date().getFullYear();
+            // Only filter if the year is valid (not in future)
+            if (parseInt(activeFilters.year) <= currentYear) {
+                if (movieYear !== activeFilters.year) {
+                    console.log('Movie', movie.title, 'does not match year filter');
+                    return false;
+                }
+            } else {
+                console.log('Invalid year filter:', activeFilters.year);
+                return false;
+            }
+        }
+
+        // Rating filter
+        if (activeFilters.rating && movie.vote_average) {
+            // Only apply rating filter if movie has enough votes
+            if (movie.vote_count > 10) { // Minimum 10 votes required
+                if (movie.vote_average < activeFilters.rating) {
+                    console.log('Movie', movie.title, 'does not match rating filter');
+                    return false;
+                }
+            } else {
+                console.log('Movie', movie.title, 'has too few votes');
+                return false;
+            }
+        }
+
+        return true;
+    });
+
+    console.log('Filtered movies count:', filteredMovies.length);
+    return filteredMovies;
+}
+
+// Initialize filter panel
+function initializeFilterPanel() {
+    const filterBtn = document.querySelector('.filter-btn');
+    const genreSelect = document.querySelector('select[name="genre"]');
+    const yearSelect = document.querySelector('select[name="year"]');
+    const ratingSelect = document.querySelector('select[name="rating"]');
+
+    if (!filterBtn || !genreSelect || !yearSelect || !ratingSelect) return;
+
+    // Update year options to only show past and current year
+    const currentYear = new Date().getFullYear();
+    yearSelect.innerHTML = '<option value="">All Years</option>';
+    for(let year = currentYear; year >= 1950; year--) {
+        const option = document.createElement('option');
+        option.value = year;
+        option.textContent = year;
+        yearSelect.appendChild(option);
+    }
+
+    // Genre select event
+    genreSelect.addEventListener('change', function() {
+        const genreId = this.value ? parseInt(this.value) : null;
+        console.log('Genre selected:', genreId);
+        activeFilters.genre = genreId;
+        updateFilterButton();
+    });
+
+    // Year select event
+    yearSelect.addEventListener('change', function() {
+        const year = this.value || null;
+        console.log('Year selected:', year);
+        // Validate year is not in the future
+        if (year && parseInt(year) > currentYear) {
+            console.log('Invalid year selected:', year);
+            this.value = '';
+            activeFilters.year = null;
+        } else {
+            activeFilters.year = year;
+        }
+        updateFilterButton();
+    });
+
+    // Rating select event
+    ratingSelect.addEventListener('change', function() {
+        const rating = this.value ? parseFloat(this.value) : null;
+        console.log('Rating selected:', rating);
+        activeFilters.rating = rating;
+        updateFilterButton();
+    });
+
+    // Filter button click event
+    filterBtn.addEventListener('click', function() {
+        if (this.disabled) return;
+        
+        console.log('Applying filters...');
+        // Reset to page 1 and fetch movies with filters
+        currentPage = 1;
+        fetchMovies(currentTab, 1);
+    });
+}
+
 async function fetchMovies(tabName = 'New Releases', page = 1) {
-    const tab = tabEndpoints[tabName];
-    let url = `https://api.themoviedb.org/3/movie/${tab.endpoint}?api_key=${TMDB_API_KEY}&page=${page}`;
-    if (tab.sort) {
-        url = `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_API_KEY}&sort_by=${tab.sort}&page=${page}`;
+    try {
+        const tab = tabEndpoints[tabName];
+        if (!tab) {
+            console.error('Invalid tab name:', tabName);
+            return;
+        }
+
+        // Build discover URL with proper parameters
+        let url = `https://api.themoviedb.org/3/${tab.endpoint}/movie?api_key=${TMDB_API_KEY}&language=en-US&page=${page}&sort_by=${tab.sort}`;
+        
+        // Add vote count filter to ensure ratings are meaningful
+        url += '&vote_count.gte=10';
+        
+        // Add release date filter for New Releases
+        if (tabName === 'New Releases') {
+            const currentDate = new Date().toISOString().split('T')[0];
+            const oneYearAgo = new Date();
+            oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+            const oneYearAgoStr = oneYearAgo.toISOString().split('T')[0];
+            url += `&primary_release_date.gte=${oneYearAgoStr}&primary_release_date.lte=${currentDate}`;
+        }
+
+        // Add genre filter if active
+        if (activeFilters.genre) {
+            url += `&with_genres=${activeFilters.genre}`;
+        }
+
+        // Add year filter if active
+        if (activeFilters.year) {
+            const yearStart = `${activeFilters.year}-01-01`;
+            const yearEnd = `${activeFilters.year}-12-31`;
+            url += `&primary_release_date.gte=${yearStart}&primary_release_date.lte=${yearEnd}`;
+        }
+
+        // Add rating filter if active
+        if (activeFilters.rating) {
+            url += `&vote_average.gte=${activeFilters.rating}`;
+        }
+
+        console.log('Fetching movies with URL:', url);
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (!res.ok) {
+            throw new Error(`API error: ${data.status_message || 'Unknown error'}`);
+        }
+
+        let movies = data.results;
+        console.log('Fetched movies sample:', movies[0]);
+
+        // Store original movies
+        allMovies = movies;
+        currentPage = page;
+        currentTab = tabName;
+
+        // No need to apply filters here as they're already applied in the API call
+        renderGrid(movies);
+        renderPagination(data.total_pages);
+    } catch (error) {
+        console.error('Error fetching movies:', error);
+        const grid = document.getElementById('film-grid');
+        grid.innerHTML = `<div class="error-message">Error loading movies: ${error.message}</div>`;
     }
-    const res = await fetch(url);
-    const data = await res.json();
-    let movies = data.results;
-    if (tab.minVote > 0) {
-        movies = movies.filter(m => m.vote_average >= tab.minVote);
-    }
-    allMovies = movies;
-    renderGrid();
-    renderPagination(data.total_pages);
 }
 
 // Grid render
-function renderGrid() {
+function renderGrid(movies = allMovies) {
     const grid = document.getElementById('film-grid');
+    if (!grid) return;
+
     grid.innerHTML = '';
-    const start = 0;
-    const end = FILMS_PER_PAGE;
-    const movies = allMovies.slice(start, end);
+    
+    if (!movies || movies.length === 0) {
+        grid.innerHTML = '<div class="no-movies">No movies found matching your filters</div>';
+        return;
+    }
+
     movies.forEach(movie => {
         const card = document.createElement('div');
         card.className = 'film-thumb-card';
         card.innerHTML = `
             <div class="film-thumb-img-wrap">
-                <img src="https://image.tmdb.org/t/p/w500${movie.poster_path}" alt="${movie.title}" class="film-thumb-img" />
+                <img src="https://image.tmdb.org/t/p/w500${movie.poster_path}" alt="${movie.title}" class="film-thumb-img" onerror="this.src='https://via.placeholder.com/500x750?text=No+Poster'" />
                 <div class="film-thumb-overlay">
                     <div class="film-thumb-meta">
                         <span>${movie.release_date ? movie.release_date.split('-')[0] : ''}</span>
-                        <span><i class='fas fa-comment'></i> 0</span>
+                        <span><i class='fas fa-comment'></i> ${movie.vote_count || 0}</span>
                         <span><i class='fas fa-star'></i> ${movie.vote_average ? movie.vote_average.toFixed(1) : '-'}</span>
                     </div>
                     <div class="film-thumb-title">${movie.title}</div>
                     <div class="film-thumb-extra">
-                        <span class="film-thumb-label">Dubbed & Subtitled</span>
+                        <span class="film-thumb-label">${movie.original_language === 'en' ? 'English' : 'Dubbed'}</span>
                     </div>
                 </div>
             </div>
@@ -91,64 +285,136 @@ function renderGrid() {
 }
 
 // Pagination render
-function renderPagination(totalPages = 5) {
+function renderPagination(totalPages = 1) {
     const pagination = document.getElementById('pagination');
+    if (!pagination) return;
+
     pagination.innerHTML = '';
-    const createBtn = (label, page, active = false, disabled = false) => {
-        const btn = document.createElement('button');
-        btn.textContent = label;
-        if (active) btn.classList.add('active');
-        if (disabled) btn.disabled = true;
-        btn.onclick = () => {
-            currentPage = page;
-            fetchMovies(currentTab, currentPage);
-        };
-        return btn;
+
+    // Helper function to create pagination buttons
+    const createButton = (label, page, isActive = false, isDisabled = false) => {
+        const button = document.createElement('button');
+        button.textContent = label;
+        if (isActive) button.classList.add('active');
+        if (isDisabled) button.disabled = true;
+        
+        if (!isDisabled) {
+            button.onclick = () => {
+                if (page !== currentPage) {
+                    fetchMovies(currentTab, page);
+                }
+            };
+        }
+        
+        return button;
     };
-    pagination.appendChild(createBtn('Previous', Math.max(1, currentPage - 1), false, currentPage === 1));
-    for (let i = 1; i <= totalPages; i++) {
-        if (i === 1 || i === totalPages || Math.abs(i - currentPage) <= 2) {
-            pagination.appendChild(createBtn(i, i, i === currentPage));
-        } else if (i === currentPage - 3 || i === currentPage + 3) {
+
+    // Previous button
+    pagination.appendChild(
+        createButton('Previous', currentPage - 1, false, currentPage === 1)
+    );
+
+    // First page
+    if (currentPage > 2) {
+        pagination.appendChild(createButton('1', 1));
+        if (currentPage > 3) {
             const dots = document.createElement('span');
             dots.textContent = '...';
+            dots.className = 'pagination-dots';
             pagination.appendChild(dots);
         }
     }
-    pagination.appendChild(createBtn('Next', Math.min(totalPages, currentPage + 1), false, currentPage === totalPages));
-    pagination.appendChild(createBtn('Last', totalPages, false, currentPage === totalPages));
+
+    // Page numbers around current page
+    for (let i = Math.max(1, currentPage - 1); i <= Math.min(totalPages, currentPage + 1); i++) {
+        pagination.appendChild(createButton(i.toString(), i, i === currentPage));
+    }
+
+    // Last page
+    if (currentPage < totalPages - 1) {
+        if (currentPage < totalPages - 2) {
+            const dots = document.createElement('span');
+            dots.textContent = '...';
+            dots.className = 'pagination-dots';
+            pagination.appendChild(dots);
+        }
+        pagination.appendChild(createButton(totalPages.toString(), totalPages));
+    }
+
+    // Next button
+    pagination.appendChild(
+        createButton('Next', currentPage + 1, false, currentPage === totalPages)
+    );
 }
 
+// Update renderGenreButtons function to handle genre selection
 async function renderGenreButtons() {
-    const res = await fetch(`https://api.themoviedb.org/3/genre/movie/list?api_key=${TMDB_API_KEY}&language=en`);
-    const data = await res.json();
-    const genres = data.genres;
-    const container = document.getElementById('genre-buttons');
-    container.innerHTML = '';
-    genres.forEach(genre => {
-        const btn = document.createElement('button');
-        btn.className = 'genre-btn';
-        btn.textContent = genre.name;
-        btn.onclick = function() {
-            document.querySelectorAll('.genre-btn').forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-            // Şimdilik sadece görsel olarak aktif, filtreleme yok
-        };
-        container.appendChild(btn);
-    });
+    try {
+        const res = await fetch(`https://api.themoviedb.org/3/genre/movie/list?api_key=${TMDB_API_KEY}&language=en`);
+        const data = await res.json();
+        const genres = data.genres;
+        console.log('Available genres:', genres); // Debug log
+        
+        // Update genre select options
+        const genreSelect = document.querySelector('select[name="genre"]');
+        if (genreSelect) {
+            genreSelect.innerHTML = '<option value="">All Genres</option>';
+            genres.forEach(genre => {
+                const option = document.createElement('option');
+                option.value = genre.id;
+                option.textContent = genre.name;
+                genreSelect.appendChild(option);
+            });
+        }
+
+        // Update genre buttons
+        const container = document.getElementById('genre-buttons');
+        if (container) {
+            container.innerHTML = '';
+            genres.forEach(genre => {
+                const btn = document.createElement('button');
+                btn.className = 'genre-btn';
+                btn.textContent = genre.name;
+                btn.onclick = function() {
+                    document.querySelectorAll('.genre-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Update genre filter
+                    activeFilters.genre = genre.id;
+                    console.log('Genre button clicked:', genre.id, genre.name); // Debug log
+                    updateFilterButton();
+                    
+                    // Apply filter immediately
+                    const filteredMovies = applyFilters(allMovies);
+                    renderGrid(filteredMovies);
+                    renderPagination(Math.ceil(filteredMovies.length / FILMS_PER_PAGE));
+                };
+                container.appendChild(btn);
+            });
+        }
+    } catch (error) {
+        console.error('Error loading genres:', error);
+    }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
     // Tab click events
     document.querySelectorAll('.film-tab').forEach(tab => {
         tab.addEventListener('click', function() {
+            const tabName = this.textContent.trim();
             document.querySelectorAll('.film-tab').forEach(t => t.classList.remove('active'));
             this.classList.add('active');
-            currentTab = this.textContent.trim();
+            
+            // Reset to page 1 when changing tabs
             currentPage = 1;
-            fetchMovies(currentTab, currentPage);
+            fetchMovies(tabName, 1);
         });
     });
+
+    // Initialize filter panel
+    initializeFilterPanel();
+    
+    // Initial load
     fetchMovies('New Releases', 1);
     renderGenreButtons();
     setupMajikTrigger();

@@ -413,46 +413,81 @@
     margin-top: 32px;
     box-shadow: 0 2px 16px #0002;
     height: fit-content;
+    position: sticky;
+    top: 32px;
 }
 
 .filter-panel h3 {
     font-size: 1.2rem;
     font-weight: 600;
-    margin-bottom: 18px;
+    margin-bottom: 24px;
+    color: #ff66c4;
+    text-align: center;
 }
 
 .filter-group {
-    margin-bottom: 18px;
+    margin-bottom: 20px;
 }
 
 .filter-group label {
     display: block;
-    font-size: 1rem;
-    margin-bottom: 6px;
+    font-size: 0.95rem;
+    margin-bottom: 8px;
     color: #bbb;
+    font-weight: 500;
 }
 
 .filter-group select {
     width: 100%;
-    padding: 7px 10px;
-    border-radius: 6px;
-    border: none;
-    background: #292938;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: #2a2a35;
     color: #fff;
-    font-size: 1rem;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 32px;
+}
+
+.filter-group select:hover {
+    border-color: rgba(255, 102, 196, 0.3);
+}
+
+.filter-group select:focus {
+    outline: none;
+    border-color: #ff66c4;
+    box-shadow: 0 0 0 2px rgba(255, 102, 196, 0.2);
 }
 
 .filter-btn {
     width: 100%;
-    padding: 10px 0;
+    padding: 12px 0;
     border-radius: 8px;
     border: none;
     background: #ff66c4;
     color: #fff;
     font-weight: 600;
     font-size: 1rem;
-    cursor: not-allowed;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 8px;
+}
+
+.filter-btn:hover:not(:disabled) {
+    background: #ff4db8;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 102, 196, 0.3);
+}
+
+.filter-btn:disabled {
     opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
 }
 
 .film-tabs {
@@ -492,7 +527,9 @@
     justify-content: center;
     align-items: center;
     gap: 8px;
-    margin-bottom: 24px;
+    margin: 24px 0;
+    flex-wrap: wrap;
+    padding: 0 16px;
 }
 
 .pagination button {
@@ -500,16 +537,89 @@
     color: #fff;
     border: none;
     border-radius: 6px;
-    padding: 7px 16px;
-    font-size: 1rem;
+    padding: 8px 16px;
+    font-size: 0.95rem;
     font-weight: 500;
     cursor: pointer;
-    transition: background 0.18s, color 0.18s;
+    transition: all 0.2s ease;
+    min-width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.pagination button.active, .pagination button:hover {
+.pagination button:hover:not(:disabled) {
+    background: #ff66c4;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 102, 196, 0.2);
+}
+
+.pagination button.active {
     background: #ff66c4;
     color: #fff;
+    font-weight: 600;
+}
+
+.pagination button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.pagination-dots {
+    color: #fff;
+    padding: 0 8px;
+    font-size: 1.1rem;
+    user-select: none;
+}
+
+/* Error and no movies states */
+.error-message,
+.no-movies {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 40px 20px;
+    background: #23232b;
+    border-radius: 12px;
+    color: #fff;
+    font-size: 1.1rem;
+}
+
+.error-message {
+    color: #ff6666;
+}
+
+.no-movies {
+    color: #ccc;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .pagination {
+        gap: 6px;
+        padding: 0 8px;
+    }
+
+    .pagination button {
+        padding: 6px 12px;
+        font-size: 0.9rem;
+        min-width: 36px;
+        height: 36px;
+    }
+}
+
+@media (max-width: 480px) {
+    .pagination button {
+        padding: 4px 8px;
+        font-size: 0.85rem;
+        min-width: 32px;
+        height: 32px;
+    }
+
+    .pagination-dots {
+        padding: 0 4px;
+    }
 }
 
 @media (max-width: 1200px) {
