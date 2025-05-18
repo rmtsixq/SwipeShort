@@ -50,12 +50,31 @@
                 </div>
                 <!-- Original Content -->
                 <div id="mainContent" class="main-content-wrapper">
+                    <div class="content-type-selector">
+                        <button class="content-type-btn active" data-type="movie">Movies</button>
+                        <button class="content-type-btn" data-type="tv">TV Shows</button>
+                    </div>
                     <div class="film-tabs">
-                        <button class="film-tab active">New Releases</button>
-                        <button class="film-tab">Recommended</button>
-                        <button class="film-tab">IMDB 7+ Films</button>
-                        <button class="film-tab">Most Commented</button>
-                        <button class="film-tab">Most Liked</button>
+                        <!-- Movie Tabs -->
+                        <div class="film-tabs-header" data-type="movie">
+                            <div class="film-tabs-buttons">
+                                <button class="film-tab active" data-type="movie">New Releases</button>
+                                <button class="film-tab" data-type="movie">Recommended</button>
+                                <button class="film-tab" data-type="movie">IMDB 7+ Films</button>
+                                <button class="film-tab" data-type="movie">Most Commented</button>
+                                <button class="film-tab" data-type="movie">Most Liked</button>
+                            </div>
+                        </div>
+                        <!-- TV Show Tabs -->
+                        <div class="film-tabs-header" data-type="tv" style="display: none;">
+                            <div class="film-tabs-buttons">
+                                <button class="film-tab" data-type="tv">New Episodes</button>
+                                <button class="film-tab" data-type="tv">Popular Shows</button>
+                                <button class="film-tab" data-type="tv">Top Rated</button>
+                                <button class="film-tab" data-type="tv">Trending</button>
+                                <button class="film-tab" data-type="tv">On The Air</button>
+                            </div>
+                        </div>
                     </div>
                     <div id="film-grid" class="film-grid-new"></div>
                     <div id="pagination" class="pagination"></div>

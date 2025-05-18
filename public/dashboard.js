@@ -31,13 +31,22 @@ const FILMS_PER_PAGE = 20;
 let allMovies = [];
 let currentPage = 1;
 let currentTab = 'New Releases'; // Default tab
+let currentType = 'movie'; // Track current content type (movie or tv)
 
 const tabEndpoints = {
-    'New Releases': { endpoint: 'discover', sort: 'release_date.desc', minVote: 0 },
-    'Recommended': { endpoint: 'discover', sort: 'popularity.desc', minVote: 0 },
-    'IMDB 7+ Films': { endpoint: 'discover', sort: 'vote_average.desc', minVote: 7 },
-    'Most Commented': { endpoint: 'discover', sort: 'vote_count.desc', minVote: 0 },
-    'Most Liked': { endpoint: 'discover', sort: 'vote_average.desc', minVote: 0 }
+    // Movie tabs
+    'New Releases': { type: 'movie', endpoint: 'discover', sort: 'release_date.desc', minVote: 0 },
+    'Recommended': { type: 'movie', endpoint: 'discover', sort: 'popularity.desc', minVote: 0 },
+    'IMDB 7+ Films': { type: 'movie', endpoint: 'discover', sort: 'vote_average.desc', minVote: 7 },
+    'Most Commented': { type: 'movie', endpoint: 'discover', sort: 'vote_count.desc', minVote: 0 },
+    'Most Liked': { type: 'movie', endpoint: 'discover', sort: 'vote_average.desc', minVote: 0 },
+    
+    // TV Show tabs
+    'New Episodes': { type: 'tv', endpoint: 'discover', sort: 'first_air_date.desc', minVote: 0 },
+    'Popular Shows': { type: 'tv', endpoint: 'discover', sort: 'popularity.desc', minVote: 0 },
+    'Top Rated': { type: 'tv', endpoint: 'discover', sort: 'vote_average.desc', minVote: 0 },
+    'Trending': { type: 'tv', endpoint: 'trending', timeWindow: 'week', minVote: 0 },
+    'On The Air': { type: 'tv', endpoint: 'on_the_air', minVote: 0 }
 };
 
 // Filter state
@@ -176,11 +185,11 @@ function initializeFilterPanel() {
         console.log('Applying filters...');
         // Reset to page 1 and fetch movies with filters
         currentPage = 1;
-        fetchMovies(currentTab, 1);
+        fetchContent(currentTab, 1);
     });
 }
 
-async function fetchMovies(tabName = 'New Releases', page = 1) {
+async function fetchContent(tabName = 'New Releases', page = 1) {
     try {
         const tab = tabEndpoints[tabName];
         if (!tab) {
@@ -188,39 +197,61 @@ async function fetchMovies(tabName = 'New Releases', page = 1) {
             return;
         }
 
-        // Build discover URL with proper parameters
-        let url = `https://api.themoviedb.org/3/${tab.endpoint}/movie?api_key=${TMDB_API_KEY}&language=en-US&page=${page}&sort_by=${tab.sort}`;
-        
-        // Add vote count filter to ensure ratings are meaningful
-        url += '&vote_count.gte=10';
-        
-        // Add release date filter for New Releases
-        if (tabName === 'New Releases') {
-            const currentDate = new Date().toISOString().split('T')[0];
-            const oneYearAgo = new Date();
-            oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-            const oneYearAgoStr = oneYearAgo.toISOString().split('T')[0];
-            url += `&primary_release_date.gte=${oneYearAgoStr}&primary_release_date.lte=${currentDate}`;
+        currentType = tab.type;
+        let url;
+
+        if (tab.endpoint === 'trending') {
+            url = `https://api.themoviedb.org/3/trending/${tab.type}/${tab.timeWindow}?api_key=${TMDB_API_KEY}&language=en-US&page=${page}`;
+        } else if (tab.endpoint === 'on_the_air') {
+            url = `https://api.themoviedb.org/3/tv/${tab.endpoint}?api_key=${TMDB_API_KEY}&language=en-US&page=${page}`;
+        } else {
+            // Build discover URL with proper parameters
+            url = `https://api.themoviedb.org/3/${tab.endpoint}/${tab.type}?api_key=${TMDB_API_KEY}&language=en-US&page=${page}&sort_by=${tab.sort}`;
+            
+            // Add vote count filter
+            url += '&vote_count.gte=10';
+            
+            // Add air date filter for TV shows
+            if (tab.type === 'tv' && tabName === 'New Episodes') {
+                const currentDate = new Date().toISOString().split('T')[0];
+                const oneYearAgo = new Date();
+                oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+                const oneYearAgoStr = oneYearAgo.toISOString().split('T')[0];
+                url += `&first_air_date.gte=${oneYearAgoStr}&first_air_date.lte=${currentDate}`;
+            }
+            
+            // Add release date filter for movies
+            if (tab.type === 'movie' && tabName === 'New Releases') {
+                const currentDate = new Date().toISOString().split('T')[0];
+                const oneYearAgo = new Date();
+                oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+                const oneYearAgoStr = oneYearAgo.toISOString().split('T')[0];
+                url += `&primary_release_date.gte=${oneYearAgoStr}&primary_release_date.lte=${currentDate}`;
+            }
+
+            // Add genre filter if active
+            if (activeFilters.genre) {
+                url += `&with_genres=${activeFilters.genre}`;
+            }
+
+            // Add year filter if active
+            if (activeFilters.year) {
+                const yearStart = `${activeFilters.year}-01-01`;
+                const yearEnd = `${activeFilters.year}-12-31`;
+                if (tab.type === 'movie') {
+                    url += `&primary_release_date.gte=${yearStart}&primary_release_date.lte=${yearEnd}`;
+                } else {
+                    url += `&first_air_date.gte=${yearStart}&first_air_date.lte=${yearEnd}`;
+                }
+            }
+
+            // Add rating filter if active
+            if (activeFilters.rating) {
+                url += `&vote_average.gte=${activeFilters.rating}`;
+            }
         }
 
-        // Add genre filter if active
-        if (activeFilters.genre) {
-            url += `&with_genres=${activeFilters.genre}`;
-        }
-
-        // Add year filter if active
-        if (activeFilters.year) {
-            const yearStart = `${activeFilters.year}-01-01`;
-            const yearEnd = `${activeFilters.year}-12-31`;
-            url += `&primary_release_date.gte=${yearStart}&primary_release_date.lte=${yearEnd}`;
-        }
-
-        // Add rating filter if active
-        if (activeFilters.rating) {
-            url += `&vote_average.gte=${activeFilters.rating}`;
-        }
-
-        console.log('Fetching movies with URL:', url);
+        console.log('Fetching content with URL:', url);
         const res = await fetch(url);
         const data = await res.json();
 
@@ -228,58 +259,66 @@ async function fetchMovies(tabName = 'New Releases', page = 1) {
             throw new Error(`API error: ${data.status_message || 'Unknown error'}`);
         }
 
-        let movies = data.results;
-        console.log('Fetched movies sample:', movies[0]);
+        let items = data.results;
+        console.log('Fetched content sample:', items[0]);
 
-        // Store original movies
-        allMovies = movies;
+        // Store original items
+        allMovies = items;
         currentPage = page;
         currentTab = tabName;
 
-        // No need to apply filters here as they're already applied in the API call
-        renderGrid(movies);
+        renderGrid(items);
         renderPagination(data.total_pages);
     } catch (error) {
-        console.error('Error fetching movies:', error);
+        console.error('Error fetching content:', error);
         const grid = document.getElementById('film-grid');
-        grid.innerHTML = `<div class="error-message">Error loading movies: ${error.message}</div>`;
+        grid.innerHTML = `<div class="error-message">Error loading content: ${error.message}</div>`;
     }
 }
 
 // Grid render
-function renderGrid(movies = allMovies) {
+function renderGrid(items = allMovies) {
     const grid = document.getElementById('film-grid');
     if (!grid) return;
 
     grid.innerHTML = '';
     
-    if (!movies || movies.length === 0) {
-        grid.innerHTML = '<div class="no-movies">No movies found matching your filters</div>';
+    if (!items || items.length === 0) {
+        grid.innerHTML = '<div class="no-movies">No content found matching your filters</div>';
         return;
     }
 
-    movies.forEach(movie => {
+    items.forEach(item => {
         const card = document.createElement('div');
         card.className = 'film-thumb-card';
+        card.setAttribute('data-type', currentType);
+        
+        const title = currentType === 'movie' ? item.title : item.name;
+        const releaseDate = currentType === 'movie' ? item.release_date : item.first_air_date;
+        const posterPath = item.poster_path;
+        
         card.innerHTML = `
             <div class="film-thumb-img-wrap">
-                <img src="https://image.tmdb.org/t/p/w500${movie.poster_path}" alt="${movie.title}" class="film-thumb-img" onerror="this.src='https://via.placeholder.com/500x750?text=No+Poster'" />
+                <img src="https://image.tmdb.org/t/p/w500${posterPath}" alt="${title}" class="film-thumb-img" onerror="this.src='https://via.placeholder.com/500x750?text=No+Poster'" />
                 <div class="film-thumb-overlay">
                     <div class="film-thumb-meta">
-                        <span>${movie.release_date ? movie.release_date.split('-')[0] : ''}</span>
-                        <span><i class='fas fa-comment'></i> ${movie.vote_count || 0}</span>
-                        <span><i class='fas fa-star'></i> ${movie.vote_average ? movie.vote_average.toFixed(1) : '-'}</span>
+                        <span>${releaseDate ? releaseDate.split('-')[0] : ''}</span>
+                        <span><i class='fas fa-comment'></i> ${item.vote_count || 0}</span>
+                        <span><i class='fas fa-star'></i> ${item.vote_average ? item.vote_average.toFixed(1) : '-'}</span>
                     </div>
-                    <div class="film-thumb-title">${movie.title}</div>
+                    <div class="film-thumb-title">${title}</div>
                     <div class="film-thumb-extra">
-                        <span class="film-thumb-label">${movie.original_language === 'en' ? 'English' : 'Dubbed'}</span>
+                        ${currentType === 'tv' ? `<span class="film-thumb-label">${item.first_air_date ? 'TV Series' : 'Upcoming'}</span>` : ''}
+                        <span class="film-thumb-label">${item.original_language === 'en' ? 'English' : 'Dubbed'}</span>
                     </div>
                 </div>
             </div>
         `;
+        
         card.onclick = () => {
-            window.location.href = `movie.html?id=${movie.id}`;
+            window.location.href = `${currentType}.html?id=${item.id}`;
         };
+        
         grid.appendChild(card);
     });
 }
@@ -301,7 +340,7 @@ function renderPagination(totalPages = 1) {
         if (!isDisabled) {
             button.onclick = () => {
                 if (page !== currentPage) {
-                    fetchMovies(currentTab, page);
+                    fetchContent(currentTab, page);
                 }
             };
         }
@@ -350,10 +389,11 @@ function renderPagination(totalPages = 1) {
 // Update renderGenreButtons function to handle genre selection
 async function renderGenreButtons() {
     try {
-        const res = await fetch(`https://api.themoviedb.org/3/genre/movie/list?api_key=${TMDB_API_KEY}&language=en`);
+        const type = currentType;
+        const res = await fetch(`https://api.themoviedb.org/3/genre/${type}/list?api_key=${TMDB_API_KEY}&language=en`);
         const data = await res.json();
         const genres = data.genres;
-        console.log('Available genres:', genres); // Debug log
+        console.log('Available genres:', genres);
         
         // Update genre select options
         const genreSelect = document.querySelector('select[name="genre"]');
@@ -379,15 +419,12 @@ async function renderGenreButtons() {
                     document.querySelectorAll('.genre-btn').forEach(b => b.classList.remove('active'));
                     this.classList.add('active');
                     
-                    // Update genre filter
                     activeFilters.genre = genre.id;
-                    console.log('Genre button clicked:', genre.id, genre.name); // Debug log
+                    console.log('Genre button clicked:', genre.id, genre.name);
                     updateFilterButton();
                     
-                    // Apply filter immediately
-                    const filteredMovies = applyFilters(allMovies);
-                    renderGrid(filteredMovies);
-                    renderPagination(Math.ceil(filteredMovies.length / FILMS_PER_PAGE));
+                    currentPage = 1;
+                    fetchContent(currentTab, 1);
                 };
                 container.appendChild(btn);
             });
@@ -398,24 +435,56 @@ async function renderGenreButtons() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Content type selector events
+    document.querySelectorAll('.content-type-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const type = this.getAttribute('data-type');
+            
+            // Update active states
+            document.querySelectorAll('.content-type-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Show/hide relevant tabs
+            document.querySelectorAll('.film-tabs-header').forEach(header => {
+                header.style.display = header.getAttribute('data-type') === type ? 'flex' : 'none';
+            });
+            
+            // Update current type and reset to first tab
+            currentType = type;
+            const firstTab = document.querySelector(`.film-tabs-header[data-type="${type}"] .film-tab`);
+            if (firstTab) {
+                document.querySelectorAll('.film-tab').forEach(t => t.classList.remove('active'));
+                firstTab.classList.add('active');
+                currentTab = firstTab.textContent.trim();
+                currentPage = 1;
+                fetchContent(currentTab, 1);
+            }
+        });
+    });
+
     // Tab click events
     document.querySelectorAll('.film-tab').forEach(tab => {
         tab.addEventListener('click', function() {
             const tabName = this.textContent.trim();
-            document.querySelectorAll('.film-tab').forEach(t => t.classList.remove('active'));
+            const type = this.getAttribute('data-type');
+            
+            // Update active states for tabs of the same type
+            document.querySelectorAll(`.film-tab[data-type="${type}"]`).forEach(t => {
+                t.classList.remove('active');
+            });
             this.classList.add('active');
             
             // Reset to page 1 when changing tabs
             currentPage = 1;
-            fetchMovies(tabName, 1);
+            fetchContent(tabName, 1);
         });
     });
 
     // Initialize filter panel
     initializeFilterPanel();
     
-    // Initial load
-    fetchMovies('New Releases', 1);
+    // Initial load (Movies tab by default)
+    fetchContent('New Releases', 1);
     renderGenreButtons();
     setupMajikTrigger();
 });
@@ -800,7 +869,9 @@ document.addEventListener('DOMContentLoaded', function() {
         'Ultimate DFC Slender',
         "Moms's Friend",
         'Mikako Abe',
-        'Leggings Mania'
+        'Leggings Mania',
+        "Friend's Mother",
+
     ];
 
     // General content filtering keywords (checked in both title and overview)
