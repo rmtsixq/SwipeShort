@@ -505,7 +505,7 @@ function showLinuxTerminal() {
     }
 }
 
-// Search functionality (Part 1)
+// Search functionality (Part 2A)
 document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.querySelector('.sidebar-search input');
     const searchResults = document.getElementById('searchResults');
@@ -514,6 +514,38 @@ document.addEventListener('DOMContentLoaded', function() {
     const searchCount = document.getElementById('searchCount');
 
     let searchTimeout;
+    let currentUser = null;
+    const MAX_SEARCH_HISTORY = 10;
+    let includeAdult = false; // Varsayılan olarak yetişkin içeriği kapalı
+
+    // Firebase auth state listener
+    firebase.auth().onAuthStateChanged(function(user) {
+        currentUser = user;
+    });
+
+    // Add adult content filter toggle to search header
+    const searchHeader = document.querySelector('.search-header');
+    const adultFilterDiv = document.createElement('div');
+    adultFilterDiv.className = 'adult-filter';
+    adultFilterDiv.innerHTML = `
+        <label class="adult-filter-toggle">
+            <input type="checkbox" id="adultContentToggle">
+            <span class="toggle-slider"></span>
+            <span class="toggle-label">Show Adult Content</span>
+        </label>
+    `;
+    searchHeader.appendChild(adultFilterDiv);
+
+    // Adult content toggle event listener
+    const adultContentToggle = document.getElementById('adultContentToggle');
+    adultContentToggle.addEventListener('change', function() {
+        includeAdult = this.checked;
+        // Eğer arama kutusunda bir terim varsa, yeni filtreyle tekrar ara
+        const currentSearch = searchInput.value.trim();
+        if (currentSearch) {
+            searchMovies(currentSearch);
+        }
+    });
 
     // Search input event listener with debounce
     searchInput.addEventListener('input', function(e) {
@@ -541,19 +573,85 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    // Function to save search to Firebase
+    async function saveSearchToHistory(searchTerm, results) {
+        if (!currentUser) return;
+
+        try {
+            const searchRef = firebase.firestore().collection('searchHistory').doc(currentUser.uid);
+            const searchData = {
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                term: searchTerm,
+                resultCount: results.length,
+                results: results.slice(0, 5).map(movie => ({
+                    id: movie.id,
+                    title: movie.title,
+                    poster_path: movie.poster_path,
+                    release_date: movie.release_date,
+                    vote_average: movie.vote_average
+                }))
+            };
+
+            // Get current history
+            const doc = await searchRef.get();
+            if (doc.exists) {
+                const history = doc.data().history || [];
+                // Add new search to beginning of array
+                history.unshift(searchData);
+                // Keep only last MAX_SEARCH_HISTORY searches
+                if (history.length > MAX_SEARCH_HISTORY) {
+                    history.pop();
+                }
+                // Update history
+                await searchRef.update({ history });
+            } else {
+                // Create new history document
+                await searchRef.set({ history: [searchData] });
+            }
+        } catch (error) {
+            console.error('Error saving search history:', error);
+        }
+    }
+
+    // Function to get search suggestions based on history
+    async function getSearchSuggestions() {
+        if (!currentUser) return [];
+
+        try {
+            const searchRef = firebase.firestore().collection('searchHistory').doc(currentUser.uid);
+            const doc = await searchRef.get();
+            
+            if (doc.exists) {
+                const history = doc.data().history || [];
+                // Get unique search terms from history
+                const suggestions = [...new Set(history.map(item => item.term))];
+                return suggestions.slice(0, 5); // Return top 5 suggestions
+            }
+            return [];
+        } catch (error) {
+            console.error('Error getting search suggestions:', error);
+            return [];
+        }
+    }
+
     // Function to search movies using TMDB API
     async function searchMovies(query) {
         try {
             const response = await fetch(
-                `https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}&language=en-US&page=1&include_adult=false`
+                `https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}&language=en-US&page=1&include_adult=${includeAdult}`
             );
             const data = await response.json();
             
             // Update search count
             searchCount.textContent = data.total_results;
             
+            // Save search to history if user is logged in
+            if (currentUser) {
+                saveSearchToHistory(query, data.results);
+            }
+            
             // Display filtered results
-            displaySearchResults(data.results);
+            displaySearchResults(data.results, query);
         } catch (error) {
             console.error('Error searching movies:', error);
             searchResultsGrid.innerHTML = '<div class="search-error">Error loading movies. Please try again.</div>';
@@ -561,11 +659,37 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Function to display search results
-    function displaySearchResults(movies) {
+    function displaySearchResults(movies, searchTerm) {
         searchResultsGrid.innerHTML = '';
         
         if (movies.length === 0) {
-            searchResultsGrid.innerHTML = '<div class="search-no-results">No movies found</div>';
+            searchResultsGrid.innerHTML = `
+                <div class="search-no-results">
+                    <p>No movies found for "${searchTerm}"</p>
+                    ${currentUser ? '<p class="search-suggestions">Try one of your recent searches:</p>' : ''}
+                </div>
+            `;
+            
+            // Show search suggestions if user is logged in
+            if (currentUser) {
+                getSearchSuggestions().then(suggestions => {
+                    if (suggestions.length > 0) {
+                        const suggestionsDiv = document.createElement('div');
+                        suggestionsDiv.className = 'search-suggestions-list';
+                        suggestions.forEach(term => {
+                            const suggestion = document.createElement('button');
+                            suggestion.className = 'search-suggestion-btn';
+                            suggestion.textContent = term;
+                            suggestion.onclick = () => {
+                                searchInput.value = term;
+                                searchMovies(term);
+                            };
+                            suggestionsDiv.appendChild(suggestion);
+                        });
+                        searchResultsGrid.appendChild(suggestionsDiv);
+                    }
+                });
+            }
             return;
         }
         
