@@ -764,4 +764,120 @@
         margin: 10px 2vw 0 2vw;
         width: 94vw;
     }
+}
+
+/* Search Results Styles */
+.search-results {
+    padding: 20px;
+    background: #23232b;
+    border-radius: 12px;
+    margin-bottom: 24px;
+}
+
+.search-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.search-header h2 {
+    color: #fff;
+    font-size: 1.5rem;
+    font-weight: 500;
+    margin: 0;
+}
+
+.search-stats {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.9rem;
+}
+
+.search-stats #searchCount {
+    color: #ff66c4;
+    font-weight: 500;
+}
+
+#searchResultsGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 24px;
+    padding: 10px 0;
+}
+
+.search-film-card {
+    background: #2a2a35;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: pointer;
+}
+
+.search-film-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.search-film-card img {
+    width: 100%;
+    height: 280px;
+    object-fit: cover;
+}
+
+.search-film-info {
+    padding: 16px;
+}
+
+.search-film-title {
+    color: #fff;
+    font-size: 1.1rem;
+    font-weight: 500;
+    margin-bottom: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.search-film-meta {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.9rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.search-film-year {
+    color: #ff66c4;
+}
+
+.search-film-rating {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.search-film-rating i {
+    color: #ffd700;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    #searchResultsGrid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 16px;
+    }
+
+    .search-film-card img {
+        height: 200px;
+    }
+
+    .search-film-info {
+        padding: 12px;
+    }
+
+    .search-film-title {
+        font-size: 1rem;
+    }
 } 

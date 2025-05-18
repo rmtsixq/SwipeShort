@@ -503,4 +503,89 @@ function showLinuxTerminal() {
             document.body.style.overflow = '';
         }, 2200);
     }
-} 
+}
+
+// Search functionality (Part 1)
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.querySelector('.sidebar-search input');
+    const searchResults = document.getElementById('searchResults');
+    const mainContent = document.getElementById('mainContent');
+    const searchResultsGrid = document.getElementById('searchResultsGrid');
+    const searchCount = document.getElementById('searchCount');
+
+    // Sample movie data (will be replaced with Firebase data in Part 2)
+    const sampleMovies = [
+        { id: 1, title: 'House', year: 2020, rating: 8.5, image: 'images/movie1.jpg' },
+        { id: 2, title: 'House of Cards', year: 2019, rating: 8.2, image: 'images/movie2.jpg' },
+        { id: 3, title: 'House of Gucci', year: 2021, rating: 7.8, image: 'images/movie3.jpg' },
+        { id: 4, title: 'House of the Dragon', year: 2022, rating: 8.7, image: 'images/movie4.jpg' },
+        { id: 5, title: 'House of Wax', year: 2005, rating: 7.1, image: 'images/movie5.jpg' },
+        // Add more sample movies as needed
+    ];
+
+    // Search input event listener
+    searchInput.addEventListener('input', function(e) {
+        const searchTerm = e.target.value.toLowerCase().trim();
+        
+        if (searchTerm.length > 0) {
+            // Show search results, hide main content
+            searchResults.style.display = 'block';
+            mainContent.style.display = 'none';
+            
+            // Filter movies based on search term
+            const filteredMovies = sampleMovies.filter(movie => 
+                movie.title.toLowerCase().includes(searchTerm)
+            );
+            
+            // Update search count
+            searchCount.textContent = filteredMovies.length;
+            
+            // Display filtered results
+            displaySearchResults(filteredMovies);
+        } else {
+            // Hide search results, show main content
+            searchResults.style.display = 'none';
+            mainContent.style.display = 'block';
+        }
+    });
+
+    // Function to display search results
+    function displaySearchResults(movies) {
+        searchResultsGrid.innerHTML = '';
+        
+        movies.forEach(movie => {
+            const movieCard = document.createElement('div');
+            movieCard.className = 'search-film-card';
+            movieCard.innerHTML = `
+                <img src="${movie.image}" alt="${movie.title}">
+                <div class="search-film-info">
+                    <h3 class="search-film-title">${movie.title}</h3>
+                    <div class="search-film-meta">
+                        <span class="search-film-year">${movie.year}</span>
+                        <span class="search-film-rating">
+                            <i class="fas fa-star"></i>
+                            ${movie.rating}
+                        </span>
+                    </div>
+                </div>
+            `;
+            
+            // Add click event to movie card
+            movieCard.addEventListener('click', () => {
+                // Will be implemented in Part 2
+                console.log('Movie clicked:', movie.title);
+            });
+            
+            searchResultsGrid.appendChild(movieCard);
+        });
+    }
+
+    // Clear search when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+            searchInput.value = '';
+            searchResults.style.display = 'none';
+            mainContent.style.display = 'block';
+        }
+    });
+}); 

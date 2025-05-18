@@ -38,15 +38,28 @@
         </aside>
         <main class="dashboard-main dashboard-flex">
             <section class="main-content">
-                <div class="film-tabs">
-                    <button class="film-tab active">New Releases</button>
-                    <button class="film-tab">Recommended</button>
-                    <button class="film-tab">IMDB 7+ Films</button>
-                    <button class="film-tab">Most Commented</button>
-                    <button class="film-tab">Most Liked</button>
+                <!-- Search Results Section -->
+                <div id="searchResults" class="search-results" style="display: none;">
+                    <div class="search-header">
+                        <h2>Search Results</h2>
+                        <div class="search-stats">
+                            <span id="searchCount">0</span> results found
+                        </div>
+                    </div>
+                    <div id="searchResultsGrid" class="film-grid-new"></div>
                 </div>
-                <div id="film-grid" class="film-grid-new"></div>
-                <div id="pagination" class="pagination"></div>
+                <!-- Original Content -->
+                <div id="mainContent" class="main-content-wrapper">
+                    <div class="film-tabs">
+                        <button class="film-tab active">New Releases</button>
+                        <button class="film-tab">Recommended</button>
+                        <button class="film-tab">IMDB 7+ Films</button>
+                        <button class="film-tab">Most Commented</button>
+                        <button class="film-tab">Most Liked</button>
+                    </div>
+                    <div id="film-grid" class="film-grid-new"></div>
+                    <div id="pagination" class="pagination"></div>
+                </div>
             </section>
             <aside class="filter-panel">
                 <h3>Filter</h3>
