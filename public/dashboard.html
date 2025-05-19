@@ -12,27 +12,40 @@
     <div class="dashboard-container">
         <aside class="sidebar">
             <div class="sidebar-header">
-                <div class="sidebar-brand">ShortSwipe</div>
+                <div class="logo">
+                    <img src="https://cdn-icons-png.flaticon.com/512/1179/1179120.png" alt="SwipeShort Logo">
+                    <span>SwipeShort</span>
+                </div>
             </div>
+            
+            <!-- Profile Section -->
+            <div class="profile-section">
+                <a href="profile.html" class="profile-link">
+                    <div class="profile-image">
+                        <img src="/default-avatar.png" alt="Profile" id="sidebarProfileImage">
+                    </div>
+                    <div class="profile-info">
+                        <span class="profile-name" id="sidebarProfileName">Loading...</span>
+                        <span class="profile-email" id="sidebarProfileEmail">Loading...</span>
+                    </div>
+                </a>
+            </div>
+
             <div class="sidebar-search">
                 <input type="text" placeholder="Search movies...">
             </div>
             <nav class="sidebar-menu">
-                <a href="#" class="sidebar-link active">
+                <a href="dashboard.html" class="menu-item">
                     <i class="fas fa-home"></i>
                     <span>Home</span>
                 </a>
-                <a href="#" class="sidebar-link">
-                    <i class="fas fa-fire"></i>
-                    <span>Trending</span>
+                <a href="profile.html" class="menu-item">
+                    <i class="fas fa-user"></i>
+                    <span>Profile</span>
                 </a>
-                <a href="#" class="sidebar-link">
-                    <i class="fas fa-star"></i>
-                    <span>Favorites</span>
-                </a>
-                <a href="#" class="sidebar-link">
-                    <i class="fas fa-history"></i>
-                    <span>History</span>
+                <a href="settings.html" class="menu-item">
+                    <i class="fas fa-cog"></i>
+                    <span>Settings</span>
                 </a>
             </nav>
         </aside>

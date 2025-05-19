@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - SwipeShort</title>
+    <link rel="stylesheet" href="dashboard.css">
+    <link rel="stylesheet" href="profile.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <img src="https://cdn-icons-png.flaticon.com/512/1179/1179120.png" alt="SwipeShort Logo">
+                    <span>SwipeShort</span>
+                </div>
+            </div>
+            
+            <!-- Profile Section -->
+            <div class="profile-section">
+                <a href="profile.html" class="profile-link">
+                    <div class="profile-image">
+                        <img src="/default-avatar.png" alt="Profile" id="sidebarProfileImage">
+                    </div>
+                    <div class="profile-info">
+                        <span class="profile-name" id="sidebarProfileName">Loading...</span>
+                        <span class="profile-email" id="sidebarProfileEmail">Loading...</span>
+                    </div>
+                </a>
+            </div>
+
+            <div class="sidebar-menu">
+                <a href="dashboard.html" class="menu-item">
+                    <i class="fas fa-home"></i>
+                    <span>Home</span>
+                </a>
+                <a href="profile.html" class="menu-item active">
+                    <i class="fas fa-user"></i>
+                    <span>Profile</span>
+                </a>
+                <a href="settings.html" class="menu-item">
+                    <i class="fas fa-cog"></i>
+                    <span>Settings</span>
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="profile-page">
+                <!-- Profile Header -->
+                <div class="profile-header">
+                    <div class="profile-cover">
+                        <div class="profile-avatar">
+                            <img src="/default-avatar.png" alt="Profile" id="profileAvatar">
+                            <button class="change-avatar-btn" id="changeAvatarBtn">
+                                <i class="fas fa-camera"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="profile-details">
+                        <h1 id="profileName">Loading...</h1>
+                        <p id="profileEmail">Loading...</p>
+                        <div class="profile-stats">
+                            <div class="stat">
+                                <span class="stat-value" id="likedMoviesCount">0</span>
+                                <span class="stat-label">Liked Movies</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-value" id="dislikedMoviesCount">0</span>
+                                <span class="stat-label">Disliked Movies</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Profile Content -->
+                <div class="profile-content">
+                    <!-- Profile Settings -->
+                    <div class="profile-section-card">
+                        <h2>Profile Settings</h2>
+                        <form id="profileSettingsForm" class="profile-settings-form">
+                            <div class="form-group">
+                                <label for="displayName">Display Name</label>
+                                <input type="text" id="displayName" name="displayName" placeholder="Enter your display name">
+                            </div>
+                            <div class="form-group">
+                                <label for="bio">Bio</label>
+                                <textarea id="bio" name="bio" placeholder="Tell us about yourself"></textarea>
+                            </div>
+                            <button type="submit" class="save-btn">Save Changes</button>
+                        </form>
+                    </div>
+
+                    <!-- Liked Movies -->
+                    <div class="profile-section-card">
+                        <h2>Liked Movies</h2>
+                        <div class="liked-movies-grid" id="likedMoviesGrid">
+                            <!-- Liked movies will be loaded here -->
+                        </div>
+                    </div>
+
+                    <!-- Disliked Movies -->
+                    <div class="profile-section-card">
+                        <h2>Disliked Movies</h2>
+                        <div class="disliked-movies-grid" id="dislikedMoviesGrid">
+                            <!-- Disliked movies will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="profile.js"></script>
+</body>
+</html> 
