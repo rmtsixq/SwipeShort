@@ -11,20 +11,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadUserProfile() {
     try {
-        // TODO: Replace with actual API call
+        // Firebase'den mevcut kullanıcıyı al
+        const user = firebase.auth().currentUser;
+        if (!user) {
+            // Giriş yoksa login sayfasına yönlendir
+            window.location.href = 'auth.html?tab=login';
+            return;
+        }
         const userData = {
-            name: 'John Doe',
-            email: 'john@example.com',
-            bio: 'Movie enthusiast and tech lover',
-            avatar: '/default-avatar.png'
+            name: user.displayName || user.email || 'User',
+            email: user.email || '',
+            bio: '', // İstersen Firestore'dan bio çekebilirsin
+            avatar: user.photoURL || '/default-avatar.png'
         };
 
-        // Update sidebar profile
+        // Sidebar profilini güncelle
         document.getElementById('sidebarProfileImage').src = userData.avatar;
         document.getElementById('sidebarProfileName').textContent = userData.name;
         document.getElementById('sidebarProfileEmail').textContent = userData.email;
 
-        // Update main profile
+        // Ana profil kısmını güncelle
         document.getElementById('profileAvatar').src = userData.avatar;
         document.getElementById('profileName').textContent = userData.name;
         document.getElementById('profileEmail').textContent = userData.email;

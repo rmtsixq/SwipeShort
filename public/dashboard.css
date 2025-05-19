@@ -47,25 +47,27 @@
 .sidebar-menu {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 14px;
     padding: 0 24px;
+    margin-top: 18px;
 }
 
-.sidebar-link {
+.menu-item {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 12px 16px;
-    border-radius: 8px;
-    color: #fff;
+    gap: 10px;
+    color: #a259ff;
     text-decoration: none;
     font-size: 1.08rem;
+    padding: 10px 14px;
+    border-radius: 8px;
     transition: background 0.2s, color 0.2s;
+    font-weight: 500;
 }
 
-.sidebar-link.active, .sidebar-link:hover {
+.menu-item.active, .menu-item:hover {
     background: linear-gradient(79deg, rgba(81, 112, 255, 0.18) 6%, rgba(255, 102, 196, 0.18) 87%);
-    color: #ff66c4;
+    color: #fff;
 }
 
 .dashboard-main {
@@ -1616,8 +1618,8 @@
 
 /* Profile Section Styles */
 .profile-section {
-    padding: 1rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 1.2rem 1rem 1rem 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
     margin-bottom: 1rem;
 }
 
@@ -1633,7 +1635,7 @@
 }
 
 .profile-link:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.08);
 }
 
 .profile-image {
@@ -1641,7 +1643,7 @@
     height: 48px;
     border-radius: 50%;
     overflow: hidden;
-    border: 2px solid #ff69b4;
+    border: 2px solid #a259ff;
 }
 
 .profile-image img {
@@ -1658,12 +1660,12 @@
 
 .profile-name {
     font-weight: 600;
-    font-size: 1rem;
+    font-size: 1.05rem;
     color: #fff;
 }
 
 .profile-email {
-    font-size: 0.85rem;
+    font-size: 0.88rem;
     color: rgba(255, 255, 255, 0.7);
 }
 

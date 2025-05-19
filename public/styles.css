@@ -77,10 +77,10 @@ button:hover {
 
 .movie-card {
     width: 300px;
-    background: white;
+    background: rgb(255, 255, 255);
     border-radius: 10px;
     overflow: hidden;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 15px rgba(165, 136, 136, 0.1);
     transition: transform 0.3s, box-shadow 0.3s;
     cursor: pointer;
 }
@@ -101,12 +101,12 @@ button:hover {
 }
 
 .movie-info h3 {
-    color: #333;
+    color: #ffffff;
     margin-bottom: 10px;
 }
 
 .movie-info p {
-    color: #666;
+    color: #ffffff;
     font-size: 0.9rem;
     line-height: 1.4;
 } 
