@@ -871,6 +871,7 @@ document.addEventListener('DOMContentLoaded', function() {
         'Mikako Abe',
         'Leggings Mania',
         "Friend's Mother",
+        'Scan Doll',
 
     ];
 

@@ -12,10 +12,11 @@ const ytdl = require('ytdl-core');
 const axios = require('axios');
 const cheerio = require('cheerio');
 const puppeteer = require('puppeteer');
+const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 const upload = multer({ dest: process.env.UPLOAD_DIR || 'uploads/' });
 
 // YouTube API Key
@@ -50,9 +51,12 @@ app.use((req, res, next) => {
   next();
 });
 
+// CORS middleware
+app.use(cors());
+
 // Start server
 app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+    console.log(`Web server running on http://localhost:${PORT}`);
 }).on('error', (err) => {
     if (err.code === 'EADDRINUSE') {
         console.error(`Port ${PORT} is already in use. Please try a different port.`);
@@ -520,4 +524,71 @@ app.get('/api/stream/:tmdb_id', async (req, res) => {
     } finally {
         if (browser) await browser.close();
     }
+});
+
+// Proxy endpoint for m3u8 streams
+app.get('/proxy/stream', async (req, res) => {
+    try {
+        const streamUrl = req.query.url;
+        if (!streamUrl || !/^https?:\/\//.test(streamUrl)) {
+            return res.status(400).json({ error: 'Stream URL must be absolute (http/https)' });
+        }
+
+        // Fetch the stream
+        const response = await fetch(streamUrl);
+        
+        if (!response.ok) {
+            throw new Error(`Failed to fetch stream: ${response.statusText}`);
+        }
+
+        // Get content type and other headers
+        const contentType = response.headers.get('content-type');
+        const contentLength = response.headers.get('content-length');
+        
+        // Set appropriate headers
+        res.setHeader('Content-Type', contentType || 'application/x-mpegURL');
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+        if (contentLength) {
+            res.setHeader('Content-Length', contentLength);
+        }
+
+        // Handle OPTIONS request for CORS
+        if (req.method === 'OPTIONS') {
+            return res.status(200).end();
+        }
+
+        // Pipe the stream
+        response.body.pipe(res);
+
+        // Handle errors during streaming
+        response.body.on('error', (error) => {
+            console.error('Streaming error:', error);
+            if (!res.headersSent) {
+                res.status(500).json({ error: 'Streaming error occurred' });
+            }
+        });
+
+    } catch (error) {
+        console.error('Proxy error:', error);
+        if (!res.headersSent) {
+            res.status(500).json({ error: 'Failed to proxy stream', details: error.message });
+        }
+    }
+});
+
+// Ana sayfa
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Dashboard sayfası
+app.get('/dashboard', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
+});
+
+// Film sayfası
+app.get('/movie', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'movie.html'));
 });

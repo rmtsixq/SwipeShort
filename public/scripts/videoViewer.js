@@ -217,7 +217,84 @@ function setupSideButtons() {
     shareBtn.onclick = () => {
         const video = getActiveVideo();
         if (video) {
-            alert('Share: ' + video.src);
+            // Create and show duration selector modal
+            const modal = document.createElement('div');
+            modal.className = 'share-duration-modal';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <h2>Select Video Duration</h2>
+                    <div class="duration-range">
+                        <div class="range-labels">
+                            <span class="start-time">0:00</span>
+                            <span class="end-time">0:00</span>
+                        </div>
+                        <div class="range-slider">
+                            <input type="range" class="start-slider" min="0" max="${video.duration}" value="0" step="0.1">
+                            <input type="range" class="end-slider" min="0" max="${video.duration}" value="${video.duration}" step="0.1">
+                        </div>
+                    </div>
+                    <button class="share-confirm-btn">Share Selected Duration</button>
+                    <button class="share-cancel-btn">Cancel</button>
+                </div>
+            `;
+            document.body.appendChild(modal);
+
+            const startSlider = modal.querySelector('.start-slider');
+            const endSlider = modal.querySelector('.end-slider');
+            const startTime = modal.querySelector('.start-time');
+            const endTime = modal.querySelector('.end-time');
+            const confirmBtn = modal.querySelector('.share-confirm-btn');
+            const cancelBtn = modal.querySelector('.share-cancel-btn');
+
+            function formatTime(seconds) {
+                const minutes = Math.floor(seconds / 60);
+                seconds = Math.floor(seconds % 60);
+                return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            }
+
+            function updateTimeDisplay() {
+                startTime.textContent = formatTime(parseFloat(startSlider.value));
+                endTime.textContent = formatTime(parseFloat(endSlider.value));
+            }
+
+            startSlider.addEventListener('input', () => {
+                if (parseFloat(startSlider.value) >= parseFloat(endSlider.value)) {
+                    startSlider.value = endSlider.value;
+                }
+                updateTimeDisplay();
+            });
+
+            endSlider.addEventListener('input', () => {
+                if (parseFloat(endSlider.value) <= parseFloat(startSlider.value)) {
+                    endSlider.value = startSlider.value;
+                }
+                updateTimeDisplay();
+            });
+
+            confirmBtn.addEventListener('click', () => {
+                const startTime = parseFloat(startSlider.value);
+                const endTime = parseFloat(endSlider.value);
+                const duration = endTime - startTime;
+                
+                // Create share URL with time parameters
+                const shareUrl = `${window.location.origin}${window.location.pathname}?video=${encodeURIComponent(video.src)}&start=${startTime}&end=${endTime}`;
+                
+                // Copy to clipboard
+                navigator.clipboard.writeText(shareUrl).then(() => {
+                    alert('Share link copied to clipboard!');
+                }).catch(err => {
+                    console.error('Failed to copy:', err);
+                    alert('Failed to copy share link. Please try again.');
+                });
+                
+                document.body.removeChild(modal);
+            });
+
+            cancelBtn.addEventListener('click', () => {
+                document.body.removeChild(modal);
+            });
+
+            updateTimeDisplay();
         }
     };
 

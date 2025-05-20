@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="movie.css">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 </head>
 <body>
     <div class="movie-container">
@@ -22,6 +23,31 @@
                 <div id="movie-player" class="movie-player">
                     <!-- Film player buraya gelecek -->
                     <div class="movie-player-placeholder">Loading movie...</div>
+                </div>
+                <button class="share-button">
+                    <i class="fas fa-share-alt"></i>
+                </button>
+            </div>
+            
+            <!-- Share Duration Modal -->
+            <div class="share-duration-modal" style="display: none;">
+                <div class="modal-content">
+                    <h2>Select Video Duration</h2>
+                    <div class="modal-video-preview-container">
+                        <video class="modal-video-preview" src="" controls style="width:100%;border-radius:12px;background:#000;max-height:200px;"></video>
+                    </div>
+                    <div class="duration-range">
+                        <div class="range-labels">
+                            <span class="start-time">0:00</span>
+                            <span class="end-time">0:00</span>
+                        </div>
+                        <div class="range-slider">
+                            <input type="range" class="start-slider" min="0" max="0" value="0" step="0.1">
+                            <input type="range" class="end-slider" min="0" max="0" value="0" step="0.1">
+                        </div>
+                    </div>
+                    <button class="share-confirm-btn">Share Selected Duration</button>
+                    <button class="share-cancel-btn">Cancel</button>
                 </div>
             </div>
             
