@@ -585,11 +585,10 @@ app.get('/movie', (req, res) => {
 // M3U8 URL fetching endpoint
 app.get('/api/get-m3u8-urls', async (req, res) => {
     const { movieId } = req.query;
-    console.log('=== M3U8 URL Fetching Started ===');
+    console.log('\n=== M3U8 URL Fetching Started ===');
     console.log('Movie ID:', movieId);
 
     if (!movieId) {
-        console.log('Error: Movie ID is missing');
         return res.status(400).json({ error: 'Movie ID is required' });
     }
 
@@ -604,6 +603,7 @@ app.get('/api/get-m3u8-urls', async (req, res) => {
                 '--disable-web-security',
                 '--disable-features=IsolateOrigins,site-per-process',
                 '--disable-blink-features=AutomationControlled',
+                '--autoplay-policy=no-user-gesture-required',
                 '--window-size=1920,1080',
                 '--disable-dev-shm-usage',
                 '--disable-accelerated-2d-canvas',
@@ -640,16 +640,7 @@ app.get('/api/get-m3u8-urls', async (req, res) => {
                 '--use-mock-keychain',
                 '--disable-site-isolation-trials'
             ],
-            ignoreHTTPSErrors: true,
-            protocolTimeout: 60000,
-            defaultViewport: {
-                width: 1920,
-                height: 1080,
-                deviceScaleFactor: 1,
-                hasTouch: false,
-                isLandscape: true,
-                isMobile: false
-            }
+            ignoreHTTPSErrors: true
         });
 
         const page = await browser.newPage();
@@ -732,6 +723,20 @@ app.get('/api/get-m3u8-urls', async (req, res) => {
                 csi: function() {},
                 app: {}
             };
+
+            // Override iframe contentWindow
+            const originalGetOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
+            Object.getOwnPropertyDescriptor = function(target, prop) {
+                if (prop === 'contentWindow' && target instanceof HTMLIFrameElement) {
+                    return {
+                        get: function() {
+                            return window;
+                        },
+                        configurable: true
+                    };
+                }
+                return originalGetOwnPropertyDescriptor(target, prop);
+            };
         });
 
         // Network isteklerini filtrele
@@ -757,209 +762,203 @@ app.get('/api/get-m3u8-urls', async (req, res) => {
 
             // Cloudflare challenge kontrolü
             if (response.status() === 503 || page.url().includes('challenges.cloudflare.com')) {
+                console.log('Cloudflare challenge detected, handling...');
                 await handleCloudflareChallenge(page);
             }
 
             // Sayfa yüklendikten sonra biraz bekle
             await new Promise(resolve => setTimeout(resolve, 5000));
 
-            // Video player'ı başlat
-            console.log('Attempting to start video player...');
-            await page.evaluate(async () => {
-                // Tüm iframe'leri bul
-                const iframes = Array.from(document.querySelectorAll('iframe'));
-                console.log('Found iframes:', iframes.length);
-
-                // Her iframe'i kontrol et
-                for (const iframe of iframes) {
-                    try {
-                        console.log('Processing iframe:', iframe.src);
-                        
-                        // iframe'in yüklenmesini bekle
-                        await new Promise((resolve, reject) => {
-                            const timeout = setTimeout(() => {
-                                reject(new Error('iframe load timeout'));
-                            }, 10000);
-
-                            if (iframe.contentDocument?.readyState === 'complete') {
-                                clearTimeout(timeout);
-                                resolve();
-                            } else {
-                                iframe.onload = () => {
-                                    clearTimeout(timeout);
-                                    resolve();
-                                };
-                                iframe.onerror = (error) => {
-                                    clearTimeout(timeout);
-                                    reject(error);
-                                };
-                            }
-                        });
-
-                        console.log('iframe loaded, checking content...');
-
-                        // iframe içeriğini kontrol et
-                        const iframeDoc = iframe.contentDocument;
-                        if (!iframeDoc) {
-                            console.log('No contentDocument available for iframe');
-                            continue;
-                        }
-
-                        // Video elementlerini bul
-                        const videoElements = iframeDoc.querySelectorAll('video');
-                        console.log('Found video elements:', videoElements.length);
-
-                        // Her video elementini dene
-                        for (const video of videoElements) {
-                            try {
-                                console.log('Attempting to start video element...');
-                                
-                                // Video elementinin görünür olmasını sağla
-                                video.style.cssText = 'display: block !important; visibility: visible !important; opacity: 1 !important; position: relative !important; z-index: 9999 !important;';
-                                
-                                // Video kontrollerini göster
-                                video.controls = true;
-                                
-                                // Video elementine tıkla
-                                const clickEvent = new MouseEvent('click', {
-                                    bubbles: true,
-                                    cancelable: true,
-                                    view: window
-                                });
-                                video.dispatchEvent(clickEvent);
-                                
-                                // Video oynatmayı başlat
-                                try {
-                                    await video.play();
-                                    console.log('Video play() successful');
-                                } catch (playError) {
-                                    console.log('Video play() failed, trying with user interaction...');
-                                    // Kullanıcı etkileşimi simülasyonu
-                                    const playPromise = video.play();
-                                    if (playPromise !== undefined) {
-                                        playPromise.catch(() => {
-                                            // Otomatik oynatma engellendi, manuel olarak dene
-                                            video.muted = true;
-                                            video.play().then(() => {
-                                                video.muted = false;
-                                            }).catch(console.error);
-                                        });
-                                    }
-                                }
-                            } catch (error) {
-                                console.error('Error with video element:', error);
-                            }
-                        }
-
-                        // Play butonlarını bul ve tıkla
-                        const playButtons = iframeDoc.querySelectorAll('button[aria-label="Play"], .play-button, .vjs-big-play-button, [class*="play"], [class*="Play"]');
-                        console.log('Found play buttons:', playButtons.length);
-
-                        for (const button of playButtons) {
-                            try {
-                                console.log('Clicking play button:', button.outerHTML);
-                                button.click();
-                                
-                                // Click event'ini manuel olarak tetikle
-                                const clickEvent = new MouseEvent('click', {
-                                    bubbles: true,
-                                    cancelable: true,
-                                    view: window
-                                });
-                                button.dispatchEvent(clickEvent);
-                            } catch (error) {
-                                console.error('Error clicking play button:', error);
-                            }
-                        }
-
-                        // Video.js player'ı başlat
-                        const videoJsPlayers = iframeDoc.querySelectorAll('.video-js, [class*="video-js"]');
-                        console.log('Found video.js players:', videoJsPlayers.length);
-
-                        for (const player of videoJsPlayers) {
-                            try {
-                                console.log('Attempting to start video.js player...');
-                                if (window.videojs) {
-                                    const videoPlayer = window.videojs(player);
-                                    videoPlayer.play().catch(error => {
-                                        console.log('Video.js play() failed, trying muted...');
-                                        videoPlayer.muted(true);
-                                        videoPlayer.play().then(() => {
-                                            videoPlayer.muted(false);
-                                        }).catch(console.error);
-                                    });
-                                }
-                            } catch (error) {
-                                console.error('Error with video.js player:', error);
-                            }
-                        }
-
-                        // HLS.js player'ı kontrol et
-                        const hlsPlayers = iframeDoc.querySelectorAll('[class*="hls"], [class*="Hls"]');
-                        console.log('Found HLS.js players:', hlsPlayers.length);
-
-                        for (const player of hlsPlayers) {
-                            try {
-                                console.log('Attempting to start HLS.js player...');
-                                if (window.Hls) {
-                                    const hls = new window.Hls();
-                                    const video = player.querySelector('video');
-                                    if (video && video.src) {
-                                        hls.loadSource(video.src);
-                                        hls.attachMedia(video);
-                                        hls.on(window.Hls.Events.MANIFEST_PARSED, () => {
-                                            video.play().catch(console.error);
-                                        });
-                                    }
-                                }
-                            } catch (error) {
-                                console.error('Error with HLS.js player:', error);
-                            }
-                        }
-
-                    } catch (error) {
-                        console.error('Error processing iframe:', error);
-                    }
-                }
+            // iframe'i bul
+            const iframeSrc = await page.evaluate(() => {
+                const iframe = document.querySelector('iframe');
+                return iframe ? iframe.src : null;
             });
 
-            // Biraz daha uzun bekle ve m3u8 URL'lerini topla
-            console.log('Waiting for m3u8 URLs...');
-            await new Promise(resolve => setTimeout(resolve, 15000));
+            if (iframeSrc) {
+                console.log('Found iframe:', iframeSrc);
+                
+                // iframe'e git
+                const iframePage = await browser.newPage();
+                
+                // iframe'e git ve yüklenmesini bekle
+                await iframePage.goto(iframeSrc, { 
+                    waitUntil: 'networkidle0',
+                    timeout: 30000 
+                });
 
-            // M3U8 URL'lerini topla
-            const urls = Array.from(m3u8Urls);
-            console.log(`Found ${urls.length} m3u8 URLs:`, urls);
+                // Sayfanın içeriğini kontrol et
+                const pageContent = await iframePage.content();
+                console.log('Page content length:', pageContent.length);
+                console.log('Page title:', await iframePage.title());
 
-            if (urls.length === 0) {
-                console.log('No m3u8 URLs found after all attempts');
-                return res.status(404).json({ error: 'No m3u8 URLs found' });
+                // Önce sayfadaki tüm script'leri çalıştır
+                await iframePage.evaluate(() => {
+                    // Tüm script elementlerini bul ve çalıştır
+                    const scripts = document.querySelectorAll('script');
+                    scripts.forEach(script => {
+                        try {
+                            if (script.src) {
+                                // Harici script'leri yükle
+                                const newScript = document.createElement('script');
+                                newScript.src = script.src;
+                                document.head.appendChild(newScript);
+                            } else {
+                                // Inline script'leri çalıştır
+                                eval(script.textContent);
+                            }
+                        } catch (e) {
+                            console.error('Script error:', e);
+                        }
+                    });
+                });
+
+                // Şimdi videoyu başlatmayı dene
+                await iframePage.evaluate(() => {
+                    // Tüm video elementlerini bul
+                    const videos = document.querySelectorAll('video');
+                    console.log('Found videos:', videos.length);
+
+                    // Her video elementini dene
+                    videos.forEach(video => {
+                        try {
+                            // Video elementini görünür yap
+                            video.style.cssText = 'display: block !important; visibility: visible !important; opacity: 1 !important; position: relative !important; z-index: 9999 !important;';
+                            video.controls = true;
+                            
+                            // Video.js varsa onu kullan
+                            if (window.videojs) {
+                                console.log('Using video.js');
+                                const player = window.videojs(video);
+                                player.play();
+                            } else {
+                                // Normal video oynatma
+                                console.log('Using native video player');
+                                video.play();
+                            }
+
+                            // Video elementine tıkla
+                            video.click();
+                        } catch (e) {
+                            console.error('Video error:', e);
+                        }
+                    });
+
+                    // Tüm olası play butonlarını bul ve tıkla
+                    const selectors = [
+                        'button',
+                        '[role="button"]',
+                        '[class*="play"]',
+                        '[class*="Play"]',
+                        '.jw-icon-playback',
+                        '.plyr__control--play',
+                        '.vjs-big-play-button',
+                        '[onclick*="play"]',
+                        '[onclick*="Play"]'
+                    ];
+
+                    const buttons = document.querySelectorAll(selectors.join(','));
+                    console.log('Found buttons:', buttons.length);
+
+                    buttons.forEach(button => {
+                        try {
+                            // Butonu görünür yap
+                            button.style.cssText = 'display: block !important; visibility: visible !important; opacity: 1 !important; position: relative !important; z-index: 9999 !important;';
+                            
+                            // Butona tıkla
+                            button.click();
+                            
+                            // Click event'ini manuel olarak tetikle
+                            button.dispatchEvent(new MouseEvent('click', {
+                                bubbles: true,
+                                cancelable: true,
+                                view: window
+                            }));
+
+                            // Mouse event'lerini simüle et
+                            const rect = button.getBoundingClientRect();
+                            const events = ['mousedown', 'mouseup', 'click'];
+                            events.forEach(eventType => {
+                                button.dispatchEvent(new MouseEvent(eventType, {
+                                    bubbles: true,
+                                    cancelable: true,
+                                    view: window,
+                                    clientX: rect.left + rect.width / 2,
+                                    clientY: rect.top + rect.height / 2
+                                }));
+                            });
+                        } catch (e) {
+                            console.error('Button error:', e);
+                        }
+                    });
+
+                    // Sayfadaki tüm tıklanabilir elementleri kontrol et
+                    const clickables = document.querySelectorAll('a, button, [role="button"], [onclick]');
+                    clickables.forEach(element => {
+                        if (element.textContent.toLowerCase().includes('play') || 
+                            element.className.toLowerCase().includes('play')) {
+                            try {
+                                element.click();
+                            } catch (e) {
+                                console.error('Clickable error:', e);
+                            }
+                        }
+                    });
+                });
+
+                // Biraz daha uzun bekle
+                await new Promise(resolve => setTimeout(resolve, 10000));
+
+                // Sonuçları topla
+                const urls = Array.from(m3u8Urls);
+                console.log('Found m3u8 URLs:', urls);
+                
+                if (urls.length === 0) {
+                    // Sayfanın son durumunu kontrol et
+                    const finalContent = await iframePage.content();
+                    console.log('Final page content length:', finalContent.length);
+                    console.log('Final page title:', await iframePage.title());
+                    
+                    // Video elementlerinin durumunu kontrol et
+                    const videoStatus = await iframePage.evaluate(() => {
+                        const videos = document.querySelectorAll('video');
+                        return Array.from(videos).map(video => ({
+                            paused: video.paused,
+                            currentTime: video.currentTime,
+                            duration: video.duration,
+                            readyState: video.readyState,
+                            error: video.error ? video.error.message : null,
+                            src: video.src
+                        }));
+                    });
+                    console.log('Video status:', videoStatus);
+
+                    return res.status(404).json({ 
+                        error: 'No m3u8 URLs found',
+                        details: {
+                            videoStatus,
+                            pageTitle: await iframePage.title(),
+                            contentLength: finalContent.length
+                        }
+                    });
+                }
+
+                res.json({ urls });
+            } else {
+                return res.status(404).json({ error: 'No iframe found' });
             }
 
-            console.log('=== M3U8 URL Fetching Completed ===');
-            res.status(200).json({ urls });
-
         } catch (error) {
-            console.error('Error navigating to embed page:', error);
-            throw new Error(`Failed to load embed page: ${error.message}`);
+            console.error('Error:', error);
+            res.status(500).json({ error: error.message });
+        } finally {
+            if (browser) await browser.close();
         }
-
     } catch (error) {
-        console.error('=== M3U8 URL Fetching Failed ===');
-        console.error('Error details:', error);
-        console.error('Error stack:', error.stack);
-        res.status(500).json({ 
-            error: 'Failed to fetch m3u8 URLs', 
-            details: error.message,
-            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-        });
+        console.error('Error:', error);
+        res.status(500).json({ error: error.message });
     } finally {
-        if (browser) {
-            console.log('Closing browser...');
-            await browser.close();
-            console.log('Browser closed');
-        }
-        console.log('=== M3U8 URL Fetching Process Ended ===');
+        if (browser) await browser.close();
     }
 });
 
