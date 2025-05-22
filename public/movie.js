@@ -1,6 +1,5 @@
 // TMDB API
 const TMDB_API_KEY = 'fda9bed2dd52a349ecb7cfe38b050ca5';
-const BOT_API_URL = 'http://localhost:3000/api/m3u8';
 
 // URL'den film ID'sini al
 function getMovieIdFromUrl() {
@@ -8,117 +7,138 @@ function getMovieIdFromUrl() {
     return params.get('id');
 }
 
-// M3U8 URL'sini bul
-async function findM3U8Url(movieId) {
+// M3U8 URL'lerini al
+async function getM3U8Urls(movieId) {
+    console.log('=== Frontend: M3U8 URL Fetching Started ===');
+    console.log('Movie ID:', movieId);
+    
     try {
-        const response = await fetch(`${BOT_API_URL}/${movieId}`);
-        const data = await response.json();
+        console.log('Fetching from endpoint:', `/api/get-m3u8-urls?movieId=${movieId}`);
+        const response = await fetch(`/api/get-m3u8-urls?movieId=${movieId}`);
+        console.log('Response status:', response.status);
+        console.log('Response headers:', Object.fromEntries(response.headers.entries()));
         
-        if (data.success) {
-            // URL'yi proxy üzerinden al
-            return `/proxy/stream?url=${encodeURIComponent(data.url)}`;
-        } else {
-            throw new Error(data.error || 'M3U8 URL bulunamadı');
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Error response body:', errorText);
+            throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
         }
+        
+        const data = await response.json();
+        console.log('Response data:', data);
+        
+        if (!data.urls || data.urls.length === 0) {
+            console.error('No m3u8 URLs in response data');
+            throw new Error('No m3u8 URLs found');
+        }
+        
+        console.log('=== Frontend: M3U8 URL Fetching Completed ===');
+        return data.urls;
     } catch (error) {
-        console.error('M3U8 URL bulma hatası:', error);
+        console.error('=== Frontend: M3U8 URL Fetching Failed ===');
+        console.error('Error details:', error);
+        console.error('Error stack:', error.stack);
         throw error;
-    }
-}
-
-// Custom loader for proxying all HLS requests
-class ProxyLoader extends Hls.DefaultConfig.loader {
-    constructor(config) {
-        super(config);
-    }
-    load(context, config, callbacks) {
-        // Only proxy if not already proxied
-        if (!context.url.startsWith('/proxy/stream')) {
-            context.url = `/proxy/stream?url=${encodeURIComponent(context.url)}`;
-        }
-        super.load(context, config, callbacks);
     }
 }
 
 // Film detaylarını yükle
 async function loadMovieDetails() {
+    console.log('=== Frontend: Loading Movie Details Started ===');
     const movieId = getMovieIdFromUrl();
+    console.log('Movie ID from URL:', movieId);
+    
     if (!movieId) {
+        console.log('No movie ID found in URL, redirecting to dashboard');
         window.location.href = 'dashboard.html';
         return;
     }
 
     try {
         // TMDB'den film bilgilerini al
+        console.log('Fetching movie details from TMDB...');
         const res = await fetch(`https://api.themoviedb.org/3/movie/${movieId}?api_key=${TMDB_API_KEY}`);
+        console.log('TMDB response status:', res.status);
+        
+        if (!res.ok) {
+            throw new Error(`TMDB API error! status: ${res.status}`);
+        }
+        
         const movie = await res.json();
+        console.log('Movie details received:', movie);
 
         // Başlık ve meta bilgileri güncelle
+        console.log('Updating UI with movie details...');
         document.getElementById('movie-title').textContent = movie.title;
         document.getElementById('movie-year').textContent = movie.release_date.split('-')[0];
         document.getElementById('movie-rating').textContent = `⭐ ${movie.vote_average.toFixed(1)}`;
         document.getElementById('movie-description').textContent = movie.overview;
 
-        // M3U8 URL'sini bul
-        const m3u8Url = await findM3U8Url(movieId);
+        // M3U8 URL'lerini al
+        console.log('Fetching m3u8 URLs...');
+        const m3u8Urls = await getM3U8Urls(movieId);
+        console.log('M3U8 URLs received:', m3u8Urls);
         
-        // Player'ı güncelle
-        const player = document.getElementById('movie-player');
-        player.innerHTML = `
-            <video 
-                id="movie-video-player"
-                controls
-                style="width: 100%; height: 100%;"
-                crossorigin="anonymous"
-            >
-                <source src="${m3u8Url}" type="application/x-mpegURL">
-                Your browser does not support the video tag.
-            </video>
-        `;
+        if (m3u8Urls && m3u8Urls.length > 0) {
+            console.log('Setting up video player with first m3u8 URL:', m3u8Urls[0]);
+            // Mevcut player'ı kullan
+            const playerContainer = document.getElementById('movie-player');
+            // M3U8 URL'lerini proxy üzerinden geçir
+            const proxiedM3u8Urls = m3u8Urls.map(url => `/proxy/stream?url=${encodeURIComponent(url)}`);
+            console.log('Proxied m3u8 URLs:', proxiedM3u8Urls);
 
-        // HLS.js ile video oynatıcıyı başlat
-        if (Hls.isSupported()) {
-            Hls.DefaultConfig.loader = ProxyLoader;
-            const video = document.getElementById('movie-video-player');
-            const hls = new Hls({
-                debug: true,
-                enableWorker: true,
-                lowLatencyMode: true,
-                backBufferLength: 90
-            });
-            hls.on(Hls.Events.ERROR, function(event, data) {
-                console.error('HLS Error:', data);
-                if (data.fatal) {
-                    switch(data.type) {
-                        case Hls.ErrorTypes.NETWORK_ERROR:
-                            console.log('Network error, trying to recover...');
-                            hls.startLoad();
-                            break;
-                        case Hls.ErrorTypes.MEDIA_ERROR:
-                            console.log('Media error, trying to recover...');
-                            hls.recoverMediaError();
-                            break;
-                        default:
-                            console.log('Fatal error, cannot recover');
-                            hls.destroy();
-                            break;
+            playerContainer.innerHTML = `
+                <video id="video-player" class="video-js vjs-default-skin" controls preload="auto" width="100%" height="100%">
+                    <source src="${proxiedM3u8Urls[0]}" type="application/x-mpegURL">
+                </video>
+            `;
+
+            // Video.js player'ı başlat
+            console.log('Initializing video.js player...');
+            const player = videojs('video-player', {
+                fluid: true,
+                aspectRatio: '16:9',
+                playbackRates: [0.5, 1, 1.5, 2],
+                html5: {
+                    hls: {
+                        overrideNative: true
                     }
                 }
             });
-            hls.loadSource(m3u8Url);
-            hls.attachMedia(video);
-            hls.on(Hls.Events.MANIFEST_PARSED, function() {
-                video.play().catch(function(error) {
-                    console.log("Playback failed:", error);
-                });
+
+            // Hata durumunda diğer URL'leri dene
+            player.on('error', (error) => {
+                console.error('Video player error:', error);
+                // Orijinal URL listesindeki indeksi bul
+                const currentOriginalUrlIndex = m3u8Urls.findIndex(url => `/proxy/stream?url=${encodeURIComponent(url)}` === player.currentSrc());
+                console.log('Current URL index:', currentOriginalUrlIndex);
+                
+                if (currentOriginalUrlIndex < m3u8Urls.length - 1) {
+                    console.log('Trying next URL:', proxiedM3u8Urls[currentOriginalUrlIndex + 1]);
+                    player.src({ src: proxiedM3u8Urls[currentOriginalUrlIndex + 1], type: 'application/x-mpegURL' });
+                    player.play();
+                } else {
+                    console.error('No more URLs to try');
+                }
             });
+
+            console.log('Video player setup completed');
+        } else {
+            throw new Error('No m3u8 URLs found');
         }
+
+        console.log('=== Frontend: Loading Movie Details Completed ===');
     } catch (error) {
-        console.error('Error loading movie details:', error);
+        console.error('=== Frontend: Loading Movie Details Failed ===');
+        console.error('Error details:', error);
+        console.error('Error stack:', error.stack);
+        
         document.getElementById('movie-title').textContent = 'Error loading movie';
         document.getElementById('movie-player').innerHTML = `
             <div class="movie-player-placeholder">
                 Error loading video. Please try again later.
+                <br>
+                <small>Error details: ${error.message}</small>
             </div>
         `;
     }
@@ -137,8 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const endTime = document.querySelector('.end-time');
     const confirmBtn = document.querySelector('.share-confirm-btn');
     const cancelBtn = document.querySelector('.share-cancel-btn');
-    const iframe = document.querySelector('iframe');
-    const previewVideo = document.querySelector('.modal-video-preview');
+    const videoPlayer = document.querySelector('#video-player');
 
     function formatTime(seconds) {
         const minutes = Math.floor(seconds / 60);
@@ -152,53 +171,28 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateSliderMax() {
-        // Vidsrc iframe'inden video süresini al
-        if (iframe) {
-            // Varsayılan süre (2 saat)
-            const defaultDuration = 7200;
-            startSlider.max = defaultDuration;
-            endSlider.max = defaultDuration;
-            endSlider.value = defaultDuration;
+        if (videoPlayer) {
+            const duration = videoPlayer.duration || 7200; // Varsayılan 2 saat
+            startSlider.max = duration;
+            endSlider.max = duration;
+            endSlider.value = duration;
             updateTimeDisplay();
         }
     }
 
-    function setPreviewVideoSource() {
-        // Eğer iframe varsa, preview için aynı kaynağı kullan
-        if (iframe) {
-            // Vidsrc embed yerine bir poster veya örnek video kullanmak gerekebilir
-            // Şimdilik demo için örnek bir video dosyası kullanıyoruz
-            // Örn: previewVideo.src = 'clips/sample.mp4';
-            // Eğer elinizde film dosyasının doğrudan linki varsa onu kullanabilirsiniz
-            // previewVideo.src = iframe.src.replace('embed', 'stream');
-            // Şimdilik poster olarak siyah bırakıyoruz
-            previewVideo.src = '';
-            previewVideo.poster = '';
-            previewVideo.load();
-        }
-    }
-
-    shareButton.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
+    shareButton.addEventListener('click', () => {
         shareModal.style.display = 'flex';
         updateSliderMax();
-        setPreviewVideoSource();
     });
-
-    // Slider hareket ettikçe preview güncelle
-    function updatePreviewCurrentTime() {
-        if (!previewVideo.src) return;
-        previewVideo.currentTime = parseFloat(startSlider.value);
-        previewVideo.pause();
-    }
 
     startSlider.addEventListener('input', () => {
         if (parseFloat(startSlider.value) >= parseFloat(endSlider.value)) {
             startSlider.value = endSlider.value;
         }
         updateTimeDisplay();
-        updatePreviewCurrentTime();
+        if (videoPlayer) {
+            videoPlayer.currentTime = parseFloat(startSlider.value);
+        }
     });
 
     endSlider.addEventListener('input', () => {
@@ -206,20 +200,6 @@ document.addEventListener('DOMContentLoaded', () => {
             endSlider.value = startSlider.value;
         }
         updateTimeDisplay();
-        updatePreviewCurrentTime();
-    });
-
-    // Preview video sadece seçili aralıkta oynasın
-    previewVideo.addEventListener('timeupdate', () => {
-        const start = parseFloat(startSlider.value);
-        const end = parseFloat(endSlider.value);
-        if (previewVideo.currentTime < start) {
-            previewVideo.currentTime = start;
-        }
-        if (previewVideo.currentTime > end) {
-            previewVideo.pause();
-            previewVideo.currentTime = start;
-        }
     });
 
     confirmBtn.addEventListener('click', () => {
@@ -252,13 +232,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const startParam = urlParams.get('start');
     const endParam = urlParams.get('end');
 
-    if (iframe && startParam && endParam) {
-        // Vidsrc iframe'ine mesaj gönder
-        const message = {
-            type: 'setTimeRange',
-            start: parseFloat(startParam),
-            end: parseFloat(endParam)
-        };
-        iframe.contentWindow.postMessage(message, '*');
+    if (videoPlayer && startParam && endParam) {
+        videoPlayer.currentTime = parseFloat(startParam);
+        videoPlayer.addEventListener('timeupdate', () => {
+            if (videoPlayer.currentTime >= parseFloat(endParam)) {
+                videoPlayer.pause();
+            }
+        });
     }
 }); 
