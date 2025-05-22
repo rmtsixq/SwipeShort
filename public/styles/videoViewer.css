@@ -248,6 +248,96 @@ video {
     .header-nav a {
         font-size: 14px;
     }
+
+    .video-container {
+        width: 100%;
+        margin: 0;
+        border-radius: 0;
+    }
+
+    .video-player {
+        aspect-ratio: 16/9;
+        width: 100%;
+    }
+
+    .side-buttons {
+        right: 8px;
+        gap: 8px;
+    }
+
+    .side-buttons .control-button {
+        width: 36px;
+        height: 36px;
+        font-size: 1.1rem;
+    }
+
+    .clip-title {
+        font-size: 13px;
+        padding: 2px 8px;
+        max-width: 90%;
+    }
+
+    .share-duration-modal .modal-content {
+        width: 95%;
+        padding: 20px 15px;
+    }
+
+    .share-duration-modal h2 {
+        font-size: 18px;
+        margin-bottom: 15px;
+    }
+
+    .range-labels {
+        font-size: 13px;
+    }
+
+    .range-slider input[type="range"]::-webkit-slider-thumb {
+        width: 16px;
+        height: 16px;
+    }
+
+    .share-confirm-btn, .share-cancel-btn {
+        padding: 8px 16px;
+        font-size: 14px;
+        margin: 8px;
+    }
+}
+
+@media (max-width: 480px) {
+    .side-buttons {
+        right: 6px;
+        gap: 6px;
+    }
+
+    .side-buttons .control-button {
+        width: 32px;
+        height: 32px;
+        font-size: 1rem;
+    }
+
+    .clip-title {
+        font-size: 12px;
+        padding: 2px 6px;
+    }
+
+    .share-duration-modal .modal-content {
+        padding: 15px 12px;
+    }
+
+    .share-duration-modal h2 {
+        font-size: 16px;
+        margin-bottom: 12px;
+    }
+
+    .range-labels {
+        font-size: 12px;
+    }
+
+    .share-confirm-btn, .share-cancel-btn {
+        padding: 6px 12px;
+        font-size: 13px;
+        margin: 6px;
+    }
 }
 
 /* Share Duration Modal Styles */
@@ -362,25 +452,4 @@ video {
 
 .share-confirm-btn:active, .share-cancel-btn:active {
     transform: translateY(0);
-}
-
-@media (max-width: 768px) {
-    .share-duration-modal .modal-content {
-        padding: 20px;
-        width: 95%;
-    }
-    
-    .share-duration-modal h2 {
-        font-size: 20px;
-        margin-bottom: 20px;
-    }
-    
-    .range-labels {
-        font-size: 14px;
-    }
-    
-    .share-confirm-btn, .share-cancel-btn {
-        padding: 10px 20px;
-        font-size: 14px;
-    }
 } 
