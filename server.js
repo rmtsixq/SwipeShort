@@ -9,6 +9,7 @@ const util = require('util');
 const execPromise = util.promisify(exec);
 const { v4: uuidv4 } = require('uuid');
 const axios = require('axios');
+const puppeteer = require('puppeteer');
 const cors = require('cors');
 require('dotenv').config();
 
@@ -323,3 +324,237 @@ app.get('/dashboard', (req, res) => {
 app.get('/movie', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'movie.html'));
 });
+
+// Update Cloudflare bypass logic (re-adding if needed)
+async function handleCloudflareChallenge(page) {
+    console.log('Handling Cloudflare challenge...');
+    try {
+        await page.waitForSelector('iframe[src*="challenges.cloudflare.com"]', { timeout: 10000 });
+        const frames = page.frames();
+        const challengeFrame = frames.find(f => f.url().includes('challenges.cloudflare.com'));
+        if (challengeFrame) {
+            console.log('Found Cloudflare challenge frame');
+            await challengeFrame.waitForSelector('body', { timeout: 10000 });
+            await page.mouse.move(Math.random() * 800, Math.random() * 600);
+            await page.waitForTimeout(1000 + Math.random() * 1000);
+            const button = await challengeFrame.$('button[type="submit"]');
+            if (button) {
+                await button.click();
+                console.log('Clicked challenge button');
+            } else {
+                 console.log('Cloudflare submit button not found, trying general click...');
+                 await challengeFrame.click('body'); // Try clicking on the body
+            }
+            await page.waitForTimeout(5000); // Wait after clicking
+            const currentUrl = page.url();
+            if (currentUrl.includes('challenges.cloudflare.com')) {
+                console.log('Still on challenge page after click, waiting longer...');
+                await page.waitForTimeout(10000); // Wait even longer
+            }
+        }
+    } catch (error) {
+        console.log('Error handling Cloudflare challenge:', error.message);
+    }
+}
+
+// New endpoint to get Cloudnestra embed URL from vidsrc
+app.get('/api/get-cloudnestra-embed', async (req, res) => {
+    const { movieId } = req.query;
+    console.log('\n=== Cloudnestra Embed Fetching Started ===');
+    console.log('Movie ID:', movieId);
+
+    if (!movieId) {
+        return res.status(400).json({ error: 'Movie ID is required' });
+    }
+
+    let browser = null;
+    try {
+        console.log('Starting Puppeteer browser...');
+        browser = await puppeteer.launch({
+            headless: 'new',
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-web-security',
+                '--disable-features=IsolateOrigins,site-per-process',
+                '--disable-blink-features=AutomationControlled',
+                '--autoplay-policy=no-user-gesture-required',
+                '--window-size=1920,1080',
+                '--disable-dev-shm-usage',
+                '--disable-accelerated-2d-canvas',
+                '--disable-gpu',
+                '--disable-infobars',
+                '--disable-notifications',
+                '--disable-extensions',
+                '--disable-default-apps',
+                '--disable-popup-blocking',
+                '--disable-save-password-bubble',
+                '--disable-translate',
+                '--disable-sync',
+                '--disable-background-networking',
+                '--metrics-recording-only',
+                '--mute-audio',
+                '--no-first-run',
+                '--safebrowsing-disable-auto-update',
+                '--js-flags=--random-seed=1157259157',
+                '--disable-background-timer-throttling',
+                '--disable-backgrounding-occluded-windows',
+                '--disable-renderer-backgrounding',
+                '--disable-breakpad',
+                '--disable-component-extensions-with-background-pages',
+                '--disable-features=TranslateUI,BlinkGenPropertyTrees', /* Exclude TranslateUI and BlinkGenPropertyTrees */
+                '--disable-ipc-flooding-protection',
+                '--disable-renderer-throttling',
+                '--enable-features=NetworkService,NetworkServiceInProcess', /* Ensure NetworkService is enabled */
+                '--force-color-profile=srgb',
+                '--hide-scrollbars',
+                '--ignore-certificate-errors',
+                '--ignore-certificate-errors-spki-list',
+                '--lang=en-US,en', /* Prefer English */
+                '--password-store=basic', /* Use basic password store */
+                '--use-mock-keychain', /* Use mock keychain */
+                '--disable-site-isolation-trials' /* Disable site isolation */
+            ],
+            ignoreHTTPSErrors: true // Ignore HTTPS errors
+        });
+
+        const page = await browser.newPage();
+
+        // Optional: Set user agent and headers for better imitation
+        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
+        await page.setExtraHTTPHeaders({
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8', // Adjusted Accept header
+            'Accept-Encoding': 'gzip, deflate, br', // Adjusted Accept-Encoding
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1', // Added Upgrade-Insecure-Requests
+            'Sec-Fetch-Dest': 'document', // Added Sec-Fetch headers
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'none', // Changed from 'cross-site' or 'same-origin'
+            'Sec-Fetch-User': '?1', // Added Sec-Fetch-User
+            'sec-ch-ua': '"Chromium";v="122", "Google Chrome";v="122", "Not(A:Brand";v="24"', // Added client hints
+            'sec-ch-ua-mobile': '?0',
+            'sec-ch-ua-platform': '"Windows"',
+            'DNT': '1' // Do Not Track header
+        });
+
+         // Re-apply stealth scripts
+        await page.evaluateOnNewDocument(() => {
+            const originalQuery = window.navigator.permissions.query;
+            window.navigator.permissions.query = (parameters) => (
+                parameters.name === 'notifications' ?
+                    Promise.resolve({ state: Notification.permission }) :
+                    originalQuery(parameters)
+            );
+            Object.defineProperty(navigator, 'plugins', {
+                get: () => [1, 2, 3, 4, 5].map(() => ({
+                    0: { type: "application/x-google-chrome-pdf", suffixes: "pdf", description: "Portable Document Format", enabledPlugin: true },
+                    name: "Chrome PDF Plugin", filename: "internal-pdf-viewer", description: "Portable Document Format", length: 1
+                }))
+            });
+            Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+            Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
+            Object.defineProperty(navigator, 'platform', { get: () => 'Win32' });
+            window.chrome = { runtime: {}, loadTimes: function() {}, csi: function() {}, app: {} };
+            const originalGetOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
+            Object.getOwnPropertyDescriptor = function(target, prop) {
+                if (prop === 'contentWindow' && target instanceof HTMLIFrameElement) {
+                    return { get: function() { return window; }, configurable: true };
+                }
+                return originalGetOwnPropertyDescriptor(target, prop);
+            };
+        });
+
+        // Go to the vidsrc embed page
+        const embedUrl = `https://vidsrc.to/embed/movie/${movieId}`; // Using .to instead of .xyz as in previous successful attempts
+        console.log('Navigating to vidsrc embed page:', embedUrl);
+
+        const response = await page.goto(embedUrl, {
+            waitUntil: 'domcontentloaded', // Wait for DOM to be ready
+            timeout: 60000
+        });
+
+        // Check for Cloudflare challenge and try to handle it
+        if (response && (response.status() === 503 || page.url().includes('challenges.cloudflare.com'))) {
+             console.log('Cloudflare challenge detected after initial load, trying to handle...');
+             await handleCloudflareChallenge(page);
+             // After handling, check if we are redirected to the actual content page
+             if (page.url().includes('challenges.cloudflare.com')) {
+                 console.error('Failed to bypass Cloudflare.');
+                 return res.status(500).json({ error: 'Failed to bypass Cloudflare challenge.' });
+             }
+             console.log('Cloudflare bypassed, continuing...');
+        } else if (!response) {
+             console.error('Navigation failed or returned no response.');
+             return res.status(500).json({ error: 'Navigation failed to vidsrc embed page.' });
+        } else if (response.status() >= 400) {
+             console.error(`Navigation returned status code ${response.status()}.`);
+             return res.status(response.status()).json({ error: `Navigation failed with status: ${response.status()}` });
+        }
+
+        console.log('Page loaded. Current URL:', page.url());
+
+        // Wait for the iframe to appear
+        await page.waitForSelector('iframe', { timeout: 30000 });
+        console.log('Iframe found on the page.');
+
+        // Get the src attribute of the first iframe
+        const iframeSrc = await page.evaluate(() => {
+            const iframe = document.querySelector('iframe');
+            return iframe ? iframe.src : null;
+        });
+
+        if (iframeSrc) {
+            console.log('Found iframe src:', iframeSrc);
+            // Assuming the iframe src is the Cloudnestra embed URL
+            res.json({ cloudnestraEmbedUrl: iframeSrc });
+        } else {
+            console.error('No iframe found on the vidsrc embed page.');
+            res.status(404).json({ error: 'Could not find the embed iframe.' });
+        }
+
+    } catch (error) {
+        console.error('Error during Cloudnestra embed fetching:', error);
+        res.status(500).json({ error: 'An error occurred while fetching the embed URL.', details: error.message });
+    } finally {
+        if (browser) {
+            await browser.close();
+            console.log('Puppeteer browser closed.');
+        }
+    }
+});
+
+// TMDB Movie Search endpoint
+app.get('/api/search-movie', async (req, res) => {
+    const query = req.query.query;
+    const apiKey = process.env.TMDB_API_KEY || 'fda9bed2dd52a349ecb7cfe38b050ca5';
+    if (!query) {
+        return res.status(400).json({ error: 'Query parameter is required' });
+    }
+    try {
+        const tmdbUrl = `https://api.themoviedb.org/3/search/movie?api_key=${apiKey}&language=en-US&query=${encodeURIComponent(query)}`;
+        const response = await fetch(tmdbUrl);
+        const data = await response.json();
+        res.json(data);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch movies', details: err.message });
+    }
+});
+
+// TMDB TV Search endpoint
+app.get('/api/search-tv', async (req, res) => {
+    const query = req.query.query;
+    const apiKey = process.env.TMDB_API_KEY || 'fda9bed2dd52a349ecb7cfe38b050ca5';
+    if (!query) {
+        return res.status(400).json({ error: 'Query parameter is required' });
+    }
+    try {
+        const tmdbUrl = `https://api.themoviedb.org/3/search/tv?api_key=${apiKey}&language=en-US&query=${encodeURIComponent(query)}`;
+        const response = await fetch(tmdbUrl);
+        const data = await response.json();
+        res.json(data);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch TV shows', details: err.message });
+    }
+});
+

@@ -487,6 +487,296 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchContent('New Releases', 1);
     renderGenreButtons();
     setupMajikTrigger();
+
+    // Arama kutusuna film/dizi seçimi ekle
+    const searchHeader = document.querySelector('.search-header');
+    if (searchHeader && !document.getElementById('search-type')) {
+        const select = document.createElement('select');
+        select.id = 'search-type';
+        select.className = 'search-type-select';
+        select.innerHTML = `
+            <option value="movie">🎬 Film Ara</option>
+            <option value="tv">📺 Dizi Ara</option>
+        `;
+        
+        // Select stilini güncelle
+        select.style.cssText = `
+            padding: 10px 15px;
+            font-size: 16px;
+            border: 2px solid #2c3e50;
+            border-radius: 8px;
+            background-color: #34495e;
+            color: white;
+            cursor: pointer;
+            margin-right: 10px;
+            min-width: 150px;
+            transition: all 0.3s ease;
+        `;
+        
+        // Hover efekti
+        select.addEventListener('mouseover', () => {
+            select.style.backgroundColor = '#2c3e50';
+            select.style.borderColor = '#3498db';
+        });
+        
+        select.addEventListener('mouseout', () => {
+            select.style.backgroundColor = '#34495e';
+            select.style.borderColor = '#2c3e50';
+        });
+
+        // Arama kutusunu da güncelle
+        const searchInput = document.querySelector('.sidebar-search input');
+        if (searchInput) {
+            searchInput.style.cssText = `
+                padding: 10px 15px;
+                font-size: 16px;
+                border: 2px solid #2c3e50;
+                border-radius: 8px;
+                background-color: #34495e;
+                color: white;
+                width: 100%;
+                transition: all 0.3s ease;
+            `;
+            
+            searchInput.placeholder = 'Film veya dizi ara...';
+            
+            // Hover efekti
+            searchInput.addEventListener('mouseover', () => {
+                searchInput.style.backgroundColor = '#2c3e50';
+                searchInput.style.borderColor = '#3498db';
+            });
+            
+            searchInput.addEventListener('mouseout', () => {
+                searchInput.style.backgroundColor = '#34495e';
+                searchInput.style.borderColor = '#2c3e50';
+            });
+        }
+
+        searchHeader.insertBefore(select, searchHeader.firstChild);
+
+        // Seçim değiştiğinde aramayı güncelle
+        select.addEventListener('change', function() {
+            const searchTerm = searchInput.value.trim();
+            if (searchTerm) {
+                // Loading göster
+                searchResultsGrid.innerHTML = '<div class="search-loading">Searching...</div>';
+                // Hemen aramayı başlat
+                searchContent(searchTerm, this.value);
+            }
+            // Placeholder'ı güncelle
+            searchInput.placeholder = this.value === 'movie' ? 'Film ara...' : 'Dizi ara...';
+        });
+    }
+
+    // Search input event listener with debounce
+    searchInput.addEventListener('input', function(e) {
+        const searchTerm = e.target.value.toLowerCase().trim();
+        const searchType = document.getElementById('search-type') ? document.getElementById('search-type').value : 'movie';
+        
+        // Clear previous timeout
+        if (searchTimeout) {
+            clearTimeout(searchTimeout);
+        }
+        
+        if (searchTerm.length > 0) {
+            searchResults.style.display = 'block';
+            mainContent.style.display = 'none';
+            searchResultsGrid.innerHTML = '<div class="search-loading">Searching...</div>';
+            
+            searchTimeout = setTimeout(() => {
+                searchContent(searchTerm, searchType);
+            }, 300);
+        } else {
+            searchResults.style.display = 'none';
+            mainContent.style.display = 'block';
+        }
+    });
+
+    // Arama fonksiyonu
+    async function searchContent(query, type) {
+        try {
+            console.log('Searching for:', query, 'Type:', type);
+            const endpoint = type === 'tv' ? '/api/search-tv' : '/api/search-movie';
+            
+            // Loading göster
+            searchResultsGrid.innerHTML = '<div class="search-loading">Searching...</div>';
+            
+            const response = await fetch(`${endpoint}?query=${encodeURIComponent(query)}`);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            console.log('Search results:', data);
+            
+            // Önce media_type'a göre filtrele
+            let filteredResults = (data.results || []).filter(item => {
+                if (type === 'tv') {
+                    return item.media_type !== 'movie';
+                } else {
+                    return item.media_type !== 'tv';
+                }
+            });
+            
+            // Sonra yasaklı içerikleri filtrele
+            filteredResults = filterMovies(filteredResults);
+            
+            searchCount.textContent = filteredResults.length;
+            
+            if (currentUser) {
+                saveSearchToHistory(query, filteredResults);
+            }
+            
+            displaySearchResults(filteredResults, query);
+        } catch (error) {
+            console.error('Error searching:', error);
+            searchResultsGrid.innerHTML = '<div class="search-error">Error loading results. Please try again.</div>';
+        }
+    }
+
+    // Arama sonuçlarını göster
+    function displaySearchResults(movies, searchTerm) {
+        searchResultsGrid.innerHTML = '';
+        
+        if (movies.length === 0) {
+            let message = `No results found for "${searchTerm}"`;
+            if (!showAdultMovies) {
+                message += ' (18+ content is hidden)';
+            }
+            
+            searchResultsGrid.innerHTML = `
+                <div class="search-no-results">
+                    <p>${message}</p>
+                    ${currentUser ? '<p class="search-suggestions">Try one of your recent searches:</p>' : ''}
+                </div>
+            `;
+            
+            if (currentUser) {
+                getSearchSuggestions().then(suggestions => {
+                    if (suggestions.length > 0) {
+                        const suggestionsDiv = document.createElement('div');
+                        suggestionsDiv.className = 'search-suggestions-list';
+                        suggestions.forEach(term => {
+                            const suggestion = document.createElement('button');
+                            suggestion.className = 'search-suggestion-btn';
+                            suggestion.textContent = term;
+                            suggestion.onclick = () => {
+                                searchInput.value = term;
+                                const searchType = document.getElementById('search-type') ? document.getElementById('search-type').value : 'movie';
+                                searchContent(term, searchType);
+                            };
+                            suggestionsDiv.appendChild(suggestion);
+                        });
+                        searchResultsGrid.appendChild(suggestionsDiv);
+                    }
+                });
+            }
+            return;
+        }
+        
+        movies.forEach(movie => {
+            const movieCard = document.createElement('div');
+            movieCard.className = 'search-film-card';
+            
+            const title = movie.title || movie.name;
+            const releaseDate = movie.release_date || movie.first_air_date;
+            const posterPath = movie.poster_path 
+                ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+                : '/images/no-poster.png';
+            
+            movieCard.innerHTML = `
+                <img src="${posterPath}" alt="${title}" onerror="this.src='/images/no-poster.png'">
+                <div class="search-film-info">
+                    <h3 class="search-film-title">${title}</h3>
+                    <div class="search-film-meta">
+                        <span class="search-film-year">${releaseDate ? releaseDate.split('-')[0] : 'N/A'}</span>
+                        <span class="search-film-rating">
+                            <i class="fas fa-star"></i>
+                            ${movie.vote_average ? movie.vote_average.toFixed(1) : 'N/A'}
+                        </span>
+                    </div>
+                </div>
+            `;
+            
+            movieCard.addEventListener('click', () => {
+                const type = document.getElementById('search-type') ? document.getElementById('search-type').value : 'movie';
+                window.location.href = `${type}.html?id=${movie.id}`;
+            });
+            
+            searchResultsGrid.appendChild(movieCard);
+        });
+    }
+
+    // Function to save search to Firebase
+    async function saveSearchToHistory(searchTerm, results) {
+        if (!currentUser) return;
+
+        try {
+            const searchRef = firebase.firestore().collection('searchHistory').doc(currentUser.uid);
+            const searchData = {
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                term: searchTerm,
+                resultCount: results.length,
+                results: results.slice(0, 5).map(movie => ({
+                    id: movie.id,
+                    title: movie.title,
+                    poster_path: movie.poster_path,
+                    release_date: movie.release_date,
+                    vote_average: movie.vote_average
+                }))
+            };
+
+            // Get current history
+            const doc = await searchRef.get();
+            if (doc.exists) {
+                const history = doc.data().history || [];
+                // Add new search to beginning of array
+                history.unshift(searchData);
+                // Keep only last MAX_SEARCH_HISTORY searches
+                if (history.length > MAX_SEARCH_HISTORY) {
+                    history.pop();
+                }
+                // Update history
+                await searchRef.update({ history });
+            } else {
+                // Create new history document
+                await searchRef.set({ history: [searchData] });
+            }
+        } catch (error) {
+            console.error('Error saving search history:', error);
+        }
+    }
+
+    // Function to get search suggestions based on history
+    async function getSearchSuggestions() {
+        if (!currentUser) return [];
+
+        try {
+            const searchRef = firebase.firestore().collection('searchHistory').doc(currentUser.uid);
+            const doc = await searchRef.get();
+            
+            if (doc.exists) {
+                const history = doc.data().history || [];
+                // Get unique search terms from history
+                const suggestions = [...new Set(history.map(item => item.term))];
+                return suggestions.slice(0, 5); // Return top 5 suggestions
+            }
+            return [];
+        } catch (error) {
+            console.error('Error getting search suggestions:', error);
+            return [];
+        }
+    }
+
+    // Clear search when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+            searchInput.value = '';
+            searchResults.style.display = 'none';
+            mainContent.style.display = 'block';
+        }
+    });
 });
 
 // TMDB API Test
@@ -840,6 +1130,87 @@ function showLinuxTerminal() {
     }
 }
 
+// Title-specific keywords (strict control)
+const titleFilteredKeywords = [
+    // Single words
+    'rape', 'sex', 'orgasm', 'cum', 'porn', 'xxx', 'adult', 'erotic',
+    'nude', 'naked', 'pornographic', 'explicit', 'mature', 'adult content',
+    'carpenter\'s shop', 'fuck', 'cock', 'dick', 'pussy', 'ass', 'whore',
+    'slut', 'bitch', 'penis', 'vagina', 'anal', 'oral', 'blowjob', 'handjob',
+    'masturbation', 'ejaculation', 'sperm', 'semen', 'prostitute', 'hooker',
+    'escort', 'stripper', 'striptease', 'lapdance', 'brothel', 'whorehouse',
+    'bordello', 'sexuality', 'sexual', 'intercourse', 'coitus', 'copulation',
+    'fornication', 'prostitution', 'pornography', 'obscenity', 'lewdness',
+    'indecency', 'vulgarity', 'crudeness', 'filth', 'smut', 'dirt', 'squirt',
+    // Multi-word phrases and names (exact match)
+    'Ultimate DFC Slender',
+    "Moms's Friend",
+    'Mikako Abe',
+    'Leggings Mania',
+    "Friend's Mother",
+    'Scan Doll',
+];
+
+// General content filtering keywords (checked in both title and overview)
+const contentFilteredKeywords = [
+    'porn', 'xxx', 'adult', 'erotic', 'sex', 'nude', 'naked',
+    'pornographic', 'explicit', 'mature', 'adult content', 'rape', "Carpenter's Shop",
+    'Ultimate DFC Slender'
+];
+
+// Movie filtering function
+function filterMovies(movies) {
+    return movies.filter(movie => {
+        const title = (movie.title || movie.name || '').toLowerCase();
+        const overview = (movie.overview || '').toLowerCase();
+        
+        // Check title-specific keywords (strict control)
+        const hasFilteredTitle = titleFilteredKeywords.some(keyword => {
+            const keywordLower = keyword.toLowerCase();
+            
+            // Multi-word check (exact match)
+            if (keyword.includes(' ')) {
+                return title.includes(keywordLower);
+            }
+            
+            // Single word check (word boundary match)
+            const regex = new RegExp(`\\b${keywordLower}\\b`, 'i');
+            return regex.test(title);
+        });
+
+        // Filter out if title contains filtered keywords
+        if (hasFilteredTitle) {
+            console.log('Filtered content:', title, 'due to title match');
+            return false;
+        }
+
+        // Check content keywords
+        const hasFilteredContent = contentFilteredKeywords.some(keyword => {
+            const keywordLower = keyword.toLowerCase();
+            // Multi-word check
+            if (keyword.includes(' ')) {
+                return title.includes(keywordLower) || overview.includes(keywordLower);
+            }
+            // Single word check
+            return title.includes(keywordLower) || overview.includes(keywordLower);
+        });
+
+        // Filter out if content contains filtered keywords
+        if (hasFilteredContent) {
+            console.log('Filtered content:', title, 'due to content match');
+            return false;
+        }
+
+        // 18+ content check
+        if (!showAdultMovies && movie.adult) {
+            console.log('Filtered content:', title, 'due to adult content');
+            return false;
+        }
+
+        return true;
+    });
+}
+
 // Search functionality (Part 2A)
 document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.querySelector('.sidebar-search input');
@@ -852,36 +1223,6 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentUser = null;
     const MAX_SEARCH_HISTORY = 10;
     let showAdultMovies = false;
-
-    // Title-specific keywords (strict control)
-    const titleFilteredKeywords = [
-        // Single words
-        'rape', 'sex', 'orgasm', 'cum', 'porn', 'xxx', 'adult', 'erotic',
-        'nude', 'naked', 'pornographic', 'explicit', 'mature', 'adult content',
-        'carpenter\'s shop', 'fuck', 'cock', 'dick', 'pussy', 'ass', 'whore',
-        'slut', 'bitch', 'penis', 'vagina', 'anal', 'oral', 'blowjob', 'handjob',
-        'masturbation', 'ejaculation', 'sperm', 'semen', 'prostitute', 'hooker',
-        'escort', 'stripper', 'striptease', 'lapdance', 'brothel', 'whorehouse',
-        'bordello', 'sexuality', 'sexual', 'intercourse', 'coitus', 'copulation',
-        'fornication', 'prostitution', 'pornography', 'obscenity', 'lewdness',
-        'indecency', 'vulgarity', 'crudeness', 'filth', 'smut', 'dirt', 'squirt',
-        // Multi-word phrases and names (exact match)
-        'Ultimate DFC Slender',
-        "Moms's Friend",
-        'Mikako Abe',
-        'Leggings Mania',
-        "Friend's Mother",
-        'Scan Doll',
-
-    ];
-
-    // General content filtering keywords (checked in both title and overview)
-    const contentFilteredKeywords = [
-        'porn', 'xxx', 'adult', 'erotic', 'sex', 'nude', 'naked',
-        'pornographic', 'explicit', 'mature', 'adult content', 'rape', "Carpenter's Shop",
-        'Ultimate DFC Slender'
-        // Add more keywords here if needed
-    ];
 
     // Firebase auth state listener
     firebase.auth().onAuthStateChanged(function(user) {
@@ -915,7 +1256,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Movie filtering function
     function filterMovies(movies) {
         return movies.filter(movie => {
-            const title = movie.title.toLowerCase();
+            const title = (movie.title || movie.name || '').toLowerCase();
             const overview = (movie.overview || '').toLowerCase();
             
             // Check title-specific keywords (strict control)
@@ -924,7 +1265,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Multi-word check (exact match)
                 if (keyword.includes(' ')) {
-                    // Check if the title contains this exact phrase
                     return title.includes(keywordLower);
                 }
                 
@@ -935,7 +1275,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Filter out if title contains filtered keywords
             if (hasFilteredTitle) {
-                console.log('Filtered movie:', movie.title, 'due to title match');
+                console.log('Filtered content:', title, 'due to title match');
                 return false;
             }
 
@@ -952,13 +1292,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Filter out if content contains filtered keywords
             if (hasFilteredContent) {
-                console.log('Filtered movie:', movie.title, 'due to content match');
+                console.log('Filtered content:', title, 'due to content match');
                 return false;
             }
 
             // 18+ content check
             if (!showAdultMovies && movie.adult) {
-                console.log('Filtered movie:', movie.title, 'due to adult content');
+                console.log('Filtered content:', title, 'due to adult content');
                 return false;
             }
 
@@ -969,6 +1309,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Search input event listener with debounce
     searchInput.addEventListener('input', function(e) {
         const searchTerm = e.target.value.toLowerCase().trim();
+        const searchType = document.getElementById('search-type') ? document.getElementById('search-type').value : 'movie';
         
         // Clear previous timeout
         if (searchTimeout) {
@@ -976,57 +1317,70 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         if (searchTerm.length > 0) {
-            // Show loading state
             searchResults.style.display = 'block';
             mainContent.style.display = 'none';
             searchResultsGrid.innerHTML = '<div class="search-loading">Searching...</div>';
             
-            // Debounce search to avoid too many API calls
             searchTimeout = setTimeout(() => {
-                searchMovies(searchTerm);
+                searchContent(searchTerm, searchType);
             }, 300);
         } else {
-            // Hide search results, show main content
             searchResults.style.display = 'none';
             mainContent.style.display = 'block';
         }
     });
 
-    // Function to search movies using TMDB API
-    async function searchMovies(query) {
+    // Arama fonksiyonu
+    async function searchContent(query, type) {
         try {
-            const response = await fetch(
-                `https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}&language=en-US&page=1&include_adult=${showAdultMovies}`
-            );
+            console.log('Searching for:', query, 'Type:', type);
+            const endpoint = type === 'tv' ? '/api/search-tv' : '/api/search-movie';
+            
+            // Loading göster
+            searchResultsGrid.innerHTML = '<div class="search-loading">Searching...</div>';
+            
+            const response = await fetch(`${endpoint}?query=${encodeURIComponent(query)}`);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
             const data = await response.json();
+            console.log('Search results:', data);
             
-            // Get filtered results
-            const filteredResults = filterMovies(data.results);
+            // Önce media_type'a göre filtrele
+            let filteredResults = (data.results || []).filter(item => {
+                if (type === 'tv') {
+                    return item.media_type !== 'movie';
+                } else {
+                    return item.media_type !== 'tv';
+                }
+            });
             
-            // Update search count
+            // Sonra yasaklı içerikleri filtrele
+            filteredResults = filterMovies(filteredResults);
+            
             searchCount.textContent = filteredResults.length;
             
-            // Save search to history if user is logged in
             if (currentUser) {
                 saveSearchToHistory(query, filteredResults);
             }
             
-            // Display filtered results
             displaySearchResults(filteredResults, query);
         } catch (error) {
-            console.error('Error searching movies:', error);
-            searchResultsGrid.innerHTML = '<div class="search-error">Error loading movies. Please try again.</div>';
+            console.error('Error searching:', error);
+            searchResultsGrid.innerHTML = '<div class="search-error">Error loading results. Please try again.</div>';
         }
     }
 
-    // Function to display search results
+    // Arama sonuçlarını göster
     function displaySearchResults(movies, searchTerm) {
         searchResultsGrid.innerHTML = '';
         
         if (movies.length === 0) {
-            let message = `No movies found for "${searchTerm}"`;
+            let message = `No results found for "${searchTerm}"`;
             if (!showAdultMovies) {
-                message += ' (18+ movies are hidden)';
+                message += ' (18+ content is hidden)';
             }
             
             searchResultsGrid.innerHTML = `
@@ -1036,7 +1390,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             `;
             
-            // Show search suggestions if user is logged in
             if (currentUser) {
                 getSearchSuggestions().then(suggestions => {
                     if (suggestions.length > 0) {
@@ -1048,7 +1401,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             suggestion.textContent = term;
                             suggestion.onclick = () => {
                                 searchInput.value = term;
-                                searchMovies(term);
+                                const searchType = document.getElementById('search-type') ? document.getElementById('search-type').value : 'movie';
+                                searchContent(term, searchType);
                             };
                             suggestionsDiv.appendChild(suggestion);
                         });
@@ -1063,17 +1417,18 @@ document.addEventListener('DOMContentLoaded', function() {
             const movieCard = document.createElement('div');
             movieCard.className = 'search-film-card';
             
-            // Get poster path with fallback
+            const title = movie.title || movie.name;
+            const releaseDate = movie.release_date || movie.first_air_date;
             const posterPath = movie.poster_path 
                 ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
-                : 'https://via.placeholder.com/500x750?text=No+Poster';
+                : '/images/no-poster.png';
             
             movieCard.innerHTML = `
-                <img src="${posterPath}" alt="${movie.title}" onerror="this.src='https://via.placeholder.com/500x750?text=No+Poster'">
+                <img src="${posterPath}" alt="${title}" onerror="this.src='/images/no-poster.png'">
                 <div class="search-film-info">
-                    <h3 class="search-film-title">${movie.title}</h3>
+                    <h3 class="search-film-title">${title}</h3>
                     <div class="search-film-meta">
-                        <span class="search-film-year">${movie.release_date ? movie.release_date.split('-')[0] : 'N/A'}</span>
+                        <span class="search-film-year">${releaseDate ? releaseDate.split('-')[0] : 'N/A'}</span>
                         <span class="search-film-rating">
                             <i class="fas fa-star"></i>
                             ${movie.vote_average ? movie.vote_average.toFixed(1) : 'N/A'}
@@ -1082,9 +1437,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             `;
             
-            // Add click event to movie card
             movieCard.addEventListener('click', () => {
-                window.location.href = `movie.html?id=${movie.id}`;
+                const type = document.getElementById('search-type') ? document.getElementById('search-type').value : 'movie';
+                window.location.href = `${type}.html?id=${movie.id}`;
             });
             
             searchResultsGrid.appendChild(movieCard);

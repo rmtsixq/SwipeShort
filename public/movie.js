@@ -7,39 +7,36 @@ function getMovieIdFromUrl() {
     return params.get('id');
 }
 
-// M3U8 URL'lerini al
-async function getM3U8Urls(movieId) {
-    console.log('=== Frontend: M3U8 URL Fetching Started ===');
+// Cloudnestra Embed URL'ini al
+async function getCloudnestraEmbedUrl(movieId) {
+    console.log('=== Frontend: Cloudnestra Embed URL Fetching Started ===');
     console.log('Movie ID:', movieId);
-    
+
     try {
-        console.log('Fetching from endpoint:', `/api/stream/${movieId}`);
-        const response = await fetch(`/api/stream/${movieId}`);
+        console.log('Fetching from endpoint:', `/api/get-cloudnestra-embed?movieId=${movieId}`);
+        const response = await fetch(`/api/get-cloudnestra-embed?movieId=${movieId}`);
         console.log('Response status:', response.status);
         console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-        
+
         if (!response.ok) {
             const errorText = await response.text();
             console.error('Error response body:', errorText);
             throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
         }
-        
+
         const data = await response.json();
         console.log('Response data:', data);
-        
-        // API'dan gelen yanıta göre m3u8 URL'lerini kontrol et
-        if (!data.streamSrc) {
-            console.error('No streamSrc in response data');
-            throw new Error('No stream URL found');
+
+        // API'dan gelen yanıta göre embed URL'ini kontrol et
+        if (!data.cloudnestraEmbedUrl) {
+            console.error('No cloudnestraEmbedUrl in response data');
+            throw new Error('No Cloudnestra embed URL found');
         }
-        
-        // API'dan gelen tek URL'i bir diziye koyarak döndür
-        const urls = [data.streamSrc];
-        
-        console.log('=== Frontend: M3U8 URL Fetching Completed ===');
-        return urls;
+
+        console.log('=== Frontend: Cloudnestra Embed URL Fetching Completed ===');
+        return data.cloudnestraEmbedUrl; // Direkt embed URL'i döndür
     } catch (error) {
-        console.error('=== Frontend: M3U8 URL Fetching Failed ===');
+        console.error('=== Frontend: Cloudnestra Embed URL Fetching Failed ===');
         console.error('Error details:', error);
         console.error('Error stack:', error.stack);
         throw error;
@@ -51,7 +48,7 @@ async function loadMovieDetails() {
     console.log('=== Frontend: Loading Movie Details Started ===');
     const movieId = getMovieIdFromUrl();
     console.log('Movie ID from URL:', movieId);
-    
+
     if (!movieId) {
         console.log('No movie ID found in URL, redirecting to dashboard');
         window.location.href = 'dashboard.html';
@@ -63,11 +60,11 @@ async function loadMovieDetails() {
         console.log('Fetching movie details from TMDB...');
         const res = await fetch(`https://api.themoviedb.org/3/movie/${movieId}?api_key=${TMDB_API_KEY}`);
         console.log('TMDB response status:', res.status);
-        
+
         if (!res.ok) {
             throw new Error(`TMDB API error! status: ${res.status}`);
         }
-        
+
         const movie = await res.json();
         console.log('Movie details received:', movie);
 
@@ -80,14 +77,10 @@ async function loadMovieDetails() {
 
         // Stream URL'ini al (artık m3u8 URL değil, embed URL)
         console.log('Fetching stream URL...');
-        const streamUrl = await getM3U8Urls(movieId); // Fonksiyon adı misleading oldu ama backend'den embed URL getiriyor
-        console.log('Stream URL received:', streamUrl);
-        
-        if (streamUrl && streamUrl.length > 0) {
-            // Gelen URL dizisinin ilk elemanını al
-            const embedSrc = streamUrl[0];
-            console.log('Setting up iframe with embed URL:', embedSrc);
+        const embedSrc = await getCloudnestraEmbedUrl(movieId); // Fonksiyon adını güncelledik ve direkt embed URL alıyoruz
+        console.log('Embed URL received:', embedSrc);
 
+        if (embedSrc) {
             const playerContainer = document.getElementById('movie-player');
             // Video.js player yerine iframe kullan
             playerContainer.innerHTML = `
@@ -109,7 +102,7 @@ async function loadMovieDetails() {
         console.error('=== Frontend: Loading Movie Details Failed ===');
         console.error('Error details:', error);
         console.error('Error stack:', error.stack);
-        
+
         document.getElementById('movie-title').textContent = 'Error loading movie';
         document.getElementById('movie-player').innerHTML = `
             <div class="movie-player-placeholder">
@@ -182,13 +175,13 @@ document.addEventListener('DOMContentLoaded', () => {
     confirmBtn.addEventListener('click', () => {
         const startTime = parseFloat(startSlider.value);
         const endTime = parseFloat(endSlider.value);
-        
+
         // Create share URL with time parameters
         const currentUrl = new URL(window.location.href);
         currentUrl.searchParams.set('start', startTime);
         currentUrl.searchParams.set('end', endTime);
         const shareUrl = currentUrl.toString();
-        
+
         // Copy to clipboard
         navigator.clipboard.writeText(shareUrl).then(() => {
             alert('Share link copied to clipboard!');
@@ -196,25 +189,11 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Failed to copy:', err);
             alert('Failed to copy share link. Please try again.');
         });
-        
+
         shareModal.style.display = 'none';
     });
 
     cancelBtn.addEventListener('click', () => {
         shareModal.style.display = 'none';
     });
-
-    // URL'den zaman parametrelerini kontrol et
-    const urlParams = new URLSearchParams(window.location.search);
-    const startParam = urlParams.get('start');
-    const endParam = urlParams.get('end');
-
-    if (videoPlayer && startParam && endParam) {
-        videoPlayer.currentTime = parseFloat(startParam);
-        videoPlayer.addEventListener('timeupdate', () => {
-            if (videoPlayer.currentTime >= parseFloat(endParam)) {
-                videoPlayer.pause();
-            }
-        });
-    }
 }); 
