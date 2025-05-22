@@ -202,6 +202,7 @@ app.get('/api/stream/:tmdb_id', async (req, res) => {
         console.log("embedUrl:", embedUrl);
 
         // Puppeteer ile headless browser başlat
+        console.log('Starting Puppeteer browser...');
         browser = await puppeteer.launch({
             headless: 'new',
             args: [
@@ -256,7 +257,8 @@ app.get('/api/stream/:tmdb_id', async (req, res) => {
                 hasTouch: false,
                 isLandscape: true,
                 isMobile: false
-            }
+            },
+            executablePath: require('puppeteer').executablePath(),
         });
 
         const page = await browser.newPage();
@@ -649,7 +651,8 @@ app.get('/api/get-m3u8-urls', async (req, res) => {
                 hasTouch: false,
                 isLandscape: true,
                 isMobile: false
-            }
+            },
+            executablePath: require('puppeteer').executablePath(),
         });
 
         const page = await browser.newPage();
