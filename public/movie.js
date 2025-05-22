@@ -13,8 +13,8 @@ async function getM3U8Urls(movieId) {
     console.log('Movie ID:', movieId);
     
     try {
-        console.log('Fetching from endpoint:', `/api/get-m3u8-urls?movieId=${movieId}`);
-        const response = await fetch(`/api/get-m3u8-urls?movieId=${movieId}`);
+        console.log('Fetching from endpoint:', `/api/stream/${movieId}`);
+        const response = await fetch(`/api/stream/${movieId}`);
         console.log('Response status:', response.status);
         console.log('Response headers:', Object.fromEntries(response.headers.entries()));
         
@@ -27,13 +27,17 @@ async function getM3U8Urls(movieId) {
         const data = await response.json();
         console.log('Response data:', data);
         
-        if (!data.urls || data.urls.length === 0) {
-            console.error('No m3u8 URLs in response data');
-            throw new Error('No m3u8 URLs found');
+        // API'dan gelen yanıta göre m3u8 URL'lerini kontrol et
+        if (!data.streamSrc) {
+            console.error('No streamSrc in response data');
+            throw new Error('No stream URL found');
         }
         
+        // API'dan gelen tek URL'i bir diziye koyarak döndür
+        const urls = [data.streamSrc];
+        
         console.log('=== Frontend: M3U8 URL Fetching Completed ===');
-        return data.urls;
+        return urls;
     } catch (error) {
         console.error('=== Frontend: M3U8 URL Fetching Failed ===');
         console.error('Error details:', error);
@@ -74,57 +78,30 @@ async function loadMovieDetails() {
         document.getElementById('movie-rating').textContent = `⭐ ${movie.vote_average.toFixed(1)}`;
         document.getElementById('movie-description').textContent = movie.overview;
 
-        // M3U8 URL'lerini al
-        console.log('Fetching m3u8 URLs...');
-        const m3u8Urls = await getM3U8Urls(movieId);
-        console.log('M3U8 URLs received:', m3u8Urls);
+        // Stream URL'ini al (artık m3u8 URL değil, embed URL)
+        console.log('Fetching stream URL...');
+        const streamUrl = await getM3U8Urls(movieId); // Fonksiyon adı misleading oldu ama backend'den embed URL getiriyor
+        console.log('Stream URL received:', streamUrl);
         
-        if (m3u8Urls && m3u8Urls.length > 0) {
-            console.log('Setting up video player with first m3u8 URL:', m3u8Urls[0]);
-            // Mevcut player'ı kullan
-            const playerContainer = document.getElementById('movie-player');
-            // M3U8 URL'lerini proxy üzerinden geçir
-            const proxiedM3u8Urls = m3u8Urls.map(url => `/proxy/stream?url=${encodeURIComponent(url)}`);
-            console.log('Proxied m3u8 URLs:', proxiedM3u8Urls);
+        if (streamUrl && streamUrl.length > 0) {
+            // Gelen URL dizisinin ilk elemanını al
+            const embedSrc = streamUrl[0];
+            console.log('Setting up iframe with embed URL:', embedSrc);
 
+            const playerContainer = document.getElementById('movie-player');
+            // Video.js player yerine iframe kullan
             playerContainer.innerHTML = `
-                <video id="video-player" class="video-js vjs-default-skin" controls preload="auto" width="100%" height="100%">
-                    <source src="${proxiedM3u8Urls[0]}" type="application/x-mpegURL">
-                </video>
+                <iframe src="${embedSrc}" frameborder="0" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true" style="width: 100%; height: 100%;"></iframe>
             `;
 
-            // Video.js player'ı başlat
-            console.log('Initializing video.js player...');
-            const player = videojs('video-player', {
-                fluid: true,
-                aspectRatio: '16:9',
-                playbackRates: [0.5, 1, 1.5, 2],
-                html5: {
-                    hls: {
-                        overrideNative: true
-                    }
-                }
-            });
+            console.log('Iframe player setup completed');
 
-            // Hata durumunda diğer URL'leri dene
-            player.on('error', (error) => {
-                console.error('Video player error:', error);
-                // Orijinal URL listesindeki indeksi bul
-                const currentOriginalUrlIndex = m3u8Urls.findIndex(url => `/proxy/stream?url=${encodeURIComponent(url)}` === player.currentSrc());
-                console.log('Current URL index:', currentOriginalUrlIndex);
-                
-                if (currentOriginalUrlIndex < m3u8Urls.length - 1) {
-                    console.log('Trying next URL:', proxiedM3u8Urls[currentOriginalUrlIndex + 1]);
-                    player.src({ src: proxiedM3u8Urls[currentOriginalUrlIndex + 1], type: 'application/x-mpegURL' });
-                    player.play();
-                } else {
-                    console.error('No more URLs to try');
-                }
-            });
+             // Share functionality'nin videoPlayer referansını güncelle (iframe kullanıldığı için bu kısım çalışmayabilir)
+             // Eğer share süresi seçimi iframe içindeki videoya bağlıysa, bu özellik devre dışı kalabilir veya yeniden uyarlanması gerekebilir.
+             // Şimdilik bu kısmı olduğu gibi bırakıyorum ancak dikkatli olunmalı.
 
-            console.log('Video player setup completed');
         } else {
-            throw new Error('No m3u8 URLs found');
+            throw new Error('No stream URL found');
         }
 
         console.log('=== Frontend: Loading Movie Details Completed ===');
