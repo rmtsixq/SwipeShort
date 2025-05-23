@@ -5,9 +5,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // Check if user is logged in
     firebase.auth().onAuthStateChanged(function(user) {
         if (user) {
-            // Show username if available, otherwise show email
-            const name = user.displayName || user.email || 'User';
-            document.getElementById('dashboard-username').textContent = name;
+            // Sidebar profile info
+            document.getElementById('sidebarProfileImage').src = '/images/user.jpg';
+            document.getElementById('sidebarProfileName').textContent = user.displayName || user.email || 'User';
+            document.getElementById('sidebarProfileEmail').textContent = user.email || '';
+            // Show username if available, otherwise show email (for dashboard-username if exists)
+            if (document.getElementById('dashboard-username')) {
+                document.getElementById('dashboard-username').textContent = user.displayName || user.email || 'User';
+            }
         } else {
             // Redirect to auth.html if not logged in
             window.location.href = 'auth.html?tab=login';
@@ -21,6 +26,44 @@ document.addEventListener('DOMContentLoaded', function() {
             firebase.auth().signOut().then(function() {
                 window.location.href = 'auth.html?tab=login';
             });
+        });
+    }
+
+    const filterPanel = document.querySelector('.filter-panel');
+    const filterToggle = document.querySelector('.filter-toggle');
+    const filterOverlay = document.querySelector('.filter-overlay');
+
+    if (filterToggle && filterPanel && filterOverlay) {
+        filterToggle.addEventListener('click', function() {
+            const isActive = filterPanel.classList.contains('active');
+            if (isActive) {
+                filterPanel.classList.remove('active');
+                filterOverlay.style.display = 'none';
+            } else {
+                filterPanel.classList.add('active');
+                filterOverlay.style.display = 'block';
+            }
+        });
+
+        filterOverlay.addEventListener('click', function() {
+            filterPanel.classList.remove('active');
+            filterOverlay.style.display = 'none';
+        });
+
+        // Close button inside filter panel
+        const filterClose = document.querySelector('.filter-panel .filter-close');
+        if (filterClose) {
+            filterClose.addEventListener('click', function() {
+                filterPanel.classList.remove('active');
+                filterOverlay.style.display = 'none';
+            });
+        }
+
+        window.addEventListener('resize', function() {
+            if (window.innerWidth > 1650) {
+                filterPanel.classList.remove('active');
+                filterOverlay.style.display = 'none';
+            }
         });
     }
 });

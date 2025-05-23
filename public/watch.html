@@ -135,12 +135,37 @@
             padding: 10px 22px;
             font-size: 1rem;
             font-weight: 600;
+            cursor: pointer;
+            opacity: 1;
+            box-shadow: 0 2px 8px #0003;
+            transition: background 0.2s, box-shadow 0.2s, opacity 0.2s;
+        }
+        .comment-submit-btn:disabled {
+            opacity: 0.5;
             cursor: not-allowed;
-            opacity: 0.6;
+            filter: grayscale(0.5);
+        }
+        .comment-submit-btn:not(:disabled):hover {
+            background: linear-gradient(90deg, #38cfff 0%, #a259ff 100%);
+            box-shadow: 0 4px 16px #38cfff55;
+            opacity: 1;
         }
         .comments-list {
             margin-top: 10px;
             color: #aaa;
+            font-size: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .comment-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            background: #202027;
+            border-radius: 12px;
+            padding: 14px 18px 12px 14px;
+            box-shadow: 0 1px 6px #0002;
             font-size: 1rem;
         }
         @media (max-width: 900px) {
@@ -193,6 +218,10 @@
             </div>
         </div>
     </div>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="scripts/firebase-config.js"></script>
     <script src="https://kit.fontawesome.com/4e7b8e7e2a.js" crossorigin="anonymous"></script>
     <script>
     async function getCloudnestraEmbedUrl(movieId) {
@@ -237,6 +266,77 @@
         }
     }
     loadVideo();
+    // --- FIRESTORE COMMENT SECTION ---
+    const params = new URLSearchParams(window.location.search);
+    const movieId = params.get('id');
+    const commentsSection = document.querySelector('.comments-section');
+    const commentInput = document.querySelector('.comment-input');
+    const commentBtn = document.querySelector('.comment-submit-btn');
+    const commentsList = document.querySelector('.comments-list');
+    let currentUser = null;
+    // Auth state
+    firebase.auth().onAuthStateChanged(function(user) {
+        currentUser = user;
+        if (user) {
+            commentInput.disabled = false;
+            commentBtn.disabled = false;
+            commentInput.placeholder = 'Add a comment...';
+        } else {
+            commentInput.disabled = true;
+            commentBtn.disabled = true;
+            commentInput.placeholder = 'You must be logged in to comment.';
+        }
+    });
+    // Add comment
+    commentBtn.addEventListener('click', async function() {
+        const text = commentInput.value.trim();
+        if (!text || !currentUser) return;
+        commentBtn.disabled = true;
+        try {
+            await firebase.firestore()
+                .collection('comments')
+                .doc(movieId)
+                .collection('userComments')
+                .add({
+                    text,
+                    user: currentUser.displayName || currentUser.email || 'User',
+                    uid: currentUser.uid,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            commentInput.value = '';
+        } catch (e) {
+            alert('Error sending comment: ' + e.message);
+        }
+        commentBtn.disabled = false;
+    });
+    // Listen for comments
+    function renderComment(doc) {
+        const d = doc.data();
+        const date = d.createdAt && d.createdAt.toDate ? d.createdAt.toDate() : null;
+        const dateStr = date ? date.toLocaleString() : '';
+        return `<div class="comment-item"><b>${d.user}</b> <span class="comment-date">${dateStr}</span><br>${d.text}</div>`;
+    }
+    commentsList.innerHTML = '<div class="comment-loading">Loading comments...</div>';
+    firebase.firestore()
+        .collection('comments')
+        .doc(movieId)
+        .collection('userComments')
+        .orderBy('createdAt', 'asc')
+        .onSnapshot(snapshot => {
+            if (snapshot.empty) {
+                commentsList.innerHTML = '<div class="comment-empty">No comments yet.</div>';
+            } else {
+                commentsList.innerHTML = Array.from(snapshot.docs).map(renderComment).join('');
+            }
+        }, err => {
+            commentsList.innerHTML = '<div class="comment-error">Error loading comments.</div>';
+        });
+    // Enter key to send
+    commentInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !commentBtn.disabled) {
+            commentBtn.click();
+        }
+    });
     </script>
 </body>
 </html> 

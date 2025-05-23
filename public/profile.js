@@ -1,47 +1,29 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Load user profile data
-    loadUserProfile();
-    
-    // Setup event listeners
-    setupProfileEvents();
-    
-    // Load liked and disliked movies
-    loadUserMovies();
-});
-
-async function loadUserProfile() {
-    try {
-        // Firebase'den mevcut kullanıcıyı al
-        const user = firebase.auth().currentUser;
+    firebase.auth().onAuthStateChanged(function(user) {
         if (!user) {
-            // Giriş yoksa login sayfasına yönlendir
             window.location.href = 'auth.html?tab=login';
             return;
         }
         const userData = {
             name: user.displayName || user.email || 'User',
             email: user.email || '',
-            bio: '', // İstersen Firestore'dan bio çekebilirsin
-            avatar: user.photoURL || '/default-avatar.png'
+            bio: '',
+            avatar: '/images/user.jpg'
         };
-
-        // Sidebar profilini güncelle
-        document.getElementById('sidebarProfileImage').src = userData.avatar;
+        // Sidebar
+        document.getElementById('sidebarProfileImage').src = '/images/user.jpg';
         document.getElementById('sidebarProfileName').textContent = userData.name;
         document.getElementById('sidebarProfileEmail').textContent = userData.email;
-
-        // Ana profil kısmını güncelle
+        // Main profile
         document.getElementById('profileAvatar').src = userData.avatar;
         document.getElementById('profileName').textContent = userData.name;
         document.getElementById('profileEmail').textContent = userData.email;
         document.getElementById('displayName').value = userData.name;
         document.getElementById('bio').value = userData.bio || '';
-
-    } catch (error) {
-        console.error('Error loading profile:', error);
-        showNotification('Error loading profile data', 'error');
-    }
-}
+    });
+    setupProfileEvents();
+    loadUserMovies();
+});
 
 function setupProfileEvents() {
     // Profile image change
@@ -71,15 +53,12 @@ async function handleAvatarChange(event) {
     if (!file) return;
 
     try {
-        // TODO: Replace with actual API call
-        // Simulate file upload
         await new Promise(resolve => setTimeout(resolve, 1000));
         
         const reader = new FileReader();
         reader.onload = (e) => {
             const newAvatarUrl = e.target.result;
             document.getElementById('profileAvatar').src = newAvatarUrl;
-            document.getElementById('sidebarProfileImage').src = newAvatarUrl;
             showNotification('Profile picture updated successfully', 'success');
         };
         reader.readAsDataURL(file);
@@ -97,8 +76,6 @@ async function saveProfileSettings() {
             bio: document.getElementById('bio').value
         };
 
-        // TODO: Replace with actual API call
-        // Simulate API call
         await new Promise(resolve => setTimeout(resolve, 1000));
 
         // Update UI
@@ -156,8 +133,6 @@ function renderMovieGrid(gridId, movies) {
 }
 
 function showNotification(message, type = 'info') {
-    // TODO: Implement a proper notification system
+    // Only log, no alert
     console.log(`${type.toUpperCase()}: ${message}`);
-    // For now, just use alert
-    alert(message);
 } 
