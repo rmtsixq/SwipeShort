@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Watch Movie - ShortSwipe</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body, html {
+            background: #111;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            width: 100vw;
+            color: #fff;
+            font-family: 'Roboto', sans-serif;
+        }
+        .watch-header {
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            padding: 32px 0 0 0;
+        }
+        .back-btn {
+            color: #fff;
+            text-decoration: none;
+            font-size: 1.1rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(40,40,50,0.7);
+            border-radius: 18px;
+            padding: 8px 18px;
+            transition: background 0.2s, color 0.2s;
+        }
+        .back-btn:hover {
+            background: #38cfff;
+            color: #111;
+        }
+        .movie-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin: 0;
+            color: #fff;
+            flex: 1;
+            text-shadow: 0 2px 8px #000a;
+        }
+        .watch-container {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: flex-start;
+            padding: 0;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .video-frame {
+            width: 100%;
+            max-width: 900px;
+            aspect-ratio: 16/9;
+            background: #000;
+            border-radius: 18px;
+            box-shadow: 0 8px 32px #000a;
+            margin: 24px 0 0 0;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            position: relative;
+            left: -30px;
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            border-radius: 18px;
+            background: #000;
+        }
+        .spinner {
+            border: 6px solid #333;
+            border-top: 6px solid #38cfff;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+            margin: 80px auto 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .error-message {
+            color: #ff66c4;
+            font-size: 1.2rem;
+            margin: 48px 0 0 0;
+            text-align: center;
+        }
+        .comments-section {
+            width: 100%;
+            max-width: 900px;
+            margin: 36px auto 0 auto;
+            background: #18181c;
+            border-radius: 18px;
+            box-shadow: 0 2px 12px #0005;
+            padding: 24px 24px 18px 24px;
+        }
+        .comments-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 18px;
+            color: #38cfff;
+        }
+        .comment-input-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+        .comment-input {
+            flex: 1;
+            padding: 10px 16px;
+            border-radius: 12px;
+            border: none;
+            font-size: 1rem;
+            background: #23232b;
+            color: #fff;
+        }
+        .comment-submit-btn {
+            background: linear-gradient(90deg, #a259ff 0%, #38cfff 100%);
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            padding: 10px 22px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        .comments-list {
+            margin-top: 10px;
+            color: #aaa;
+            font-size: 1rem;
+        }
+        @media (max-width: 900px) {
+            .watch-header, .watch-container, .comments-section {
+                max-width: 100vw;
+                border-radius: 0;
+            }
+            .video-frame {
+                left: 0;
+            }
+        }
+        @media (max-width: 600px) {
+            .watch-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+                padding: 18px 0 0 0;
+            }
+            .movie-title {
+                font-size: 1.1rem;
+            }
+            .video-frame {
+                margin-top: 12px;
+                border-radius: 8px;
+            }
+            .comments-section {
+                padding: 12px 6px 10px 6px;
+                border-radius: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="watch-header">
+        <a href="dashboard.html" class="back-btn"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+        <span id="movie-title" class="movie-title">Loading...</span>
+    </div>
+    <div class="watch-container">
+        <div id="video-frame" class="video-frame">
+            <div class="spinner" id="spinner"></div>
+        </div>
+        <div class="comments-section">
+            <div class="comments-title">Comments</div>
+            <div class="comment-input-row">
+                <input class="comment-input" type="text" placeholder="Add a comment... (coming soon)" disabled />
+                <button class="comment-submit-btn" disabled>Send</button>
+            </div>
+            <div class="comments-list">
+                No comments yet.
+            </div>
+        </div>
+    </div>
+    <script src="https://kit.fontawesome.com/4e7b8e7e2a.js" crossorigin="anonymous"></script>
+    <script>
+    async function getCloudnestraEmbedUrl(movieId) {
+        const response = await fetch(`/api/get-cloudnestra-embed?movieId=${movieId}`);
+        if (!response.ok) throw new Error('No video found');
+        const data = await response.json();
+        if (!data.cloudnestraEmbedUrl) throw new Error('No video found');
+        return data.cloudnestraEmbedUrl;
+    }
+    async function getMovieTitle(movieId) {
+        const apiKey = 'fda9bed2dd52a349ecb7cfe38b050ca5';
+        const res = await fetch(`https://api.themoviedb.org/3/movie/${movieId}?api_key=${apiKey}&language=en-US`);
+        if (!res.ok) return '';
+        const data = await res.json();
+        return data.title || '';
+    }
+    async function loadVideo() {
+        const params = new URLSearchParams(window.location.search);
+        const movieId = params.get('id');
+        const frame = document.getElementById('video-frame');
+        const spinner = document.getElementById('spinner');
+        const titleSpan = document.getElementById('movie-title');
+        if (!movieId) {
+            spinner.style.display = 'none';
+            frame.innerHTML = '<div class="error-message">No movie selected.</div>';
+            titleSpan.textContent = 'No movie selected';
+            return;
+        }
+        // Set movie title
+        titleSpan.textContent = 'Loading...';
+        getMovieTitle(movieId).then(title => {
+            if (title) titleSpan.textContent = title;
+            else titleSpan.textContent = 'Movie';
+        });
+        try {
+            const embedUrl = await getCloudnestraEmbedUrl(movieId);
+            spinner.style.display = 'none';
+            frame.innerHTML = `<iframe src="${embedUrl}" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true"></iframe>`;
+        } catch (e) {
+            spinner.style.display = 'none';
+            frame.innerHTML = `<div class="error-message">Video not available.<br><small>${e.message}</small></div>`;
+        }
+    }
+    loadVideo();
+    </script>
+</body>
+</html> 

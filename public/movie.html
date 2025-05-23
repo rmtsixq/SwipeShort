@@ -19,47 +19,27 @@
             <h1 id="movie-title">Loading...</h1>
         </header>
         
+        <!-- Hero section with TMDB backdrop image -->
+        <div id="movie-hero" class="movie-hero">
+            <!-- JS will set background-image here -->
+        </div>
+        
         <main class="movie-content">
-            <div class="movie-player-container">
-                <div id="movie-player" class="movie-player">
-                    <!-- Film player buraya gelecek -->
-                    <div class="movie-player-placeholder">Loading movie...</div>
-                </div>
-                <button class="share-button">
-                    <i class="fas fa-share-alt"></i>
-                </button>
-            </div>
-            
-            <!-- Share Duration Modal -->
-            <div class="share-duration-modal" style="display: none;">
-                <div class="modal-content">
-                    <h2>Select Video Duration</h2>
-                    <div class="modal-video-preview-container">
-                        <video class="modal-video-preview" src="" controls style="width:100%;border-radius:12px;background:#000;max-height:200px;"></video>
+            <div class="movie-details-flex">
+                <img id="movie-poster" class="movie-poster" src="" alt="Movie Poster" />
+                <div class="movie-info-block">
+                    <h2 id="movie-title-main">Loading...</h2>
+                    <div class="movie-meta">
+                        <span id="movie-year" class="movie-year"></span>
+                        <span id="movie-rating" class="movie-rating"></span>
+                        <span id="movie-runtime" class="movie-runtime"></span>
+                        <span id="movie-release" class="movie-release"></span>
                     </div>
-                    <div class="duration-range">
-                        <div class="range-labels">
-                            <span class="start-time">0:00</span>
-                            <span class="end-time">0:00</span>
-                        </div>
-                        <div class="range-slider">
-                            <input type="range" class="start-slider" min="0" max="0" value="0" step="0.1">
-                            <input type="range" class="end-slider" min="0" max="0" value="0" step="0.1">
-                        </div>
-                    </div>
-                    <button class="share-confirm-btn">Share Selected Duration</button>
-                    <button class="share-cancel-btn">Cancel</button>
+                    <div id="movie-genres" class="movie-genres"></div>
+                    <p id="movie-description" class="movie-description">Loading movie description...</p>
+                    <button id="start-movie-btn" class="start-movie-btn">Start</button>
+                    <div id="movie-player" class="movie-player" style="display:none;margin-top:24px;"></div>
                 </div>
-            </div>
-            
-            <div class="movie-info">
-                <div class="movie-meta">
-                    <span id="movie-year" class="movie-year">2024</span>
-                    <span id="movie-rating" class="movie-rating">⭐ 8.5</span>
-                </div>
-                <p id="movie-description" class="movie-description">
-                    Loading movie description...
-                </p>
             </div>
         </main>
     </div>

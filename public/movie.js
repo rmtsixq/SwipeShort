@@ -58,44 +58,65 @@ async function loadMovieDetails() {
     try {
         // TMDB'den film bilgilerini al
         console.log('Fetching movie details from TMDB...');
-        const res = await fetch(`https://api.themoviedb.org/3/movie/${movieId}?api_key=${TMDB_API_KEY}`);
+        const res = await fetch(`https://api.themoviedb.org/3/movie/${movieId}?api_key=${TMDB_API_KEY}&language=en-US`);
         console.log('TMDB response status:', res.status);
 
         if (!res.ok) {
             throw new Error(`TMDB API error! status: ${res.status}`);
         }
 
-        const movie = await res.json();
-        console.log('Movie details received:', movie);
+        const data = await res.json();
+        console.log('Movie details received:', data);
 
         // Başlık ve meta bilgileri güncelle
         console.log('Updating UI with movie details...');
-        document.getElementById('movie-title').textContent = movie.title;
-        document.getElementById('movie-year').textContent = movie.release_date.split('-')[0];
-        document.getElementById('movie-rating').textContent = `⭐ ${movie.vote_average.toFixed(1)}`;
-        document.getElementById('movie-description').textContent = movie.overview;
-
-        // Stream URL'ini al (artık m3u8 URL değil, embed URL)
-        console.log('Fetching stream URL...');
-        const embedSrc = await getCloudnestraEmbedUrl(movieId); // Fonksiyon adını güncelledik ve direkt embed URL alıyoruz
-        console.log('Embed URL received:', embedSrc);
-
-        if (embedSrc) {
-            const playerContainer = document.getElementById('movie-player');
-            // Video.js player yerine iframe kullan
-            playerContainer.innerHTML = `
-                <iframe src="${embedSrc}" frameborder="0" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true" style="width: 100%; height: 100%;"></iframe>
-            `;
-
-            console.log('Iframe player setup completed');
-
-             // Share functionality'nin videoPlayer referansını güncelle (iframe kullanıldığı için bu kısım çalışmayabilir)
-             // Eğer share süresi seçimi iframe içindeki videoya bağlıysa, bu özellik devre dışı kalabilir veya yeniden uyarlanması gerekebilir.
-             // Şimdilik bu kısmı olduğu gibi bırakıyorum ancak dikkatli olunmalı.
-
-        } else {
-            throw new Error('No stream URL found');
+        document.getElementById('movie-title').textContent = data.title;
+        document.getElementById('movie-title-main').textContent = data.title;
+        document.getElementById('movie-year').textContent = data.release_date ? new Date(data.release_date).getFullYear() : '';
+        document.getElementById('movie-rating').textContent = data.vote_average ? `⭐ ${data.vote_average.toFixed(1)}` : '';
+        document.getElementById('movie-runtime').textContent = data.runtime ? `${data.runtime} min` : '';
+        document.getElementById('movie-release').textContent = data.release_date ? `Release: ${data.release_date}` : '';
+        const genresDiv = document.getElementById('movie-genres');
+        genresDiv.innerHTML = '';
+        if (data.genres && data.genres.length > 0) {
+            data.genres.forEach(g => {
+                const span = document.createElement('span');
+                span.className = 'genre-tag';
+                span.textContent = g.name;
+                genresDiv.appendChild(span);
+            });
         }
+        document.getElementById('movie-description').textContent = data.overview || '';
+
+        // Set hero background
+        if (data.backdrop_path) {
+            document.getElementById('movie-hero').style.backgroundImage = `url('https://image.tmdb.org/t/p/original${data.backdrop_path}')`;
+        }
+        // Poster
+        document.getElementById('movie-poster').src = data.poster_path ? `https://image.tmdb.org/t/p/w500${data.poster_path}` : '';
+        document.getElementById('movie-poster').alt = data.title + ' Poster';
+
+        // Embed URL (video)
+        let embedSrc = null;
+        try {
+            embedSrc = await getCloudnestraEmbedUrl(movieId);
+        } catch (e) {
+            embedSrc = null;
+        }
+        const startBtn = document.getElementById('start-movie-btn');
+        if (embedSrc) {
+            startBtn.disabled = false;
+            startBtn.title = '';
+            startBtn.onclick = () => {
+                window.open(`watch.html?id=${movieId}`, '_blank');
+            };
+        } else {
+            startBtn.disabled = true;
+            startBtn.title = 'Video not available.';
+        }
+        // Hide player in movie.html
+        const playerContainer = document.getElementById('movie-player');
+        if (playerContainer) playerContainer.style.display = 'none';
 
         console.log('=== Frontend: Loading Movie Details Completed ===');
     } catch (error) {
@@ -103,14 +124,14 @@ async function loadMovieDetails() {
         console.error('Error details:', error);
         console.error('Error stack:', error.stack);
 
-        document.getElementById('movie-title').textContent = 'Error loading movie';
-        document.getElementById('movie-player').innerHTML = `
-            <div class="movie-player-placeholder">
-                Error loading video. Please try again later.
-                <br>
-                <small>Error details: ${error.message}</small>
-            </div>
-        `;
+        document.getElementById('movie-title').textContent = 'Movie Not Found';
+        document.getElementById('movie-title-main').textContent = 'Movie Not Found';
+        document.getElementById('movie-description').textContent = 'Could not load movie details.';
+        // Hide start button and player
+        const startBtn = document.getElementById('start-movie-btn');
+        const playerContainer = document.getElementById('movie-player');
+        if (startBtn) startBtn.style.display = 'none';
+        if (playerContainer) playerContainer.style.display = 'none';
     }
 }
 
