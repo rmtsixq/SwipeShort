@@ -28,44 +28,6 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
-
-    const filterPanel = document.querySelector('.filter-panel');
-    const filterToggle = document.querySelector('.filter-toggle');
-    const filterOverlay = document.querySelector('.filter-overlay');
-
-    if (filterToggle && filterPanel && filterOverlay) {
-        filterToggle.addEventListener('click', function() {
-            const isActive = filterPanel.classList.contains('active');
-            if (isActive) {
-                filterPanel.classList.remove('active');
-                filterOverlay.style.display = 'none';
-            } else {
-                filterPanel.classList.add('active');
-                filterOverlay.style.display = 'block';
-            }
-        });
-
-        filterOverlay.addEventListener('click', function() {
-            filterPanel.classList.remove('active');
-            filterOverlay.style.display = 'none';
-        });
-
-        // Close button inside filter panel
-        const filterClose = document.querySelector('.filter-panel .filter-close');
-        if (filterClose) {
-            filterClose.addEventListener('click', function() {
-                filterPanel.classList.remove('active');
-                filterOverlay.style.display = 'none';
-            });
-        }
-
-        window.addEventListener('resize', function() {
-            if (window.innerWidth > 1650) {
-                filterPanel.classList.remove('active');
-                filterOverlay.style.display = 'none';
-            }
-        });
-    }
 });
 
 // TMDB API
@@ -531,83 +493,31 @@ document.addEventListener('DOMContentLoaded', () => {
     renderGenreButtons();
     setupMajikTrigger();
 
-    // Arama kutusuna film/dizi seçimi ekle
-    const searchHeader = document.querySelector('.search-header');
-    if (searchHeader && !document.getElementById('search-type')) {
-        const select = document.createElement('select');
-        select.id = 'search-type';
-        select.className = 'search-type-select';
-        select.innerHTML = `
-            <option value="movie">🎬 Film Ara</option>
-            <option value="tv">📺 Dizi Ara</option>
-        `;
-        
-        // Select stilini güncelle
-        select.style.cssText = `
+    // Arama kutusunu güncelle
+    const searchInput = document.querySelector('.sidebar-search input');
+    if (searchInput) {
+        searchInput.style.cssText = `
             padding: 10px 15px;
             font-size: 16px;
             border: 2px solid #2c3e50;
             border-radius: 8px;
             background-color: #34495e;
             color: white;
-            cursor: pointer;
-            margin-right: 10px;
-            min-width: 150px;
+            width: 100%;
             transition: all 0.3s ease;
         `;
         
+        searchInput.placeholder = 'Film veya dizi ara...';
+        
         // Hover efekti
-        select.addEventListener('mouseover', () => {
-            select.style.backgroundColor = '#2c3e50';
-            select.style.borderColor = '#3498db';
+        searchInput.addEventListener('mouseover', () => {
+            searchInput.style.backgroundColor = '#2c3e50';
+            searchInput.style.borderColor = '#3498db';
         });
         
-        select.addEventListener('mouseout', () => {
-            select.style.backgroundColor = '#34495e';
-            select.style.borderColor = '#2c3e50';
-        });
-
-        // Arama kutusunu da güncelle
-        const searchInput = document.querySelector('.sidebar-search input');
-        if (searchInput) {
-            searchInput.style.cssText = `
-                padding: 10px 15px;
-                font-size: 16px;
-                border: 2px solid #2c3e50;
-                border-radius: 8px;
-                background-color: #34495e;
-                color: white;
-                width: 100%;
-                transition: all 0.3s ease;
-            `;
-            
-            searchInput.placeholder = 'Film veya dizi ara...';
-            
-            // Hover efekti
-            searchInput.addEventListener('mouseover', () => {
-                searchInput.style.backgroundColor = '#2c3e50';
-                searchInput.style.borderColor = '#3498db';
-            });
-            
-            searchInput.addEventListener('mouseout', () => {
-                searchInput.style.backgroundColor = '#34495e';
-                searchInput.style.borderColor = '#2c3e50';
-            });
-        }
-
-        searchHeader.insertBefore(select, searchHeader.firstChild);
-
-        // Seçim değiştiğinde aramayı güncelle
-        select.addEventListener('change', function() {
-            const searchTerm = searchInput.value.trim();
-            if (searchTerm) {
-                // Loading göster
-                searchResultsGrid.innerHTML = '<div class="search-loading">Searching...</div>';
-                // Hemen aramayı başlat
-                searchContent(searchTerm, this.value);
-            }
-            // Placeholder'ı güncelle
-            searchInput.placeholder = this.value === 'movie' ? 'Film ara...' : 'Dizi ara...';
+        searchInput.addEventListener('mouseout', () => {
+            searchInput.style.backgroundColor = '#34495e';
+            searchInput.style.borderColor = '#2c3e50';
         });
     }
 
@@ -638,40 +548,47 @@ document.addEventListener('DOMContentLoaded', () => {
     // Arama fonksiyonu
     async function searchContent(query, type) {
         try {
-            console.log('Searching for:', query, 'Type:', type);
-            const endpoint = type === 'tv' ? '/api/search-tv' : '/api/search-movie';
+            console.log('Searching for:', query);
             
             // Loading göster
             searchResultsGrid.innerHTML = '<div class="search-loading">Searching...</div>';
             
-            const response = await fetch(`${endpoint}?query=${encodeURIComponent(query)}`);
+            // Her iki API'den de sonuçları al
+            const [movieResponse, tvResponse] = await Promise.all([
+                fetch(`/api/search-movie?query=${encodeURIComponent(query)}`),
+                fetch(`/api/search-tv?query=${encodeURIComponent(query)}`)
+            ]);
             
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+            if (!movieResponse.ok || !tvResponse.ok) {
+                throw new Error(`HTTP error! status: ${movieResponse.status || tvResponse.status}`);
             }
             
-            const data = await response.json();
-            console.log('Search results:', data);
+            const [movieData, tvData] = await Promise.all([
+                movieResponse.json(),
+                tvResponse.json()
+            ]);
             
-            // Önce media_type'a göre filtrele
-            let filteredResults = (data.results || []).filter(item => {
-                if (type === 'tv') {
-                    return item.media_type !== 'movie';
-                } else {
-                    return item.media_type !== 'tv';
-                }
-            });
+            console.log('Search results:', { movies: movieData, tv: tvData });
+            
+            // Sonuçları birleştir ve media_type ekle
+            let combinedResults = [
+                ...(movieData.results || []).map(item => ({ ...item, media_type: 'movie' })),
+                ...(tvData.results || []).map(item => ({ ...item, media_type: 'tv' }))
+            ];
             
             // Sonra yasaklı içerikleri filtrele
-            filteredResults = filterMovies(filteredResults);
+            combinedResults = filterMovies(combinedResults);
             
-            searchCount.textContent = filteredResults.length;
+            // Sonuçları puanlarına göre sırala
+            combinedResults.sort((a, b) => (b.vote_average || 0) - (a.vote_average || 0));
+            
+            searchCount.textContent = combinedResults.length;
             
             if (currentUser) {
-                saveSearchToHistory(query, filteredResults);
+                saveSearchToHistory(query, combinedResults);
             }
             
-            displaySearchResults(filteredResults, query);
+            displaySearchResults(combinedResults, query);
         } catch (error) {
             console.error('Error searching:', error);
             searchResultsGrid.innerHTML = '<div class="search-error">Error loading results. Please try again.</div>';
@@ -706,8 +623,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             suggestion.textContent = term;
                             suggestion.onclick = () => {
                                 searchInput.value = term;
-                                const searchType = document.getElementById('search-type') ? document.getElementById('search-type').value : 'movie';
-                                searchContent(term, searchType);
+                                searchContent(term);
                             };
                             suggestionsDiv.appendChild(suggestion);
                         });
@@ -739,12 +655,14 @@ document.addEventListener('DOMContentLoaded', () => {
                             ${movie.vote_average ? movie.vote_average.toFixed(1) : 'N/A'}
                         </span>
                     </div>
+                    <div class="search-film-type">
+                        ${movie.media_type === 'tv' ? '📺 TV Series' : '🎬 Movie'}
+                    </div>
                 </div>
             `;
             
             movieCard.addEventListener('click', () => {
-                const type = document.getElementById('search-type') ? document.getElementById('search-type').value : 'movie';
-                window.location.href = `${type}.html?id=${movie.id}`;
+                window.location.href = `${movie.media_type}.html?id=${movie.id}`;
             });
             
             searchResultsGrid.appendChild(movieCard);
@@ -1376,40 +1294,47 @@ document.addEventListener('DOMContentLoaded', function() {
     // Arama fonksiyonu
     async function searchContent(query, type) {
         try {
-            console.log('Searching for:', query, 'Type:', type);
-            const endpoint = type === 'tv' ? '/api/search-tv' : '/api/search-movie';
+            console.log('Searching for:', query);
             
             // Loading göster
             searchResultsGrid.innerHTML = '<div class="search-loading">Searching...</div>';
             
-            const response = await fetch(`${endpoint}?query=${encodeURIComponent(query)}`);
+            // Her iki API'den de sonuçları al
+            const [movieResponse, tvResponse] = await Promise.all([
+                fetch(`/api/search-movie?query=${encodeURIComponent(query)}`),
+                fetch(`/api/search-tv?query=${encodeURIComponent(query)}`)
+            ]);
             
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+            if (!movieResponse.ok || !tvResponse.ok) {
+                throw new Error(`HTTP error! status: ${movieResponse.status || tvResponse.status}`);
             }
             
-            const data = await response.json();
-            console.log('Search results:', data);
+            const [movieData, tvData] = await Promise.all([
+                movieResponse.json(),
+                tvResponse.json()
+            ]);
             
-            // Önce media_type'a göre filtrele
-            let filteredResults = (data.results || []).filter(item => {
-                if (type === 'tv') {
-                    return item.media_type !== 'movie';
-                } else {
-                    return item.media_type !== 'tv';
-                }
-            });
+            console.log('Search results:', { movies: movieData, tv: tvData });
+            
+            // Sonuçları birleştir ve media_type ekle
+            let combinedResults = [
+                ...(movieData.results || []).map(item => ({ ...item, media_type: 'movie' })),
+                ...(tvData.results || []).map(item => ({ ...item, media_type: 'tv' }))
+            ];
             
             // Sonra yasaklı içerikleri filtrele
-            filteredResults = filterMovies(filteredResults);
+            combinedResults = filterMovies(combinedResults);
             
-            searchCount.textContent = filteredResults.length;
+            // Sonuçları puanlarına göre sırala
+            combinedResults.sort((a, b) => (b.vote_average || 0) - (a.vote_average || 0));
+            
+            searchCount.textContent = combinedResults.length;
             
             if (currentUser) {
-                saveSearchToHistory(query, filteredResults);
+                saveSearchToHistory(query, combinedResults);
             }
             
-            displaySearchResults(filteredResults, query);
+            displaySearchResults(combinedResults, query);
         } catch (error) {
             console.error('Error searching:', error);
             searchResultsGrid.innerHTML = '<div class="search-error">Error loading results. Please try again.</div>';
@@ -1444,8 +1369,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             suggestion.textContent = term;
                             suggestion.onclick = () => {
                                 searchInput.value = term;
-                                const searchType = document.getElementById('search-type') ? document.getElementById('search-type').value : 'movie';
-                                searchContent(term, searchType);
+                                searchContent(term);
                             };
                             suggestionsDiv.appendChild(suggestion);
                         });
@@ -1477,12 +1401,14 @@ document.addEventListener('DOMContentLoaded', function() {
                             ${movie.vote_average ? movie.vote_average.toFixed(1) : 'N/A'}
                         </span>
                     </div>
+                    <div class="search-film-type">
+                        ${movie.media_type === 'tv' ? '📺 TV Series' : '🎬 Movie'}
+                    </div>
                 </div>
             `;
             
             movieCard.addEventListener('click', () => {
-                const type = document.getElementById('search-type') ? document.getElementById('search-type').value : 'movie';
-                window.location.href = `${type}.html?id=${movie.id}`;
+                window.location.href = `${movie.media_type}.html?id=${movie.id}`;
             });
             
             searchResultsGrid.appendChild(movieCard);

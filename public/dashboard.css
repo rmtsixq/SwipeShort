@@ -716,6 +716,24 @@
     padding: 10px 0;
 }
 
+.search-film-type {
+    margin-top: 8px;
+    font-size: 0.9rem;
+    color: #ff66c4;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.search-film-type::before {
+    content: '';
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ff66c4;
+}
+
 .search-film-card {
     background: #2a2a35;
     border-radius: 12px;
@@ -725,6 +743,7 @@
     height: 100%;
     display: flex;
     flex-direction: column;
+    position: relative;
 }
 
 .search-film-card:hover {
@@ -732,11 +751,20 @@
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
 }
 
-.search-film-card img {
-    width: 100%;
-    aspect-ratio: 2/3;
-    object-fit: cover;
-    background: #1a1a1f;
+.search-film-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border: 2px solid transparent;
+    border-radius: 12px;
+    transition: border-color 0.2s;
+}
+
+.search-film-card:hover::after {
+    border-color: #ff66c4;
 }
 
 .search-film-info {
@@ -745,6 +773,7 @@
     display: flex;
     flex-direction: column;
     justify-content: space-between;
+    background: linear-gradient(to bottom, rgba(42, 42, 53, 0.9), rgba(42, 42, 53, 1));
 }
 
 .search-film-title {
@@ -1080,23 +1109,6 @@
         grid-template-columns: repeat(3, 1fr);
     }
     
-    .filter-panel {
-        position: fixed;
-        right: -300px;
-        top: 0;
-        height: 100vh;
-        width: 280px;
-        background: #1a1a24;
-        padding: 20px;
-        transition: right 0.3s ease;
-        z-index: 1000;
-        box-shadow: -2px 0 10px rgba(0, 0, 0, 0.2);
-    }
-
-    .filter-panel.active {
-        right: 0;
-    }
-
     .filter-toggle {
         display: block;
         position: fixed;
@@ -1109,6 +1121,16 @@
         cursor: pointer;
         z-index: 1001;
         box-shadow: 0 2px 10px rgba(255, 102, 196, 0.3);
+        border: none;
+        font-size: 1rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+
+    .filter-toggle:hover {
+        background: #ff4db8;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(255, 102, 196, 0.4);
     }
 }
 
@@ -1135,6 +1157,13 @@
     .content-type-btn {
         padding: 8px 16px;
         font-size: 0.9rem;
+    }
+
+    .filter-toggle {
+        padding: 8px 16px;
+        font-size: 0.9rem;
+        right: 15px;
+        bottom: 15px;
     }
 }
 
@@ -1504,137 +1533,64 @@
     }
 }
 
-.search-film-type {
-    margin-top: 8px;
-    font-size: 0.85rem;
-    color: #ff66c4;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.search-film-type::before {
-    content: '';
-    display: inline-block;
-    width: 4px;
-    height: 4px;
-    background: #ff66c4;
-    border-radius: 50%;
-}
-
-.search-film-card {
-    background: #2a2a35;
-    border-radius: 12px;
-    overflow: hidden;
-    transition: transform 0.2s, box-shadow 0.2s;
-    cursor: pointer;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    position: relative;
-}
-
-.search-film-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-}
-
-.search-film-card:hover .search-film-type {
-    color: #fff;
-}
-
-.search-film-card:hover .search-film-type::before {
-    background: #fff;
-}
-
-/* Overlay for filter panel on large screens and below */
-.filter-overlay {
-    display: none;
+.filter-toggle {
+    display: none; /* Varsayılan olarak gizli */
     position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.45);
-    z-index: 999;
+    right: 20px;
+    bottom: 20px;
+    background: #ff66c4;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 25px;
+    cursor: pointer;
+    z-index: 1001;
+    box-shadow: 0 2px 10px rgba(255, 102, 196, 0.3);
+    border: none;
+    font-size: 1rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
 }
 
-/* Show overlay when filter panel is active */
-.filter-panel.active + .filter-overlay {
-    display: block;
+.filter-toggle:hover {
+    background: #ff4db8;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(255, 102, 196, 0.4);
 }
 
-/* Responsive filter panel as a drawer for <=1650px */
 @media (max-width: 1650px) {
+    .filter-toggle {
+        display: block;
+    }
+    
     .filter-panel {
         position: fixed;
-        right: -340px;
+        right: -300px;
         top: 0;
         height: 100vh;
-        width: 340px;
+        width: 280px;
         background: #1a1a24;
         padding: 20px;
-        transition: right 0.3s cubic-bezier(.4,0,.2,1);
+        transition: right 0.3s ease;
         z-index: 1000;
-        box-shadow: -2px 0 10px rgba(0,0,0,0.2);
-        margin-top: 0;
+        box-shadow: -2px 0 10px rgba(0, 0, 0, 0.2);
     }
+
     .filter-panel.active {
         right: 0;
     }
-    .filter-toggle {
-        position: fixed;
-        right: 30px;
-        bottom: 30px;
-        z-index: 1100;
+}
+
+@media (max-width: 992px) {
+    .filter-panel {
+        width: 260px;
     }
 }
 
-/* Filter toggle button modern design */
-.filter-toggle {
-    display: none;
-    align-items: center;
-    justify-content: center;
-    position: fixed;
-    right: 30px;
-    bottom: 30px;
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #ff66c4 60%, #516fff 100%);
-    color: #fff;
-    font-size: 2rem;
-    box-shadow: 0 4px 24px rgba(255,102,196,0.18), 0 2px 8px rgba(81,111,255,0.12);
-    border: none;
-    cursor: pointer;
-    z-index: 1100;
-    transition: background 0.2s, box-shadow 0.2s, transform 0.18s;
-}
-.filter-toggle:hover {
-    background: linear-gradient(135deg, #516fff 60%, #ff66c4 100%);
-    box-shadow: 0 8px 32px rgba(255,102,196,0.28), 0 4px 16px rgba(81,111,255,0.18);
-    transform: scale(1.08);
-}
-@media (max-width: 1650px) {
+@media (max-width: 768px) {
     .filter-toggle {
-        display: flex;
+        padding: 8px 16px;
+        font-size: 0.9rem;
+        right: 15px;
+        bottom: 15px;
     }
-}
-
-/* Close button for filter panel */
-.filter-panel .filter-close {
-    display: block;
-    position: absolute;
-    top: 18px;
-    right: 18px;
-    width: 36px;
-    height: 36px;
-    border: none;
-    background: none;
-    color: #ff66c4;
-    font-size: 2rem;
-    cursor: pointer;
-    z-index: 1200;
-    transition: color 0.2s, transform 0.18s;
-}
-.filter-panel .filter-close:hover {
-    color: #fff;
-    transform: scale(1.15);
 } 

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TV Show Details - ShortSwipe</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="movie.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://vjs.zencdn.net/7.20.3/video-js.css" rel="stylesheet" />
+    <script src="https://vjs.zencdn.net/7.20.3/video.min.js"></script>
+</head>
+<body>
+    <div class="movie-container">
+        <header class="movie-header">
+            <a href="dashboard.html" class="back-btn">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+            <h1 id="tv-title">Loading...</h1>
+        </header>
+        <!-- Hero section with TMDB backdrop image -->
+        <div id="tv-hero" class="movie-hero"></div>
+        <main class="movie-content">
+            <div class="movie-details-flex">
+                <img id="tv-poster" class="movie-poster" src="" alt="TV Poster" />
+                <div class="movie-info-block">
+                    <h2 id="tv-title-main">Loading...</h2>
+                    <div class="movie-meta">
+                        <span id="tv-year" class="movie-year"></span>
+                        <span id="tv-rating" class="movie-rating"></span>
+                        <span id="tv-runtime" class="movie-runtime"></span>
+                        <span id="tv-release" class="movie-release"></span>
+                    </div>
+                    <div id="tv-genres" class="movie-genres"></div>
+                    <p id="tv-description" class="movie-description">Loading TV show description...</p>
+                    <button id="start-tv-btn" class="start-movie-btn">Start</button>
+                    <div id="tv-player" class="movie-player" style="display:none;margin-top:24px;"></div>
+                </div>
+            </div>
+        </main>
+        <!-- SEASON & EPISODE LIST SECTION -->
+        <section class="tv-episodes-section">
+            <h2>Bölümler</h2>
+            <div class="tv-season-select-wrap">
+                <label for="season-select">Sezon:</label>
+                <select id="season-select"></select>
+            </div>
+            <div id="episode-list"></div>
+        </section>
+    </div>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="scripts/firebase-config.js"></script>
+    <script src="tv.js"></script>
+    <script src="https://kit.fontawesome.com/4e7b8e7e2a.js" crossorigin="anonymous"></script>
+</body>
+</html> 
