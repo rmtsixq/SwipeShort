@@ -118,6 +118,8 @@ async function loadMovieDetails() {
         const playerContainer = document.getElementById('movie-player');
         if (playerContainer) playerContainer.style.display = 'none';
 
+        setupLikeButton(movieId);
+
         console.log('=== Frontend: Loading Movie Details Completed ===');
     } catch (error) {
         console.error('=== Frontend: Loading Movie Details Failed ===');
@@ -217,4 +219,32 @@ document.addEventListener('DOMContentLoaded', () => {
     cancelBtn.addEventListener('click', () => {
         shareModal.style.display = 'none';
     });
-}); 
+});
+
+// --- Like Button Firestore Logic ---
+function setupLikeButton(movieId) {
+    const likeBtn = document.getElementById('like-btn');
+    const likeCount = document.getElementById('like-count');
+    if (!likeBtn || !likeCount || !movieId) return;
+    const db = firebase.firestore();
+    const likeDoc = db.collection('likes').doc('movie_' + movieId);
+
+    // Real-time update
+    likeDoc.onSnapshot(doc => {
+        const data = doc.data();
+        likeCount.textContent = data && data.count ? data.count : 0;
+    });
+
+    likeBtn.addEventListener('click', async () => {
+        await db.runTransaction(async (transaction) => {
+            const docSnap = await transaction.get(likeDoc);
+            const current = docSnap.exists && docSnap.data().count ? docSnap.data().count : 0;
+            transaction.set(likeDoc, { count: current + 1 }, { merge: true });
+        });
+        likeBtn.classList.add('liked');
+        setTimeout(() => likeBtn.classList.remove('liked'), 500);
+    });
+}
+
+// Call this after getting movieId in your loadMovieDetails or main init
+// setupLikeButton(movieId); 

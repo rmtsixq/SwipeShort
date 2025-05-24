@@ -19,7 +19,6 @@ async function loadTvDetails() {
         if (!res.ok) throw new Error('TMDB API error!');
         const data = await res.json();
         document.getElementById('tv-title').textContent = data.name;
-        document.getElementById('tv-title-main').textContent = data.name;
         document.getElementById('tv-year').textContent = data.first_air_date ? new Date(data.first_air_date).getFullYear() : '';
         document.getElementById('tv-rating').textContent = data.vote_average ? `⭐ ${data.vote_average.toFixed(1)}` : '';
         document.getElementById('tv-runtime').textContent = data.episode_run_time && data.episode_run_time.length ? `${data.episode_run_time[0]} min` : '';
@@ -44,9 +43,9 @@ async function loadTvDetails() {
         if (data.seasons && data.seasons.length > 0) {
             populateSeasonSelect(data.seasons);
         }
+        setupLikeButton(tvId);
     } catch (error) {
         document.getElementById('tv-title').textContent = 'TV Show Not Found';
-        document.getElementById('tv-title-main').textContent = 'TV Show Not Found';
         document.getElementById('tv-description').textContent = 'Could not load TV show details.';
         document.getElementById('start-tv-btn').style.display = 'none';
         document.getElementById('tv-player').style.display = 'none';
@@ -133,6 +132,31 @@ async function loadEpisodes(seasonNumber) {
     } catch (error) {
         episodeListDiv.innerHTML = '<div class="error">Could not load episodes.</div>';
     }
+}
+
+// --- Like Button Firestore Logic ---
+function setupLikeButton(tvId) {
+    const likeBtn = document.getElementById('like-btn');
+    const likeCount = document.getElementById('like-count');
+    if (!likeBtn || !likeCount || !tvId) return;
+    const db = firebase.firestore();
+    const likeDoc = db.collection('likes').doc('tv_' + tvId);
+
+    // Real-time update
+    likeDoc.onSnapshot(doc => {
+        const data = doc.data();
+        likeCount.textContent = data && data.count ? data.count : 0;
+    });
+
+    likeBtn.addEventListener('click', async () => {
+        await db.runTransaction(async (transaction) => {
+            const docSnap = await transaction.get(likeDoc);
+            const current = docSnap.exists && docSnap.data().count ? docSnap.data().count : 0;
+            transaction.set(likeDoc, { count: current + 1 }, { merge: true });
+        });
+        likeBtn.classList.add('liked');
+        setTimeout(() => likeBtn.classList.remove('liked'), 500);
+    });
 }
 
 document.addEventListener('DOMContentLoaded', loadTvDetails); 

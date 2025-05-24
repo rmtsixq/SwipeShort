@@ -37,6 +37,97 @@ document.addEventListener('DOMContentLoaded', function() {
             if (searchModal.classList.contains('active') && e.key === 'Escape') closeSearchModal();
         });
     }
+
+    // LIVE SEARCH LOGIC FOR MODAL (COMBINED GRID)
+    const modalContent = document.querySelector('.search-modal-content');
+    const resultGrid = modalContent.querySelector('.search-modal-grid');
+    let searchTimeout;
+
+    // Remove extra grid and headings if present
+    if (modalContent.querySelectorAll('.search-modal-grid').length > 1) {
+        // Remove second grid and both h2 headings
+        const grids = modalContent.querySelectorAll('.search-modal-grid');
+        grids[1].remove();
+        const headings = modalContent.querySelectorAll('h2');
+        headings.forEach(h => h.remove());
+    }
+
+    function renderCombinedResults(results, query) {
+        resultGrid.innerHTML = '';
+        if (results.length === 0) {
+            resultGrid.innerHTML = `<div class="search-loading">No results found${query ? ` for "${query}"` : ''}.</div>`;
+            return;
+        }
+        results.forEach(item => {
+            const isMovie = !!item.title;
+            const title = item.title || item.name;
+            const year = (item.release_date || item.first_air_date || '').split('-')[0] || 'N/A';
+            const rating = item.vote_average ? item.vote_average.toFixed(1) : 'N/A';
+            const poster = item.poster_path ? 'https://image.tmdb.org/t/p/w500' + item.poster_path : '/images/no-poster.png';
+            const typeLabel = isMovie ? '🎬 Movie' : '📺 TV Show';
+            const id = item.id;
+            const type = isMovie ? 'movie' : 'tv';
+            const card = document.createElement('div');
+            card.className = 'search-film-card';
+            card.innerHTML = `
+                <img src="${poster}" alt="${title}" onerror="this.src='/images/no-poster.png'">
+                <div class="search-film-info">
+                    <h3 class="search-film-title">${title}</h3>
+                    <div class="search-film-meta">
+                        <span class="search-film-year">${year}</span>
+                        <span class="search-film-rating"><i class="fas fa-star"></i> ${rating}</span>
+                    </div>
+                </div>
+                <div class="search-film-type">${typeLabel}</div>
+                <div class="card-like-section">
+                    <button class="like-btn"><i class="fas fa-thumbs-up"></i></button>
+                    <span class="like-count">0</span>
+                </div>
+            `;
+            card.addEventListener('click', () => {
+                window.location.href = isMovie ? `movie.html?id=${item.id}` : `tv.html?id=${item.id}`;
+            });
+            resultGrid.appendChild(card);
+            setupCardLikeButton(card, id, type);
+        });
+    }
+
+    async function liveSearchModal(query) {
+        if (!query) {
+            renderCombinedResults([], '');
+            return;
+        }
+        resultGrid.innerHTML = '<div class="search-loading">Searching...</div>';
+        try {
+            const [movieRes, tvRes] = await Promise.all([
+                fetch(`/api/search-movie?query=${encodeURIComponent(query)}`),
+                fetch(`/api/search-tv?query=${encodeURIComponent(query)}`)
+            ]);
+            const [movieData, tvData] = await Promise.all([
+                movieRes.ok ? movieRes.json() : { results: [] },
+                tvRes.ok ? tvRes.json() : { results: [] }
+            ]);
+            // Combine and sort by popularity desc
+            let combined = [
+                ...(movieData.results || []).map(item => ({ ...item, _type: 'movie' })),
+                ...(tvData.results || []).map(item => ({ ...item, _type: 'tv' }))
+            ];
+            combined.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+            renderCombinedResults(combined, query);
+        } catch (e) {
+            resultGrid.innerHTML = '<div class="search-error">Error loading results.</div>';
+        }
+    }
+
+    if (modalSearchInput) {
+        modalSearchInput.addEventListener('input', function(e) {
+            const query = e.target.value.trim();
+            if (searchTimeout) clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                liveSearchModal(query);
+            }, 300);
+        });
+    }
 });
 
 // Dashboard ana fonksiyonları ve diğer kodlar burada devam edebilir (film grid, filtre, pagination vs.)
@@ -313,6 +404,8 @@ function renderGrid(items = allMovies) {
         const title = currentType === 'movie' ? item.title : item.name;
         const releaseDate = currentType === 'movie' ? item.release_date : item.first_air_date;
         const posterPath = item.poster_path;
+        const id = item.id;
+        const type = currentType;
         
         card.innerHTML = `
             <div class="film-thumb-img-wrap">
@@ -328,6 +421,10 @@ function renderGrid(items = allMovies) {
                         ${currentType === 'tv' ? `<span class="film-thumb-label">${item.first_air_date ? 'TV Series' : 'Upcoming'}</span>` : ''}
                         <span class="film-thumb-label">${item.original_language === 'en' ? 'English' : 'Dubbed'}</span>
                     </div>
+                    <div class="card-like-section">
+                        <button class="like-btn"><i class="fas fa-thumbs-up"></i></button>
+                        <span class="like-count">0</span>
+                    </div>
                 </div>
             </div>
         `;
@@ -337,6 +434,7 @@ function renderGrid(items = allMovies) {
         };
         
         grid.appendChild(card);
+        setupCardLikeButton(card, id, type);
     });
 }
 
@@ -671,6 +769,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         ${movie.media_type === 'tv' ? '📺 TV Series' : '🎬 Movie'}
                     </div>
                 </div>
+                <div class="card-like-section">
+                    <button class="like-btn"><i class="fas fa-thumbs-up"></i></button>
+                    <span class="like-count">0</span>
+                </div>
             `;
             
             movieCard.addEventListener('click', () => {
@@ -678,6 +780,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             
             searchResultsGrid.appendChild(movieCard);
+            setupCardLikeButton(movieCard, movie.id, movie.media_type);
         });
     }
 
@@ -1417,6 +1520,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         ${movie.media_type === 'tv' ? '📺 TV Series' : '🎬 Movie'}
                     </div>
                 </div>
+                <div class="card-like-section">
+                    <button class="like-btn"><i class="fas fa-thumbs-up"></i></button>
+                    <span class="like-count">0</span>
+                </div>
             `;
             
             movieCard.addEventListener('click', () => {
@@ -1424,6 +1531,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             
             searchResultsGrid.appendChild(movieCard);
+            setupCardLikeButton(movieCard, movie.id, movie.media_type);
         });
     }
 
@@ -1496,4 +1604,28 @@ document.addEventListener('DOMContentLoaded', function() {
             mainContent.style.display = 'block';
         }
     });
-}); 
+});
+
+// --- Like Button for Cards ---
+function setupCardLikeButton(card, id, type) {
+    const db = firebase.firestore();
+    const likeDoc = db.collection('likes').doc(type + '_' + id);
+    const likeBtn = card.querySelector('.like-btn');
+    const likeCount = card.querySelector('.like-count');
+    if (!likeBtn || !likeCount) return;
+    // Real-time update
+    likeDoc.onSnapshot(doc => {
+        const data = doc.data();
+        likeCount.textContent = data && data.count ? data.count : 0;
+    });
+    likeBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        await db.runTransaction(async (transaction) => {
+            const docSnap = await transaction.get(likeDoc);
+            const current = docSnap.exists && docSnap.data().count ? docSnap.data().count : 0;
+            transaction.set(likeDoc, { count: current + 1 }, { merge: true });
+        });
+        likeBtn.classList.add('liked');
+        setTimeout(() => likeBtn.classList.remove('liked'), 500);
+    });
+} 

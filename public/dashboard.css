@@ -340,6 +340,13 @@ body {
     transition: all 0.3s ease;
     overflow: hidden;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    width: 220px;
+    min-width: 220px;
+    max-width: 220px;
+    height: 390px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
 }
 
 .search-film-card:hover {
@@ -349,33 +356,46 @@ body {
 
 .search-film-card img {
     width: 100%;
-    height: 330px;
+    height: 300px;
     object-fit: cover;
+    flex-shrink: 0;
 }
 
 .search-film-info {
-    padding: 20px;
+    padding: 16px 14px 10px 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    flex: 1 1 auto;
 }
 
 .search-film-title {
     font-size: 1.1rem;
     font-weight: 600;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
     color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .search-film-meta {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
     font-size: 0.9rem;
     color: rgba(255, 255, 255, 0.8);
 }
 
 .search-film-type {
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     color: #ff66c4;
-    font-weight: 500;
+    font-weight: 600;
+    margin-top: auto;
+    padding: 8px 0 8px 0;
+    text-align: center;
+    background: rgba(255,102,196,0.08);
+    border-top: 1px solid rgba(255,102,196,0.12);
 }
 
 /* Responsive Design */
@@ -725,4 +745,44 @@ body {
     .search-modal-content h2 {
         margin-top: 18px;
     }
+}
+
+.card-like-section {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    justify-content: flex-end;
+}
+
+.film-thumb-card .like-btn,
+.search-film-card .like-btn {
+    background: #ff66c4;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.2s;
+}
+
+.film-thumb-card .like-btn:hover,
+.film-thumb-card .like-btn.liked,
+.search-film-card .like-btn:hover,
+.search-film-card .like-btn.liked {
+    background: #e055b0;
+}
+
+.film-thumb-card .like-count,
+.search-film-card .like-count {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #ff66c4;
+    min-width: 18px;
+    text-align: center;
 } 

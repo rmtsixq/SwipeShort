@@ -17,6 +17,10 @@
                 <i class="fas fa-arrow-left"></i> Back to Dashboard
             </a>
             <h1 id="movie-title">Loading...</h1>
+            <div class="like-section">
+                <button id="like-btn" class="like-btn"><i class="fas fa-thumbs-up"></i> Like</button>
+                <span id="like-count">0</span>
+            </div>
         </header>
         
         <!-- Hero section with TMDB backdrop image -->
@@ -46,6 +50,7 @@
 
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
     <script src="scripts/firebase-config.js"></script>
     <script src="movie.js"></script>
     <script src="https://kit.fontawesome.com/4e7b8e7e2a.js" crossorigin="anonymous"></script>

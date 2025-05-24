@@ -16,7 +16,6 @@
             <a href="dashboard.html" class="back-btn">
                 <i class="fas fa-arrow-left"></i> Back to Dashboard
             </a>
-            <h1 id="tv-title">Loading...</h1>
         </header>
         <!-- Hero section with TMDB backdrop image -->
         <div id="tv-hero" class="movie-hero"></div>
@@ -24,7 +23,7 @@
             <div class="movie-details-flex">
                 <img id="tv-poster" class="movie-poster" src="" alt="TV Poster" />
                 <div class="movie-info-block">
-                    <h2 id="tv-title-main">Loading...</h2>
+                    <h2 id="tv-title">Loading...</h2>
                     <div class="movie-meta">
                         <span id="tv-year" class="movie-year"></span>
                         <span id="tv-rating" class="movie-rating"></span>
@@ -33,6 +32,10 @@
                     </div>
                     <div id="tv-genres" class="movie-genres"></div>
                     <p id="tv-description" class="movie-description">Loading TV show description...</p>
+                    <div class="like-section">
+                        <button id="like-btn" class="like-btn"><i class="fas fa-thumbs-up"></i> Like</button>
+                        <span id="like-count">0</span>
+                    </div>
                     <button id="start-tv-btn" class="start-movie-btn">Start</button>
                     <div id="tv-player" class="movie-player" style="display:none;margin-top:24px;"></div>
                 </div>
