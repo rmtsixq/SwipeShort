@@ -500,4 +500,3 @@ app.get('/api/search-tv', async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch TV shows', details: err.message });
     }
 });
-

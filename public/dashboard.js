@@ -2,33 +2,45 @@
 // This file should be called at the bottom of dashboard.html
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Check if user is logged in
+    // Kullanıcı login kontrolü ve diğer dashboard fonksiyonları burada kalabilir
     firebase.auth().onAuthStateChanged(function(user) {
-        if (user) {
-            // Sidebar profile info
-            document.getElementById('sidebarProfileImage').src = '/images/user.jpg';
-            document.getElementById('sidebarProfileName').textContent = user.displayName || user.email || 'User';
-            document.getElementById('sidebarProfileEmail').textContent = user.email || '';
-            // Show username if available, otherwise show email (for dashboard-username if exists)
-            if (document.getElementById('dashboard-username')) {
-                document.getElementById('dashboard-username').textContent = user.displayName || user.email || 'User';
-            }
-        } else {
-            // Redirect to auth.html if not logged in
+        if (!user) {
             window.location.href = 'auth.html?tab=login';
         }
     });
 
-    // Logout button
-    const logoutBtn = document.querySelector('.logout-btn');
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', function() {
-            firebase.auth().signOut().then(function() {
-                window.location.href = 'auth.html?tab=login';
-            });
+    // Sadece header arama modalı için kodlar:
+    const mainSearchInput = document.getElementById('mainSearchInput');
+    const searchModal = document.getElementById('searchModal');
+    const modalSearchInput = document.getElementById('modalSearchInput');
+    const searchModalClose = document.getElementById('searchModalClose');
+
+    if (mainSearchInput && searchModal && modalSearchInput && searchModalClose) {
+        function openSearchModal() {
+            searchModal.classList.add('active');
+            searchModal.style.display = 'flex';
+            setTimeout(() => { modalSearchInput.focus(); }, 100);
+        }
+        function closeSearchModal() {
+            searchModal.classList.remove('active');
+            searchModal.style.display = 'none';
+            mainSearchInput.blur();
+            modalSearchInput.value = '';
+        }
+        mainSearchInput.addEventListener('focus', openSearchModal);
+        mainSearchInput.addEventListener('click', openSearchModal);
+        searchModalClose.addEventListener('click', closeSearchModal);
+        searchModal.addEventListener('mousedown', function(e) {
+            if (e.target === searchModal) closeSearchModal();
+        });
+        document.addEventListener('keydown', function(e) {
+            if (searchModal.classList.contains('active') && e.key === 'Escape') closeSearchModal();
         });
     }
 });
+
+// Dashboard ana fonksiyonları ve diğer kodlar burada devam edebilir (film grid, filtre, pagination vs.)
+// Arama ile ilgili sadece yukarıdaki modal kodu kalsın, başka hiçbir yerde searchInput, searchResults, searchResultsGrid, mainContent, sidebar-search geçmesin.
 
 // TMDB API
 const TMDB_API_KEY = 'fda9bed2dd52a349ecb7cfe38b050ca5';
@@ -507,7 +519,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 transition: all 0.3s ease;
             `;
             
-            searchInput.placeholder = 'Film veya dizi ara...';
+            searchInput.placeholder = 'Search for a movie or TV show...';
             
             // Hover efekti
             searchInput.addEventListener('mouseover', () => {

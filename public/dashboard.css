@@ -641,4 +641,88 @@ body {
     .dashboard-outer {
         border-radius: 0;
     }
+}
+
+.search-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(24,24,28,0.98);
+    z-index: 9999;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    padding: 0;
+    overflow-y: auto;
+}
+.search-modal.active {
+    display: flex;
+}
+.search-modal-bar {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    padding: 36px 48px 18px 48px;
+    background: transparent;
+    position: relative;
+}
+.search-modal-bar i.fa-search {
+    color: #aaa;
+    font-size: 1.6rem;
+    margin-right: 18px;
+}
+.search-modal-bar input {
+    flex: 1;
+    font-size: 1.5rem;
+    padding: 14px 18px;
+    border: none;
+    border-radius: 12px;
+    background: #23232b;
+    color: #fff;
+    outline: none;
+    margin-right: 18px;
+}
+.search-modal-close {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 2.1rem;
+    cursor: pointer;
+    padding: 0 8px;
+    transition: color 0.2s;
+}
+.search-modal-close:hover {
+    color: #ff66c4;
+}
+.search-modal-content {
+    width: 100%;
+    padding: 0 48px 48px 48px;
+}
+.search-modal-content h2 {
+    color: #fff;
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin: 32px 0 16px 0;
+}
+.search-modal-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+    margin-bottom: 24px;
+}
+@media (max-width: 700px) {
+    .search-modal-bar, .search-modal-content {
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+    .search-modal-bar {
+        padding-top: 18px;
+        padding-bottom: 10px;
+    }
+    .search-modal-content h2 {
+        margin-top: 18px;
+    }
 } 
