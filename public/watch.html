@@ -238,37 +238,78 @@
         const data = await res.json();
         return data.title || '';
     }
+    async function getTvTitle(tvId) {
+        const apiKey = 'fda9bed2dd52a349ecb7cfe38b050ca5';
+        const res = await fetch(`https://api.themoviedb.org/3/tv/${tvId}?api_key=${apiKey}&language=en-US`);
+        if (!res.ok) return '';
+        const data = await res.json();
+        return data.name || '';
+    }
     async function loadVideo() {
         const params = new URLSearchParams(window.location.search);
         const movieId = params.get('id');
+        const tvId = params.get('tv');
+        const season = params.get('season');
+        const episode = params.get('episode');
         const frame = document.getElementById('video-frame');
         const spinner = document.getElementById('spinner');
         const titleSpan = document.getElementById('movie-title');
-        if (!movieId) {
+        if (tvId && season && episode) {
+            // TV Show
+            titleSpan.textContent = 'Loading...';
+            getTvTitle(tvId).then(title => {
+                if (title) titleSpan.textContent = title;
+                else titleSpan.textContent = 'TV Show';
+            });
+            try {
+                // Diziler için de cloudnestra embed url'sini backend'den fetch et
+                const url = `/api/get-cloudnestra-embed?tvId=${tvId}&season=${season}&episode=${episode}`;
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('No video found');
+                const data = await response.json();
+                if (!data.cloudnestraEmbedUrl) throw new Error('No video found');
+                const embedUrl = data.cloudnestraEmbedUrl;
+                spinner.style.display = 'none';
+                frame.innerHTML = `<iframe src="${embedUrl}" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true"></iframe>`;
+            } catch (e) {
+                spinner.style.display = 'none';
+                frame.innerHTML = `<div class="error-message">Video not available.<br><small>${e.message}</small></div>`;
+            }
+        } else if (movieId) {
+            // Movie
+            titleSpan.textContent = 'Loading...';
+            getMovieTitle(movieId).then(title => {
+                if (title) titleSpan.textContent = title;
+                else titleSpan.textContent = 'Movie';
+            });
+            try {
+                const embedUrl = await getCloudnestraEmbedUrl(movieId);
+                spinner.style.display = 'none';
+                frame.innerHTML = `<iframe src="${embedUrl}" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true"></iframe>`;
+            } catch (e) {
+                spinner.style.display = 'none';
+                frame.innerHTML = `<div class="error-message">Video not available.<br><small>${e.message}</small></div>`;
+            }
+        } else {
             spinner.style.display = 'none';
-            frame.innerHTML = '<div class="error-message">No movie selected.</div>';
-            titleSpan.textContent = 'No movie selected';
-            return;
-        }
-        // Set movie title
-        titleSpan.textContent = 'Loading...';
-        getMovieTitle(movieId).then(title => {
-            if (title) titleSpan.textContent = title;
-            else titleSpan.textContent = 'Movie';
-        });
-        try {
-            const embedUrl = await getCloudnestraEmbedUrl(movieId);
-            spinner.style.display = 'none';
-            frame.innerHTML = `<iframe src="${embedUrl}" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true"></iframe>`;
-        } catch (e) {
-            spinner.style.display = 'none';
-            frame.innerHTML = `<div class="error-message">Video not available.<br><small>${e.message}</small></div>`;
+            frame.innerHTML = '<div class="error-message">No video selected.</div>';
+            titleSpan.textContent = 'No video selected';
         }
     }
     loadVideo();
     // --- FIRESTORE COMMENT SECTION ---
     const params = new URLSearchParams(window.location.search);
     const movieId = params.get('id');
+    const tvId = params.get('tv');
+    const season = params.get('season');
+    const episode = params.get('episode');
+    // Benzersiz key oluştur
+    let commentDocKey = '';
+    if (movieId) {
+        commentDocKey = movieId;
+    } else if (tvId && season && episode) {
+        commentDocKey = `tv_${tvId}_s${season}_e${episode}`;
+    }
     const commentsSection = document.querySelector('.comments-section');
     const commentInput = document.querySelector('.comment-input');
     const commentBtn = document.querySelector('.comment-submit-btn');
@@ -290,12 +331,12 @@
     // Add comment
     commentBtn.addEventListener('click', async function() {
         const text = commentInput.value.trim();
-        if (!text || !currentUser) return;
+        if (!text || !currentUser || !commentDocKey) return;
         commentBtn.disabled = true;
         try {
             await firebase.firestore()
                 .collection('comments')
-                .doc(movieId)
+                .doc(commentDocKey)
                 .collection('userComments')
                 .add({
                     text,
@@ -317,20 +358,24 @@
         return `<div class="comment-item"><b>${d.user}</b> <span class="comment-date">${dateStr}</span><br>${d.text}</div>`;
     }
     commentsList.innerHTML = '<div class="comment-loading">Loading comments...</div>';
-    firebase.firestore()
-        .collection('comments')
-        .doc(movieId)
-        .collection('userComments')
-        .orderBy('createdAt', 'asc')
-        .onSnapshot(snapshot => {
-            if (snapshot.empty) {
-                commentsList.innerHTML = '<div class="comment-empty">No comments yet.</div>';
-            } else {
-                commentsList.innerHTML = Array.from(snapshot.docs).map(renderComment).join('');
-            }
-        }, err => {
-            commentsList.innerHTML = '<div class="comment-error">Error loading comments.</div>';
-        });
+    if (commentDocKey) {
+        firebase.firestore()
+            .collection('comments')
+            .doc(commentDocKey)
+            .collection('userComments')
+            .orderBy('createdAt', 'asc')
+            .onSnapshot(snapshot => {
+                if (snapshot.empty) {
+                    commentsList.innerHTML = '<div class="comment-empty">No comments yet.</div>';
+                } else {
+                    commentsList.innerHTML = Array.from(snapshot.docs).map(renderComment).join('');
+                }
+            }, err => {
+                commentsList.innerHTML = '<div class="comment-error">Error loading comments.</div>';
+            });
+    } else {
+        commentsList.innerHTML = '<div class="comment-error">Invalid video ID.</div>';
+    }
     // Enter key to send
     commentInput.addEventListener('keydown', function(e) {
         if (e.key === 'Enter' && !commentBtn.disabled) {

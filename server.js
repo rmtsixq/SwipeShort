@@ -326,16 +326,23 @@ app.get('/movie', (req, res) => {
 
 // Cloudnestra embed URL'sini almak için yeni endpoint
 app.get('/api/get-cloudnestra-embed', async (req, res) => {
-    const { movieId } = req.query;
+    const { movieId, tvId, season, episode } = req.query;
     console.log('\n=== Cloudnestra Embed Fetching Started ===');
-    console.log('Movie ID:', movieId);
-
-    if (!movieId) {
-        return res.status(400).json({ error: 'Movie ID is required' });
+    if (movieId) {
+        console.log('Movie ID:', movieId);
+    } else if (tvId && season && episode) {
+        console.log('TV ID:', tvId, 'Season:', season, 'Episode:', episode);
+    } else {
+        return res.status(400).json({ error: 'Movie ID or TV ID/Season/Episode is required' });
     }
 
     try {
-        const vidsrcApiUrl = `https://vidsrc.xyz/embed/movie/${movieId}`;
+        let vidsrcApiUrl;
+        if (movieId) {
+            vidsrcApiUrl = `https://vidsrc.xyz/embed/movie/${movieId}`;
+        } else {
+            vidsrcApiUrl = `https://vidsrc.xyz/embed/tv/${tvId}/${season}/${episode}`;
+        }
         console.log('Fetching from vidsrc API:', vidsrcApiUrl);
 
         const response = await fetch(vidsrcApiUrl, {
@@ -355,20 +362,15 @@ app.get('/api/get-cloudnestra-embed', async (req, res) => {
                 'Cache-Control': 'no-cache',
                 'Pragma': 'no-cache'
             },
-            // Timeout ekle
             timeout: 10000
         });
 
-        // Cloudflare kontrolü
         if (response.status === 403) {
             throw new Error('Cloudflare protection detected');
         }
-
-        // Rate limit kontrolü
         if (response.status === 429) {
             throw new Error('Rate limit exceeded');
         }
-
         if (!response.ok) {
             throw new Error(`Vidsrc API error: ${response.status}`);
         }
@@ -377,27 +379,21 @@ app.get('/api/get-cloudnestra-embed', async (req, res) => {
         console.log('Vidsrc response received');
         console.log('Response length:', html.length);
 
-        // Cloudflare sayfası kontrolü
         if (html.includes('cf-browser-verification') || html.includes('challenge-platform')) {
             throw new Error('Cloudflare verification page detected');
         }
 
-        // HTML içeriğinden iframe src'lerini bul
         const iframeMatches = html.match(/<iframe[^>]*src="([^"]*)"[^>]*>/g);
         console.log('Found iframes:', iframeMatches);
 
-        // Cloudnestra URL'sini bul
         let embedUrl = null;
         let source = null;
-
-        // Önce iframe src'lerini kontrol et
         if (iframeMatches) {
             for (const iframe of iframeMatches) {
                 const srcMatch = iframe.match(/src="([^"]*)"/);
                 if (srcMatch) {
                     const src = srcMatch[1];
                     console.log('Found iframe src:', src);
-                    
                     if (src.includes('cloudnestra')) {
                         embedUrl = src;
                         source = 'cloudnestra';
@@ -412,13 +408,10 @@ app.get('/api/get-cloudnestra-embed', async (req, res) => {
                 }
             }
         }
-
-        // Eğer iframe'lerde bulamazsak, doğrudan URL'leri ara
         if (!embedUrl) {
             const cloudnestraMatch = html.match(/https:\/\/[^"']*cloudnestra[^"']*/);
             const vidplayMatch = html.match(/https:\/\/[^"']*vidplay[^"']*/);
             const upcloudMatch = html.match(/https:\/\/[^"']*upcloud[^"']*/);
-
             if (cloudnestraMatch) {
                 embedUrl = cloudnestraMatch[0];
                 source = 'cloudnestra';
@@ -430,7 +423,6 @@ app.get('/api/get-cloudnestra-embed', async (req, res) => {
                 source = 'upcloud';
             }
         }
-
         if (embedUrl) {
             console.log('Found embed URL:', embedUrl);
             res.json({ 
@@ -441,14 +433,10 @@ app.get('/api/get-cloudnestra-embed', async (req, res) => {
             console.log('No video source found in HTML content');
             throw new Error('No video source found in the response');
         }
-
     } catch (error) {
         console.error('Error during embed URL fetching:', error);
-        
-        // Özel hata mesajları
         let errorMessage = 'An error occurred while fetching the embed URL.';
         let statusCode = 500;
-
         if (error.message.includes('Cloudflare')) {
             errorMessage = 'Cloudflare protection detected. Please try again later.';
             statusCode = 403;
@@ -459,7 +447,6 @@ app.get('/api/get-cloudnestra-embed', async (req, res) => {
             errorMessage = 'Request timed out. Please try again.';
             statusCode = 504;
         }
-
         res.status(statusCode).json({ 
             error: errorMessage,
             details: error.message
