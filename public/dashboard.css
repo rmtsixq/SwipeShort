@@ -406,15 +406,15 @@ body {
 
     .main-content {
         padding: 15px;
-    }
+}
 
     .filter-toggle {
         display: block;
-    }
+}
 
     .filter-content {
         display: none;
-    }
+}
 
     .filter-panel.active .filter-content {
         display: grid;
@@ -423,7 +423,7 @@ body {
     .film-grid {
         grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
         gap: 16px;
-    }
+}
 
     .search-results-grid {
         grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
@@ -436,8 +436,8 @@ body {
     }
 
     .film-tab {
-        padding: 8px 16px;
-        font-size: 0.9rem;
+    padding: 8px 16px;
+    font-size: 0.9rem;
     }
 }
 
@@ -466,7 +466,7 @@ body {
     z-index: 1000;
     justify-content: center;
     align-items: center;
-}
+    }
 
 .majik-terminal-content {
     font-family: 'Fira Mono', monospace;
@@ -550,7 +550,7 @@ body {
 /* Glitch Effect */
 .majik-glitch {
     animation: glitch 0.3s infinite;
-}
+    }
 
 @keyframes glitch {
     0% { transform: translate(0) }
@@ -664,7 +664,7 @@ body {
 }
 
 .search-modal {
-    display: none;
+        display: none;
     position: fixed;
     top: 0;
     left: 0;
@@ -726,7 +726,7 @@ body {
     font-size: 1.2rem;
     font-weight: 600;
     margin: 32px 0 16px 0;
-}
+    }
 .search-modal-grid {
     display: flex;
     flex-wrap: wrap;

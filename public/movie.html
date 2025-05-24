@@ -18,8 +18,8 @@
             </a>
             <h1 id="movie-title">Loading...</h1>
             <div class="like-section">
-                <button id="like-btn" class="like-btn"><i class="fas fa-thumbs-up"></i> Like</button>
-                <span id="like-count">0</span>
+                
+                
             </div>
         </header>
         
@@ -40,6 +40,10 @@
                         <span id="movie-release" class="movie-release"></span>
                     </div>
                     <div id="movie-genres" class="movie-genres"></div>
+                    <div class="like-section-flex">
+                        <button id="like-btn" class="like-btn"><i class="fas fa-thumbs-up"></i> Like</button>
+                        <span id="like-count">0</span>
+                    </div>
                     <p id="movie-description" class="movie-description">Loading movie description...</p>
                     <button id="start-movie-btn" class="start-movie-btn">Start</button>
                     <div id="movie-player" class="movie-player" style="display:none;margin-top:24px;"></div>
@@ -54,5 +58,36 @@
     <script src="scripts/firebase-config.js"></script>
     <script src="movie.js"></script>
     <script src="https://kit.fontawesome.com/4e7b8e7e2a.js" crossorigin="anonymous"></script>
+    <style>
+    .like-section-flex {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 12px 0 8px 0;
+    }
+    .like-btn {
+        background: linear-gradient(90deg, #a259ff 0%, #38cfff 100%);
+        color: #fff;
+        border: none;
+        border-radius: 12px;
+        padding: 8px 18px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 2px 8px #0003;
+        transition: background 0.2s, box-shadow 0.2s, opacity 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .like-btn.liked {
+        background: #e055b0;
+    }
+    #like-count {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #ff66c4;
+    }
+    </style>
 </body>
 </html> 

@@ -227,22 +227,40 @@ function setupLikeButton(movieId) {
     const likeCount = document.getElementById('like-count');
     if (!likeBtn || !likeCount || !movieId) return;
     const db = firebase.firestore();
-    const likeDoc = db.collection('likes').doc('movie_' + movieId);
-
-    // Real-time update
-    likeDoc.onSnapshot(doc => {
-        const data = doc.data();
-        likeCount.textContent = data && data.count ? data.count : 0;
-    });
-
-    likeBtn.addEventListener('click', async () => {
-        await db.runTransaction(async (transaction) => {
-            const docSnap = await transaction.get(likeDoc);
-            const current = docSnap.exists && docSnap.data().count ? docSnap.data().count : 0;
-            transaction.set(likeDoc, { count: current + 1 }, { merge: true });
+    firebase.auth().onAuthStateChanged(function(user) {
+        if (!user) {
+            likeBtn.disabled = true;
+            likeBtn.title = 'You must be logged in to like.';
+            return;
+        }
+        likeBtn.disabled = false;
+        likeBtn.title = '';
+        const likeDoc = db.collection('likes').doc('movie_' + movieId);
+        const userLikeDoc = likeDoc.collection('userLikes').doc(user.uid);
+        // Toplam like sayısını çek
+        likeDoc.collection('userLikes').onSnapshot(snapshot => {
+            likeCount.textContent = snapshot.size;
         });
-        likeBtn.classList.add('liked');
-        setTimeout(() => likeBtn.classList.remove('liked'), 500);
+        // Kullanıcı daha önce like'ladı mı?
+        userLikeDoc.get().then(doc => {
+            if (doc.exists) {
+                likeBtn.classList.add('liked');
+            } else {
+                likeBtn.classList.remove('liked');
+            }
+        });
+        likeBtn.addEventListener('click', async () => {
+            const doc = await userLikeDoc.get();
+            if (!doc.exists) {
+                // Like at
+                await userLikeDoc.set({ liked: true, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+                likeBtn.classList.add('liked');
+            } else {
+                // Like'ı geri al
+                await userLikeDoc.delete();
+                likeBtn.classList.remove('liked');
+            }
+        });
     });
 }
 

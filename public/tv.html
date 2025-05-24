@@ -9,6 +9,132 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link href="https://vjs.zencdn.net/7.20.3/video-js.css" rel="stylesheet" />
     <script src="https://vjs.zencdn.net/7.20.3/video.min.js"></script>
+    <!-- Firebase App (core) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <!-- Firebase Auth -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <!-- Firebase Firestore -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <!-- Firebase Config -->
+    <script src="firebase-config.js"></script>
+    <style>
+    .comments-section {
+        width: 100%;
+        max-width: 900px;
+        margin: 36px auto 0 auto;
+        background: #23232b;
+        border-radius: 18px;
+        box-shadow: 0 2px 12px #0005;
+        padding: 24px 24px 18px 24px;
+    }
+    .comments-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-bottom: 18px;
+        color: #38cfff;
+    }
+    .comment-input-row {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 18px;
+    }
+    .comment-input {
+        flex: 1;
+        padding: 10px 16px;
+        border-radius: 12px;
+        border: none;
+        font-size: 1rem;
+        background: #18181c;
+        color: #fff;
+    }
+    .comment-submit-btn {
+        background: linear-gradient(90deg, #a259ff 0%, #38cfff 100%);
+        color: #fff;
+        border: none;
+        border-radius: 12px;
+        padding: 10px 22px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        opacity: 1;
+        box-shadow: 0 2px 8px #0003;
+        transition: background 0.2s, box-shadow 0.2s, opacity 0.2s;
+    }
+    .comment-submit-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        filter: grayscale(0.5);
+    }
+    .comment-submit-btn:not(:disabled):hover {
+        background: linear-gradient(90deg, #38cfff 0%, #a259ff 100%);
+        box-shadow: 0 4px 16px #38cfff55;
+        opacity: 1;
+    }
+    .comments-list {
+        margin-top: 10px;
+        color: #aaa;
+        font-size: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+    .comment-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 14px;
+        background: #18181c;
+        border-radius: 12px;
+        padding: 14px 18px 12px 14px;
+        box-shadow: 0 1px 6px #0002;
+        font-size: 1rem;
+    }
+    .comment-user {
+        font-weight: 700;
+        color: #fff;
+        margin-right: 8px;
+    }
+    .comment-date {
+        color: #38cfff;
+        font-size: 0.95rem;
+        margin-left: 6px;
+    }
+    @media (max-width: 900px) {
+        .comments-section {
+            max-width: 100vw;
+            border-radius: 0;
+            padding: 12px 6px 10px 6px;
+        }
+    }
+    .like-section-flex {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 12px 0 8px 0;
+    }
+    .like-btn {
+        background: linear-gradient(90deg, #a259ff 0%, #38cfff 100%);
+        color: #fff;
+        border: none;
+        border-radius: 12px;
+        padding: 8px 18px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 2px 8px #0003;
+        transition: background 0.2s, box-shadow 0.2s, opacity 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .like-btn.liked {
+        background: #e055b0;
+    }
+    #like-count {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #ff66c4;
+    }
+    </style>
 </head>
 <body>
     <div class="movie-container">
@@ -31,11 +157,11 @@
                         <span id="tv-release" class="movie-release"></span>
                     </div>
                     <div id="tv-genres" class="movie-genres"></div>
-                    <p id="tv-description" class="movie-description">Loading TV show description...</p>
-                    <div class="like-section">
+                    <div class="like-section-flex">
                         <button id="like-btn" class="like-btn"><i class="fas fa-thumbs-up"></i> Like</button>
                         <span id="like-count">0</span>
                     </div>
+                    <p id="tv-description" class="movie-description">Loading TV show description...</p>
                     <button id="start-tv-btn" class="start-movie-btn">Start</button>
                     <div id="tv-player" class="movie-player" style="display:none;margin-top:24px;"></div>
                 </div>
@@ -51,9 +177,6 @@
             <div id="episode-list"></div>
         </section>
     </div>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-    <script src="scripts/firebase-config.js"></script>
     <script src="tv.js"></script>
     <script src="https://kit.fontawesome.com/4e7b8e7e2a.js" crossorigin="anonymous"></script>
 </body>
