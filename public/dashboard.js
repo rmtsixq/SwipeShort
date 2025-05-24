@@ -494,30 +494,30 @@ document.addEventListener('DOMContentLoaded', () => {
     setupMajikTrigger();
 
     // Arama kutusunu güncelle
-    const searchInput = document.querySelector('.sidebar-search input');
-    if (searchInput) {
-        searchInput.style.cssText = `
-            padding: 10px 15px;
-            font-size: 16px;
-            border: 2px solid #2c3e50;
-            border-radius: 8px;
-            background-color: #34495e;
-            color: white;
-            width: 100%;
-            transition: all 0.3s ease;
-        `;
-        
-        searchInput.placeholder = 'Film veya dizi ara...';
-        
-        // Hover efekti
-        searchInput.addEventListener('mouseover', () => {
-            searchInput.style.backgroundColor = '#2c3e50';
-            searchInput.style.borderColor = '#3498db';
-        });
-        
-        searchInput.addEventListener('mouseout', () => {
-            searchInput.style.backgroundColor = '#34495e';
-            searchInput.style.borderColor = '#2c3e50';
+        const searchInput = document.querySelector('.sidebar-search input');
+        if (searchInput) {
+            searchInput.style.cssText = `
+                padding: 10px 15px;
+                font-size: 16px;
+                border: 2px solid #2c3e50;
+                border-radius: 8px;
+                background-color: #34495e;
+                color: white;
+                width: 100%;
+                transition: all 0.3s ease;
+            `;
+            
+            searchInput.placeholder = 'Film veya dizi ara...';
+            
+            // Hover efekti
+            searchInput.addEventListener('mouseover', () => {
+                searchInput.style.backgroundColor = '#2c3e50';
+                searchInput.style.borderColor = '#3498db';
+            });
+            
+            searchInput.addEventListener('mouseout', () => {
+                searchInput.style.backgroundColor = '#34495e';
+                searchInput.style.borderColor = '#2c3e50';
         });
     }
 

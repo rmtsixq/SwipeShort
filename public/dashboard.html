@@ -2,160 +2,125 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - ShortSwipe</title>
-    <link rel="stylesheet" href="style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Dashboard - SwipeShort</title>
     <link rel="stylesheet" href="dashboard.css">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Mono&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="dashboard-container">
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <div class="logo">
-                    <img src="https://cdn-icons-png.flaticon.com/512/1179/1179120.png" alt="SwipeShort Logo">
-                    <span>SwipeShort</span>
-                </div>
+    <div class="dashboard-outer">
+        <div class="dashboard-header">
+            <div class="header-logo">
+                <img src="/logo.svg" alt="SwipeShort Logo" class="header-logo-img" />
+                <span class="header-logo-text">SwipeShort</span>
             </div>
-            
-            <!-- Profile Section -->
-            <div class="profile-section">
-                <a href="profile.html" class="profile-link">
-                    <div class="profile-image">
-                        <img src="/default-avatar.png" alt="Profile" id="sidebarProfileImage">
+            <form class="header-search">
+                <i class="fa fa-search"></i>
+                <input type="text" placeholder="Ara" />
+            </form>
+        </div>
+        <div class="dashboard-container">
+            <!-- Main Content -->
+            <div class="main-content" id="mainContent">
+                <!-- Content Type Selector -->
+                <div class="content-type-selector">
+                    <button class="content-type-btn active" data-type="movie">Movies</button>
+                    <button class="content-type-btn" data-type="tv">TV Shows</button>
+                </div>
+
+                <!-- Movie Tabs -->
+                <div class="film-tabs-header" data-type="movie">
+                    <button class="film-tab active" data-type="movie">New Releases</button>
+                    <button class="film-tab" data-type="movie">Recommended</button>
+                    <button class="film-tab" data-type="movie">IMDB 7+ Films</button>
+                    <button class="film-tab" data-type="movie">Most Commented</button>
+                    <button class="film-tab" data-type="movie">Most Liked</button>
+                </div>
+
+                <!-- TV Show Tabs -->
+                <div class="film-tabs-header" data-type="tv" style="display: none;">
+                    <button class="film-tab" data-type="tv">New Episodes</button>
+                    <button class="film-tab" data-type="tv">Popular Shows</button>
+                    <button class="film-tab" data-type="tv">Top Rated</button>
+                    <button class="film-tab" data-type="tv">Trending</button>
+                    <button class="film-tab" data-type="tv">On The Air</button>
+                </div>
+
+                <!-- Filter Panel -->
+                <div class="filter-panel">
+                    <div class="filter-header">
+                        <h3>Filters</h3>
+                        <button class="filter-toggle">Filter</button>
                     </div>
-                    <div class="profile-info">
-                        <span class="profile-name" id="sidebarProfileName">Loading...</span>
-                        <span class="profile-email" id="sidebarProfileEmail">Loading...</span>
+                    <div class="filter-content">
+                        <div class="filter-group">
+                            <label>Genre</label>
+                            <select name="genre">
+                                <option value="">All Genres</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label>Year</label>
+                            <select name="year">
+                                <option value="">All Years</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label>Rating</label>
+                            <select name="rating">
+                                <option value="">All Ratings</option>
+                                <option value="8">8+ Stars</option>
+                                <option value="7">7+ Stars</option>
+                                <option value="6">6+ Stars</option>
+                            </select>
+                        </div>
+                        <button class="filter-btn" disabled>Apply Filters</button>
                     </div>
-                </a>
+                </div>
+
+                <!-- Film Grid -->
+                <div id="film-grid" class="film-grid"></div>
+
+                <!-- Pagination -->
+                <div id="pagination" class="pagination"></div>
             </div>
 
-            <div class="sidebar-search">
-                <input type="text" placeholder="Search movies...">
+            <!-- Search Results -->
+            <div id="searchResults" class="search-results" style="display: none;">
+                <div class="search-header">
+                    <h2>Search Results</h2>
+                    <span id="searchCount">0 results</span>
+                </div>
+                <div id="searchResultsGrid" class="search-results-grid"></div>
             </div>
-            <nav class="sidebar-menu">
-                <a href="dashboard.html" class="menu-item">
-                    <i class="fas fa-home"></i>
-                    <span>Home</span>
-                </a>
-                <a href="profile.html" class="menu-item">
-                    <i class="fas fa-user"></i>
-                    <span>Profile</span>
-                </a>
-                <a href="settings.html" class="menu-item">
-                    <i class="fas fa-cog"></i>
-                    <span>Settings</span>
-                </a>
-            </nav>
-        </aside>
-        <main class="dashboard-main dashboard-flex">
-            <section class="main-content">
-                <!-- Search Results Section -->
-                <div id="searchResults" class="search-results" style="display: none;">
-                    <div class="search-header">
-                        <h2>Search Results</h2>
-                        <div class="search-stats">
-                            <span id="searchCount">0</span> results found
-                        </div>
-                    </div>
-                    <div id="searchResultsGrid" class="film-grid-new"></div>
-                </div>
-                <!-- Original Content -->
-                <div id="mainContent" class="main-content-wrapper">
-                    <div class="content-type-selector">
-                        <button class="content-type-btn active" data-type="movie">Movies</button>
-                        <button class="content-type-btn" data-type="tv">TV Shows</button>
-                    </div>
-                    <div class="film-tabs">
-                        <!-- Movie Tabs -->
-                        <div class="film-tabs-header" data-type="movie">
-                            <div class="film-tabs-buttons">
-                                <button class="film-tab active" data-type="movie">New Releases</button>
-                                <button class="film-tab" data-type="movie">Recommended</button>
-                                <button class="film-tab" data-type="movie">IMDB 7+ Films</button>
-                                <button class="film-tab" data-type="movie">Most Commented</button>
-                                <button class="film-tab" data-type="movie">Most Liked</button>
-                            </div>
-                        </div>
-                        <!-- TV Show Tabs -->
-                        <div class="film-tabs-header" data-type="tv" style="display: none;">
-                            <div class="film-tabs-buttons">
-                                <button class="film-tab" data-type="tv">New Episodes</button>
-                                <button class="film-tab" data-type="tv">Popular Shows</button>
-                                <button class="film-tab" data-type="tv">Top Rated</button>
-                                <button class="film-tab" data-type="tv">Trending</button>
-                                <button class="film-tab" data-type="tv">On The Air</button>
-                            </div>
-                        </div>
-                    </div>
-                    <div id="film-grid" class="film-grid-new"></div>
-                    <div id="pagination" class="pagination"></div>
-                    <button class="filter-toggle">Filter</button>
-                </div>
-            </section>
-            <aside class="filter-panel">
-                <h3>Filter Movies</h3>
-                <div class="filter-group">
-                    <label for="genre">Genre</label>
-                    <select name="genre" id="genre">
-                        <option value="">All Genres</option>
-                        <!-- Genres will be populated by JavaScript -->
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label for="year">Release Year</label>
-                    <select name="year" id="year">
-                        <option value="">All Years</option>
-                        <!-- Generate years from current year to 1950 -->
-                        <script>
-                            const currentYear = new Date().getFullYear();
-                            for(let year = currentYear; year >= 1950; year--) {
-                                document.write(`<option value="${year}">${year}</option>`);
-                            }
-                        </script>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label for="rating">Minimum Rating</label>
-                    <select name="rating" id="rating">
-                        <option value="">Any Rating</option>
-                        <option value="9">9+ Stars</option>
-                        <option value="8">8+ Stars</option>
-                        <option value="7">7+ Stars</option>
-                        <option value="6">6+ Stars</option>
-                        <option value="5">5+ Stars</option>
-                    </select>
-                </div>
-                <button class="filter-btn">Apply Filters</button>
-            </aside>
-        </main>
-    </div>
-    <div id="majik-modal" class="majik-modal" style="display:none;">
-        <div class="majik-terminal">
+        </div>
+
+        <!-- Majik Modal -->
+        <div id="majik-modal" class="majik-modal">
             <div id="majik-terminal-content" class="majik-terminal-content"></div>
-            <div id="majik-game-root" class="majik-game-root" style="display:none;"></div>
+            <div id="majik-game-root" class="majik-game-root"></div>
         </div>
-    </div>
-    <div id="linux-modal" class="linux-modal" style="display:none;">
-        <div class="pccase">
-            <div class="screen oldscreeneffect">
-                <div class="terminal-bar">
-                    <span class="terminal-title">majik@neighborhood:~$</span>
-                    <button id="tip-btn" class="tip-btn">tip</button>
-                </div>
-                <div id="terminal-content" class="screentext"></div>
-                <form id="terminal-form" autocomplete="off">
+
+        <!-- Linux Terminal Modal -->
+        <div id="linux-modal" class="linux-modal">
+            <div class="screen">
+                <div id="terminal-content" class="terminal-content"></div>
+                <form id="terminal-form" class="terminal-form">
                     <span class="prompt">$</span>
-                    <input id="terminal-input" type="text" autofocus autocomplete="off" />
+                    <input type="text" id="terminal-input" class="terminal-input" autocomplete="off">
                 </form>
+                <button id="tip-btn" class="tip-btn">💡</button>
             </div>
         </div>
+
+        <!-- Firebase -->
+        <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+        <script src="firebase-config.js"></script>
+        <script src="dashboard.js"></script>
     </div>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-    <script src="scripts/firebase-config.js"></script>
-    <script src="dashboard.js"></script>
-    <script src="https://kit.fontawesome.com/4e7b8e7e2a.js" crossorigin="anonymous"></script>
 </body>
 </html> 
