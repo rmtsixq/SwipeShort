@@ -34,34 +34,35 @@
             align-items: center;
             justify-content: center;
         }
-        .swiper {
+        .swiper, .swiper-slide {
             width: 100%;
             height: 100%;
         }
         .swiper-slide {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-end;
+            position: relative;
             background: #19191e;
             border-radius: 24px;
             box-shadow: 0 4px 24px rgba(0,0,0,0.18);
-            position: relative;
             overflow: hidden;
         }
-        .trailer-video {
+        .trailer-iframe {
+            position: absolute;
+            top: 0; left: 0;
             width: 100%;
-            height: 60%;
+            height: 100%;
+            border: none;
             background: #000;
-            border-radius: 24px 24px 0 0;
-            object-fit: cover;
         }
-        .trailer-info {
+        .trailer-info-flex {
+            position: absolute;
+            left: 0; bottom: 0;
             width: 100%;
             padding: 18px 20px 28px 20px;
             background: linear-gradient(0deg, #23232b 90%, transparent 100%);
             border-radius: 0 0 24px 24px;
             box-sizing: border-box;
+            display: flex;
+            align-items: center;
         }
         .trailer-title {
             font-size: 1.2rem;
@@ -74,8 +75,64 @@
             font-size: 1rem;
             margin-bottom: 6px;
         }
+        .trailer-poster {
+            width: 48px;
+            height: 72px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-right: 12px;
+            box-shadow: 0 2px 8px #0005;
+            vertical-align: middle;
+        }
         .swiper-pagination {
-            bottom: 10px !important;
+            display: none !important;
+        }
+        .loading-message {
+            color: #fff;
+            opacity: 0.7;
+            text-align: center;
+            padding: 40px 0;
+            font-size: 1.1rem;
+        }
+        .swipe-overlay {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            background: transparent;
+            cursor: grab;
+        }
+        .swipe-overlay:active {
+            cursor: grabbing;
+        }
+        .trailer-poster-lazy {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            border-radius: 24px 24px 0 0;
+            background-color: #000;
+            z-index: 1;
+        }
+        .unmute-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 10;
+            background: rgba(0,0,0,0.7);
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            font-size: 1.3rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         @media (max-width: 500px) {
             .discover-feed {
@@ -90,10 +147,20 @@
     </style>
 </head>
 <body>
+    <div id="instructionModal" style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(24,24,28,0.85);backdrop-filter:blur(6px);z-index:10000;display:flex;align-items:center;justify-content:center;">
+        <div style="background:#22232b;padding:40px 32px 32px 32px;border-radius:28px;box-shadow:0 8px 40px #0008;max-width:370px;text-align:center;position:relative;">
+            <div style="font-size:2.6rem;color:#ff66c4;margin-bottom:18px;">
+                <i class="fa-solid fa-clapperboard"></i>
+            </div>
+            <h2 style="color:#fff;margin-bottom:14px;font-size:1.45rem;font-weight:700;letter-spacing:0.2px;">Welcome to Discover</h2>
+            <p style="color:#fff;opacity:0.88;font-size:1.08rem;margin-bottom:26px;line-height:1.6;">Swipe <b>up or down</b> to explore trending movie trailers.<br><br>To Start, tap <b>Start</b> below.</p>
+            <button id="modalOkBtn" style="background:linear-gradient(90deg,#a259ff 0%,#38cfff 100%);color:#fff;font-weight:700;font-size:1.13rem;padding:12px 38px;border:none;border-radius:14px;cursor:pointer;box-shadow:0 2px 12px #0003;transition:background 0.2s;">Start</button>
+        </div>
+    </div>
     <div class="discover-feed">
         <div class="swiper" id="discoverSwiper">
-            <div class="swiper-wrapper">
-                <!-- Slides will be injected here -->
+            <div class="swiper-wrapper" id="swiperWrapper">
+                <div class="loading-message">Loading trailers...</div>
             </div>
             <div class="swiper-pagination"></div>
         </div>
@@ -101,81 +168,167 @@
     <!-- Swiper.js -->
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
     <script>
-    // Placeholder video data for step 2
-    const trailers = [
-        {
-            title: 'Inception',
-            year: 2010,
-            video: 'https://www.w3schools.com/html/mov_bbb.mp4',
-            poster: 'https://image.tmdb.org/t/p/w500/qmDpIHrmpJINaRKAfWQfftjCdyi.jpg'
-        },
-        {
-            title: 'Interstellar',
-            year: 2014,
-            video: 'https://www.w3schools.com/html/movie.mp4',
-            poster: 'https://image.tmdb.org/t/p/w500/rAiYTfKGqDCRIIqo664sY9XZIvQ.jpg'
-        },
-        {
-            title: 'The Dark Knight',
-            year: 2008,
-            video: 'https://www.w3schools.com/html/mov_bbb.mp4',
-            poster: 'https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg'
-        }
-    ];
+    const TMDB_API_KEY = 'fda9bed2dd52a349ecb7cfe38b050ca5';
+    const swiperWrapper = document.getElementById('swiperWrapper');
+    let isUnmuted = false;
 
-    const swiperWrapper = document.querySelector('.swiper-wrapper');
-    trailers.forEach(t => {
-        const slide = document.createElement('div');
-        slide.className = 'swiper-slide';
-        slide.innerHTML = `
-            <video class="trailer-video" src="${t.video}" poster="${t.poster}" playsinline loop muted preload="auto"></video>
-            <div class="trailer-info">
-                <div class="trailer-title">${t.title}</div>
-                <div class="trailer-meta">${t.year}</div>
+    async function fetchTrailers() {
+        // 1. Popüler filmleri çek
+        const res = await fetch(`https://api.themoviedb.org/3/movie/popular?api_key=${TMDB_API_KEY}&language=en-US&page=1`);
+        const data = await res.json();
+        const movies = data.results || [];
+        const slides = [];
+        for (const movie of movies) {
+            // 2. Her film için fragmanları çek
+            const vidRes = await fetch(`https://api.themoviedb.org/3/movie/${movie.id}/videos?api_key=${TMDB_API_KEY}&language=en-US`);
+            const vidData = await vidRes.json();
+            const trailer = (vidData.results || []).find(v => v.type === 'Trailer' && v.site === 'YouTube');
+            if (!trailer) continue;
+            // 3. Slide HTML'i oluştur
+            const youtubeId = trailer.key;
+            const title = movie.title;
+            const year = (movie.release_date || '').split('-')[0] || '';
+            const poster = movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : '';
+            slides.push({ youtubeId, title, year, poster });
+            if (slides.length >= 10) break; // 10 fragman yeterli
+        }
+        return slides;
+    }
+
+    function createSlide({youtubeId, title, year, poster}) {
+        // Lazy: only poster at first, iframe is injected dynamically
+        return `
+        <div class="swiper-slide" data-youtubeid="${youtubeId}">
+            <div class="trailer-poster-lazy" style="background-image:url('${poster}')"></div>
+            <div class="swipe-overlay"></div>
+            <div class="trailer-info-flex">
+                <img class="trailer-poster" src="${poster}" alt="${title}">
+                <div>
+                    <div class="trailer-title">${title}</div>
+                    <div class="trailer-meta">${year}</div>
+                </div>
             </div>
+        </div>
         `;
-        swiperWrapper.appendChild(slide);
-    });
+    }
 
-    // Swiper.js initialization
-    const swiper = new Swiper('.swiper', {
-        direction: 'vertical',
-        slidesPerView: 1,
-        spaceBetween: 0,
-        mousewheel: true,
-        pagination: {
-            el: '.swiper-pagination',
-            clickable: true,
-        },
-        speed: 600,
-        effect: 'slide',
-        on: {
-            slideChange: function () {
-                // Autoplay logic: only play the active slide's video
-                document.querySelectorAll('.trailer-video').forEach((video, idx) => {
-                    if (swiper.slides[swiper.activeIndex].contains(video)) {
-                        video.muted = true;
-                        video.play().catch(e => {});
-                    } else {
-                        video.pause();
-                        video.currentTime = 0;
-                    }
-                });
+    function loadIframeForSlide(slide) {
+        if (!slide || slide.querySelector('iframe')) return;
+        const youtubeId = slide.getAttribute('data-youtubeid');
+        if (!youtubeId) return;
+        const iframe = document.createElement('iframe');
+        iframe.className = 'trailer-iframe';
+        iframe.src = `https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${youtubeId}`;
+        iframe.allow = 'autoplay; encrypted-media';
+        iframe.allowFullscreen = true;
+        slide.prepend(iframe);
+        // Poster'ı gizle
+        const poster = slide.querySelector('.trailer-poster-lazy');
+        if (poster) poster.style.display = 'none';
+    }
+    function unloadIframeForSlide(slide) {
+        if (!slide) return;
+        const iframe = slide.querySelector('iframe');
+        if (iframe) iframe.remove();
+        // Poster'ı göster
+        const poster = slide.querySelector('.trailer-poster-lazy');
+        if (poster) poster.style.display = '';
+    }
+
+    function addUnmuteButton(slide) {
+        if (!slide || slide.querySelector('.unmute-btn')) return;
+        const btn = document.createElement('button');
+        btn.className = 'unmute-btn';
+        btn.innerHTML = '🔊';
+        btn.title = 'Sesi Aç';
+        btn.onclick = () => {
+            const iframe = slide.querySelector('iframe');
+            if (iframe) {
+                const src = iframe.src.replace('mute=1', 'mute=0');
+                iframe.src = '';
+                setTimeout(() => { iframe.src = src; }, 50);
+                btn.style.display = 'none';
+                isUnmuted = true;
             }
+        };
+        slide.appendChild(btn);
+    }
+
+    async function initFeed() {
+        swiperWrapper.innerHTML = '<div class="loading-message">Loading trailers...</div>';
+        const slides = await fetchTrailers();
+        if (!slides.length) {
+            swiperWrapper.innerHTML = '<div class="loading-message">No trailers found.</div>';
+            return;
         }
-    });
-
-    // Play only the first video on load
-    window.addEventListener('DOMContentLoaded', () => {
-        const videos = document.querySelectorAll('.trailer-video');
-        videos.forEach((video, idx) => {
-            if (idx === 0) {
-                video.muted = true;
-                video.play().catch(() => {});
-            } else {
-                video.pause();
-                video.currentTime = 0;
+        swiperWrapper.innerHTML = slides.map(createSlide).join('');
+        // Swiper.js initialization
+        const swiper = new Swiper('.swiper', {
+            direction: 'vertical',
+            slidesPerView: 1,
+            spaceBetween: 0,
+            mousewheel: true,
+            simulateTouch: true,
+            allowTouchMove: true,
+            grabCursor: true,
+            pagination: {
+                el: '.swiper-pagination',
+                clickable: true,
+            },
+            speed: 600,
+            effect: 'slide',
+            on: {
+                slideChange: function () {
+                    // Lazy load: aktif ve komşu slide'lara iframe ekle, diğerlerinden kaldır
+                    [swiper.activeIndex-1, swiper.activeIndex, swiper.activeIndex+1].forEach(idx => {
+                        const slide = swiper.slides[idx];
+                        if (slide) loadIframeForSlide(slide);
+                    });
+                    swiper.slides.forEach((slide, idx) => {
+                        if (Math.abs(idx - swiper.activeIndex) > 1) {
+                            unloadIframeForSlide(slide);
+                        }
+                    });
+                    // Aktif slide'da sesi aç, diğerlerinde mute
+                    swiper.slides.forEach((slide, idx) => {
+                        const iframe = slide.querySelector('iframe');
+                        if (iframe) {
+                            const youtubeId = slide.getAttribute('data-youtubeid');
+                            const mute = (idx === swiper.activeIndex) ? 0 : 1;
+                            iframe.src = `https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=${mute}&controls=0&loop=1&playlist=${youtubeId}`;
+                        }
+                    });
+                    isUnmuted = false;
+                    addUnmuteButton(swiper.slides[swiper.activeIndex]);
+                }
             }
+        });
+        // İlk başta ilk 2-3 slide'ı yükle
+        [0,1,2].forEach(idx => loadIframeForSlide(swiper.slides[idx]));
+        // İlk slide'a unmute butonu ekle
+        addUnmuteButton(swiper.slides[0]);
+        isUnmuted = false;
+    }
+
+    initFeed();
+
+    // Modal logic
+    document.addEventListener('DOMContentLoaded', function() {
+        const modal = document.getElementById('instructionModal');
+        const okBtn = document.getElementById('modalOkBtn');
+        okBtn.addEventListener('click', function() {
+            modal.style.display = 'none';
+            // İlk slide'ın sesi açılsın
+            setTimeout(() => {
+                const firstSlide = document.querySelector('.swiper-slide');
+                if (firstSlide) {
+                    const iframe = firstSlide.querySelector('iframe');
+                    const youtubeId = firstSlide.getAttribute('data-youtubeid');
+                    if (iframe && youtubeId) {
+                        iframe.src = `https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=0&controls=0&loop=1&playlist=${youtubeId}`;
+                    }
+                }
+            }, 100);
         });
     });
     </script>
