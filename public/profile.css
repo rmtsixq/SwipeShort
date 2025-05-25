@@ -106,6 +106,7 @@
     background: rgba(255, 255, 255, 0.05);
     border-radius: 20px;
     padding: 2rem;
+    margin-top: 2.5rem;
 }
 
 .profile-section-card h2 {
@@ -164,11 +165,75 @@
 }
 
 /* Movies Grid */
-.liked-movies-grid,
-.disliked-movies-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 1.5rem;
+.liked-movies-grid {
+    display: flex;
+    flex-direction: row;
+    gap: 1.2rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 8px;
+    margin-top: 1rem;
+    scrollbar-width: thin;
+    scrollbar-color: #ff66c4 #23232b;
+}
+
+.liked-movies-grid::-webkit-scrollbar {
+    height: 8px;
+}
+
+.liked-movies-grid::-webkit-scrollbar-thumb {
+    background: #ff66c4;
+    border-radius: 8px;
+}
+
+.liked-movies-grid::-webkit-scrollbar-track {
+    background: #23232b;
+    border-radius: 8px;
+}
+
+.liked-movie-card {
+    min-width: 180px;
+    max-width: 180px;
+    flex: 0 0 180px;
+    background: #23232b;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.18);
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.liked-movie-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(255, 102, 196, 0.18);
+}
+
+.liked-movie-card img {
+    width: 100%;
+    height: 260px;
+    object-fit: cover;
+    border-radius: 12px 12px 0 0;
+}
+
+.liked-movie-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #fff;
+    margin: 12px 0 8px 0;
+    padding: 0 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.liked-movie-year {
+    color: #ff66c4;
+    font-size: 0.95rem;
+    margin-bottom: 10px;
 }
 
 /* Responsive Design */
@@ -208,9 +273,18 @@
         padding: 1.5rem;
     }
 
-    .liked-movies-grid,
-    .disliked-movies-grid {
+    .liked-movies-grid {
         grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
         gap: 1rem;
+    }
+
+    .liked-movie-card {
+        min-width: 130px;
+        max-width: 130px;
+        flex: 0 0 130px;
+    }
+
+    .liked-movie-card img {
+        height: 180px;
     }
 } 

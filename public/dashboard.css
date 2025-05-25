@@ -825,11 +825,14 @@ body {
 
 .card-like-section {
     position: absolute;
-    bottom: 12px;
-    right: 12px;
+    top: 12px;
+    left: 12px;
+    right: auto;
+    bottom: auto;
     display: flex;
     align-items: center;
     gap: 8px;
+    z-index: 2;
 }
 
 .like-btn {

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Profile - SwipeShort</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="profile.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -142,6 +142,10 @@
                 <p class="stat-label">Comments</p>
             </div>
         </div>
+        <div class="profile-section-card">
+            <h2>Liked Movies & TV Shows</h2>
+            <div id="liked-movies-grid" class="liked-movies-grid"></div>
+        </div>
     </div>
 
     <!-- Firebase -->
@@ -201,6 +205,58 @@
                             document.getElementById('commentCount').textContent = snapshot.size;
                         });
                 }
+            }
+        });
+
+        // Show liked movies & TV shows in profile
+        firebase.auth().onAuthStateChanged(async function(user) {
+            if (!user) return;
+            const db = firebase.firestore();
+            const grid = document.getElementById('liked-movies-grid');
+            grid.innerHTML = '<div style="color:#fff;opacity:0.7;padding:24px;">Loading...</div>';
+            try {
+                // Get all userLikes for this user
+                const snapshot = await db.collectionGroup('userLikes')
+                    .where('liked', '==', true)
+                    .where('userId', '==', user.uid)
+                    .get();
+                if (snapshot.empty) {
+                    grid.innerHTML = '<div style="color:#fff;opacity:0.7;padding:24px;">No liked movies or TV shows yet.</div>';
+                    return;
+                }
+                // For each like, get the parent doc id (format: movie_12345 or tv_67890)
+                const likedItems = snapshot.docs.map(doc => {
+                    const parentId = doc.ref.parent.parent.id;
+                    const [type, id] = parentId.split('_');
+                    return { type, id };
+                });
+                // Fetch details from TMDB for each liked item
+                const apiKey = 'fda9bed2dd52a349ecb7cfe38b050ca5';
+                const promises = likedItems.map(item =>
+                    fetch(`https://api.themoviedb.org/3/${item.type}/${item.id}?api_key=${apiKey}&language=en-US`)
+                        .then(res => res.ok ? res.json() : null)
+                        .then(data => data ? { ...data, type: item.type } : null)
+                );
+                const results = (await Promise.all(promises)).filter(Boolean);
+                grid.innerHTML = '';
+                results.forEach(item => {
+                    const title = item.title || item.name;
+                    const year = (item.release_date || item.first_air_date || '').split('-')[0] || '';
+                    const poster = item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : '/images/no-poster.png';
+                    const card = document.createElement('div');
+                    card.className = 'liked-movie-card';
+                    card.innerHTML = `
+                        <img src="${poster}" alt="${title}">
+                        <div class="liked-movie-title">${title}</div>
+                        <div class="liked-movie-year">${year}</div>
+                    `;
+                    card.onclick = () => {
+                        window.location.href = `${item.type}.html?id=${item.id}`;
+                    };
+                    grid.appendChild(card);
+                });
+            } catch (e) {
+                grid.innerHTML = '<div style="color:#fff;opacity:0.7;padding:24px;">Error loading liked movies.</div>';
             }
         });
     </script>

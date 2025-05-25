@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (searchModal.classList.contains('active') && e.key === 'Escape') closeSearchModal();
         });
 
-        let searchTimeout;
+    let searchTimeout;
         modalSearchInput.addEventListener('input', function(e) {
             const query = e.target.value.trim();
             if (searchTimeout) clearTimeout(searchTimeout);
@@ -93,6 +93,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 currentPage = 1;
                 fetchContent(currentTab, 1);
             }
+        });
+    });
+
+    // Tab click events
+    document.querySelectorAll('.film-tab').forEach(tab => {
+        tab.addEventListener('click', function() {
+            const tabName = this.textContent.trim();
+            const type = this.getAttribute('data-type');
+            // Update active states for tabs of the same type
+            document.querySelectorAll(`.film-tab[data-type="${type}"]`).forEach(t => {
+                t.classList.remove('active');
+            });
+            this.classList.add('active');
+            // Reset to page 1 when changing tabs
+            currentPage = 1;
+            fetchContent(tabName, 1);
         });
     });
 
@@ -961,7 +977,7 @@ const modalSearchInput = document.getElementById('modalSearchInput');
 const searchModalClose = document.getElementById('searchModalClose');
 const resultGrid = document.querySelector('.search-modal-grid');
 
-let searchTimeout;
+    let searchTimeout;
 let currentSearchResults = [];
 
 // Initialize search functionality
@@ -1021,9 +1037,9 @@ async function performSearch(query) {
 
         if (!movieRes.ok || !tvRes.ok) {
             throw new Error('Search request failed');
-        }
-
-        const [movieData, tvData] = await Promise.all([
+            }
+            
+            const [movieData, tvData] = await Promise.all([
             movieRes.json(),
             tvRes.json()
         ]);
@@ -1035,7 +1051,7 @@ async function performSearch(query) {
         ].sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
 
         displaySearchResults(currentSearchResults);
-    } catch (error) {
+        } catch (error) {
         console.error('Search error:', error);
         resultGrid.innerHTML = '<div class="search-error">Error performing search. Please try again.</div>';
     }
@@ -1067,21 +1083,21 @@ function createSearchCard(item) {
     const card = document.createElement('div');
     card.className = 'search-film-card';
     card.innerHTML = `
-        <img src="${posterPath}" alt="${title}" onerror="this.src='/images/no-poster.png'">
-        <div class="search-film-info">
-            <h3 class="search-film-title">${title}</h3>
-            <div class="search-film-meta">
+                <img src="${posterPath}" alt="${title}" onerror="this.src='/images/no-poster.png'">
+                <div class="search-film-info">
+                    <h3 class="search-film-title">${title}</h3>
+                    <div class="search-film-meta">
                 <span class="search-film-year">${year}</span>
                 <span class="search-film-rating"><i class="fas fa-star"></i> ${rating}</span>
-            </div>
-        </div>
+                    </div>
+                    </div>
         <div class="search-film-type">${typeLabel}</div>
-        <div class="card-like-section">
-            <button class="like-btn"><i class="fas fa-thumbs-up"></i></button>
-            <span class="like-count">0</span>
-        </div>
-    `;
-
+                <div class="card-like-section">
+                    <button class="like-btn"><i class="fas fa-thumbs-up"></i></button>
+                    <span class="like-count">0</span>
+                </div>
+            `;
+            
     // Add click handler
     card.addEventListener('click', () => {
         window.location.href = isMovie ? `movie.html?id=${item.id}` : `tv.html?id=${item.id}`;
@@ -1103,45 +1119,47 @@ document.addEventListener('DOMContentLoaded', () => {
 function setupCardLikeButton(card, id, type) {
     const likeBtn = card.querySelector('.like-btn');
     const likeCount = card.querySelector('.like-count');
-    
     if (!likeBtn || !likeCount) return;
-
     const db = firebase.firestore();
     const likeDoc = db.collection('likes').doc(`${type}_${id}`);
-    const userLikeDoc = likeDoc.collection('userLikes').doc(firebase.auth().currentUser?.uid);
 
-    // Listen for like count changes
+    // Like count listener
     likeDoc.collection('userLikes').onSnapshot(snapshot => {
         likeCount.textContent = snapshot.size;
     });
 
-    // Check if user has liked
-    userLikeDoc.get().then(doc => {
-        if (doc.exists) {
-            likeBtn.classList.add('liked');
-        }
-    });
-
-    // Handle like button click
-    likeBtn.addEventListener('click', async (e) => {
-        e.stopPropagation(); // Prevent card click
-        
-        if (!firebase.auth().currentUser) {
-            window.location.href = 'auth.html?tab=login';
+    // Kullanıcıya özel like durumu
+    firebase.auth().onAuthStateChanged(function(user) {
+        if (!user) {
+            likeBtn.classList.remove('liked');
+            likeBtn.disabled = true;
+            likeBtn.title = 'You must be logged in to like.';
             return;
         }
-
-        const doc = await userLikeDoc.get();
-        if (!doc.exists) {
-            await userLikeDoc.set({
-                liked: true,
-                userId: firebase.auth().currentUser.uid,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-            likeBtn.classList.add('liked');
-        } else {
-            await userLikeDoc.delete();
-            likeBtn.classList.remove('liked');
-        }
+        likeBtn.disabled = false;
+        likeBtn.title = '';
+        const userLikeDoc = likeDoc.collection('userLikes').doc(user.uid);
+        userLikeDoc.get().then(doc => {
+            if (doc.exists) {
+                likeBtn.classList.add('liked');
+            } else {
+                likeBtn.classList.remove('liked');
+            }
+        });
+        likeBtn.onclick = async (e) => {
+            e.stopPropagation();
+            const doc = await userLikeDoc.get();
+            if (!doc.exists) {
+                await userLikeDoc.set({
+                    liked: true,
+                    userId: user.uid,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                likeBtn.classList.add('liked');
+            } else {
+                await userLikeDoc.delete();
+                likeBtn.classList.remove('liked');
+            }
+        };
     });
 } 
