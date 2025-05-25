@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discover - SwipeShort</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background: #18181c;
+            color: #fff;
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .discover-feed {
+            width: 380px;
+            max-width: 98vw;
+            height: 80vh;
+            background: #23232b;
+            border-radius: 24px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .swipe-card {
+            width: 100%;
+            height: 100%;
+            background: #19191e;
+            border-radius: 24px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.18);
+            position: absolute;
+            top: 0; left: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            transition: transform 0.4s cubic-bezier(.4,2,.6,1), opacity 0.3s;
+            will-change: transform, opacity;
+        }
+        .swipe-card .trailer-poster {
+            width: 100%;
+            height: 60%;
+            object-fit: cover;
+            border-radius: 24px 24px 0 0;
+        }
+        .swipe-card .trailer-info {
+            width: 100%;
+            padding: 18px 20px 28px 20px;
+            background: linear-gradient(0deg, #23232b 90%, transparent 100%);
+            border-radius: 0 0 24px 24px;
+            box-sizing: border-box;
+        }
+        .trailer-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #fff;
+        }
+        .trailer-meta {
+            color: #ff66c4;
+            font-size: 1rem;
+            margin-bottom: 6px;
+        }
+        .swipe-indicator {
+            position: absolute;
+            top: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #fff;
+            opacity: 0.25;
+            font-size: 2.2rem;
+            pointer-events: none;
+            z-index: 10;
+        }
+        @media (max-width: 500px) {
+            .discover-feed {
+                width: 100vw;
+                height: 90vh;
+                border-radius: 0;
+            }
+            .swipe-card {
+                border-radius: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="discover-feed" id="discoverFeed">
+        <div class="swipe-indicator"><i class="fa-solid fa-arrow-down"></i></div>
+        <!-- Cards will be injected here -->
+    </div>
+    <script>
+    // Placeholder data for step 1
+    const trailers = [
+        {
+            title: 'Inception',
+            year: 2010,
+            poster: 'https://image.tmdb.org/t/p/w500/qmDpIHrmpJINaRKAfWQfftjCdyi.jpg'
+        },
+        {
+            title: 'Interstellar',
+            year: 2014,
+            poster: 'https://image.tmdb.org/t/p/w500/rAiYTfKGqDCRIIqo664sY9XZIvQ.jpg'
+        },
+        {
+            title: 'The Dark Knight',
+            year: 2008,
+            poster: 'https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg'
+        }
+    ];
+
+    const feed = document.getElementById('discoverFeed');
+    let current = 0;
+
+    function renderCards() {
+        feed.querySelectorAll('.swipe-card').forEach(e => e.remove());
+        for (let i = trailers.length - 1; i >= 0; i--) {
+            const t = trailers[i];
+            const card = document.createElement('div');
+            card.className = 'swipe-card';
+            card.style.zIndex = i === current ? 2 : 1;
+            card.style.opacity = i < current ? 0 : 1;
+            card.style.transform = i === current ? 'translateY(0)' : `translateY(${(i-current)*40}px) scale(${1-Math.abs(i-current)*0.04})`;
+            card.innerHTML = `
+                <img class="trailer-poster" src="${t.poster}" alt="${t.title}">
+                <div class="trailer-info">
+                    <div class="trailer-title">${t.title}</div>
+                    <div class="trailer-meta">${t.year}</div>
+                </div>
+            `;
+            feed.appendChild(card);
+        }
+    }
+
+    function swipeNext() {
+        if (current < trailers.length - 1) {
+            current++;
+            renderCards();
+        }
+    }
+    function swipePrev() {
+        if (current > 0) {
+            current--;
+            renderCards();
+        }
+    }
+
+    let startY = null;
+    let isDragging = false;
+
+    // Touch events
+    feed.addEventListener('touchstart', e => {
+        isDragging = true;
+        startY = e.touches[0].clientY;
+    });
+    feed.addEventListener('touchend', e => {
+        if (!isDragging || startY === null) return;
+        const endY = e.changedTouches[0].clientY;
+        if (endY - startY > 60) swipePrev();
+        else if (startY - endY > 60) swipeNext();
+        startY = null;
+        isDragging = false;
+    });
+
+    // Mouse events for desktop swipe
+    feed.addEventListener('mousedown', e => {
+        isDragging = true;
+        startY = e.clientY;
+    });
+    feed.addEventListener('mousemove', e => {
+        // (isteğe bağlı: görsel feedback için buraya kod eklenebilir)
+    });
+    feed.addEventListener('mouseup', e => {
+        if (!isDragging || startY === null) return;
+        const endY = e.clientY;
+        if (endY - startY > 60) swipePrev();
+        else if (startY - endY > 60) swipeNext();
+        startY = null;
+        isDragging = false;
+    });
+    feed.addEventListener('mouseleave', () => {
+        isDragging = false;
+        startY = null;
+    });
+
+    renderCards();
+    </script>
+</body>
+</html> 
