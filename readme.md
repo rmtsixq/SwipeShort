@@ -1,19 +1,22 @@
-https://github-readme-stats.hackclub.dev/api/wakatime?username=1540&api_domain=hackatime.hackclub.com&theme=shadow_red&custom_title=Hackatime+Stats&layout=compact&cache_seconds=0&langs_count=8 
-## Project Overview
-ShortSwipe is a platform where users can transform long videos or films into short clips. The goal of this project is to create an easy-to-use platform for users to upload and share bite-sized video content, bringing quick entertainment, memorable moments, and fresh content with every swipe.
+# SwipeShort
+
+SwipeShort is a modern movie and video discovery platform inspired by TikTok/YouTube Shorts. Users can swipe through random movie trailers, like and comment on content, and discover new films in a fun, interactive way. The platform also features user profiles, a dashboard, and a responsive, mobile-friendly design.
 
 ## Features
-- **Drag and Drop Upload**: Upload your video files directly to the platform
-- **YouTube URL Input**: Paste YouTube links to automatically fetch videos
-- **Smart Video Splitting**: Automatically splits videos into engaging short clips
-- **Easy Sharing**: Share your favorite clips with others
-- **Responsive Design**: Works seamlessly on both desktop and mobile devices
+- **TikTok-Style Swipeable Feed**: Discover random movie trailers and short clips with smooth vertical swipe navigation (see `discover.html`).
+- **Movie & TV Show Dashboard**: Browse, filter, and search for movies and TV shows using TMDB API integration.
+- **User Profiles**: View your liked movies/TV shows, stats, and comments in a beautiful profile page.
+- **Like & Comment System**: Like your favorite content and see your liked items in your profile.
+- **Firebase Auth & Firestore**: Secure authentication and real-time data storage for likes, comments, and user info.
+- **Responsive Design**: Works seamlessly on both desktop and mobile devices.
+- **Modern UI/UX**: Clean, attractive, and easy-to-use interface.
 
-## Technical Details
-- Built with Node.js and Express for the backend
-- Uses FFmpeg for video processing
-- Implements YouTube API for video fetching
-- Features a modern, responsive frontend
+## Technical Stack
+- **Frontend**: HTML, CSS, JavaScript (Vanilla + Swiper.js for swipe feed)
+- **Backend**: Node.js, Express
+- **Database**: Firebase Firestore
+- **APIs**: TMDB API (movie/TV data), YouTube (trailers)
+- **Video Processing**: FFmpeg (for advanced features)
 
 ## Getting Started
 1. Clone the repository
@@ -23,12 +26,25 @@ ShortSwipe is a platform where users can transform long videos or films into sho
 
 ## Requirements
 - Node.js
-- FFmpeg
-- YouTube API Key
+- FFmpeg (for video processing)
+- TMDB API Key
+- Firebase Project (for Auth & Firestore)
 
-##Future Updates
-- PreDownloaded videos ( users can like and comment)
+## Project Structure
+- `public/` - Frontend files (HTML, CSS, JS)
+- `public/discover.html` - TikTok-style swipeable feed
+- `public/dashboard.html` - Main dashboard for browsing
+- `public/profile.html` - User profile page
+- `public/scripts/videoViewer.js` - Advanced video viewer logic
+- `server.js` - Express backend
 
-- HACKA TİMESTATS
-- ![wakatime](https://github.com/user-attachments/assets/3253ebf9-9725-45e0-8e28-a174bc03a146)
+## Future Updates
+- Infinite scroll and lazy loading for swipe feed
+- Advanced recommendations and personalized feeds
+- More social features (comments, shares)
+- Pre-downloaded videos for offline viewing
+
+---
+
+![wakatime](https://github.com/user-attachments/assets/3253ebf9-9725-45e0-8e28-a174bc03a146)
 
