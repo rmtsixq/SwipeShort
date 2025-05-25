@@ -270,3 +270,13 @@ function setupLikeButton(movieId) {
 
 // Call this after getting movieId in your loadMovieDetails or main init
 // setupLikeButton(movieId); 
+
+document.addEventListener('DOMContentLoaded', function() {
+    const startBtn = document.getElementById('start-movie-btn');
+    if (startBtn) {
+        startBtn.onclick = function() {
+            const movieId = getMovieIdFromUrl();
+            window.location.href = `watch.html?id=${movieId}`;
+        };
+    }
+}); 

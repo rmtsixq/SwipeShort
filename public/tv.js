@@ -248,4 +248,14 @@ function setupLikeButton(tvId) {
     });
 }
 
+document.addEventListener('DOMContentLoaded', function() {
+    const startBtn = document.getElementById('start-tv-btn');
+    if (startBtn) {
+        startBtn.onclick = function() {
+            const tvId = getTvIdFromUrl();
+            window.location.href = `watch.html?tv=${tvId}&season=1&episode=1`;
+        };
+    }
+});
+
 document.addEventListener('DOMContentLoaded', loadTvDetails); 
