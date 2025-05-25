@@ -144,9 +144,50 @@
                 border-radius: 0;
             }
         }
+        .back-arrow-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 100;
+            background: rgba(0,0,0,0.88);
+            border: none;
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 1.3rem;
+            box-shadow: 0 2px 8px #0005;
+            cursor: pointer;
+            transition: background 0.18s, transform 0.18s;
+        }
+        .back-arrow-btn:hover {
+            background: #a259ff;
+            color: #fff;
+            transform: scale(1.08);
+        }
+        @media (max-width: 500px) {
+            .back-arrow-btn {
+                top: 10px;
+                left: 10px;
+                width: 38px;
+                height: 38px;
+                font-size: 1.05rem;
+            }
+        }
     </style>
 </head>
 <body>
+    <div class="discover-feed">
+        <div class="swiper" id="discoverSwiper">
+            <div class="swiper-wrapper" id="swiperWrapper">
+                <div class="loading-message">Loading trailers...</div>
+            </div>
+            <div class="swiper-pagination"></div>
+        </div>
+    </div>
     <div id="instructionModal" style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(24,24,28,0.85);backdrop-filter:blur(6px);z-index:10000;display:flex;align-items:center;justify-content:center;">
         <div style="background:#22232b;padding:40px 32px 32px 32px;border-radius:28px;box-shadow:0 8px 40px #0008;max-width:370px;text-align:center;position:relative;">
             <div style="font-size:2.6rem;color:#ff66c4;margin-bottom:18px;">
@@ -155,14 +196,6 @@
             <h2 style="color:#fff;margin-bottom:14px;font-size:1.45rem;font-weight:700;letter-spacing:0.2px;">Welcome to Discover</h2>
             <p style="color:#fff;opacity:0.88;font-size:1.08rem;margin-bottom:26px;line-height:1.6;">Swipe <b>up or down</b> to explore trending movie trailers.<br><br>To Start, tap <b>Start</b> below.</p>
             <button id="modalOkBtn" style="background:linear-gradient(90deg,#a259ff 0%,#38cfff 100%);color:#fff;font-weight:700;font-size:1.13rem;padding:12px 38px;border:none;border-radius:14px;cursor:pointer;box-shadow:0 2px 12px #0003;transition:background 0.2s;">Start</button>
-        </div>
-    </div>
-    <div class="discover-feed">
-        <div class="swiper" id="discoverSwiper">
-            <div class="swiper-wrapper" id="swiperWrapper">
-                <div class="loading-message">Loading trailers...</div>
-            </div>
-            <div class="swiper-pagination"></div>
         </div>
     </div>
     <!-- Swiper.js -->
@@ -199,6 +232,9 @@
         // Lazy: only poster at first, iframe is injected dynamically
         return `
         <div class="swiper-slide" data-youtubeid="${youtubeId}">
+            <button class="back-arrow-btn" onclick="window.location.href='dashboard.html'" aria-label="Back to Dashboard">
+                <i class="fa fa-arrow-left"></i>
+            </button>
             <div class="trailer-poster-lazy" style="background-image:url('${poster}')"></div>
             <div class="swipe-overlay"></div>
             <div class="trailer-info-flex">
