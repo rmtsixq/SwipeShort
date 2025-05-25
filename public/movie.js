@@ -219,7 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
     cancelBtn.addEventListener('click', () => {
         shareModal.style.display = 'none';
     });
-});
+}); 
 
 // --- Like Button Firestore Logic ---
 function setupLikeButton(movieId) {
@@ -253,7 +253,11 @@ function setupLikeButton(movieId) {
             const doc = await userLikeDoc.get();
             if (!doc.exists) {
                 // Like at
-                await userLikeDoc.set({ liked: true, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+                await userLikeDoc.set({ 
+                    liked: true, 
+                    userId: user.uid,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp() 
+                });
                 likeBtn.classList.add('liked');
             } else {
                 // Like'ı geri al

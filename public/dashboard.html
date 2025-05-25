@@ -20,9 +20,11 @@
                 <i class="fa fa-search"></i>
                 <input type="text" placeholder="Search" id="mainSearchInput" />
             </form>
-            <div class="header-profile" id="headerProfile" style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-left:auto;">
-                <img id="profilePhoto" src="/default-profile.png" alt="Profile" style="width:36px;height:36px;border-radius:50%;object-fit:cover;">
-                <span id="profileName" style="font-weight:500;color:#fff;"></span>
+            <div class="header-profile">
+                <a href="profile.html" class="profile-link">
+                    <img src="/default-avatar.png" alt="Profile" class="profile-picture" id="userProfilePicture">
+                    <span class="profile-name" id="userProfileName">Loading...</span>
+                </a>
             </div>
         </div>
         <div class="search-modal" id="searchModal" style="display:none;">
@@ -32,13 +34,8 @@
                 <button class="search-modal-close" id="searchModalClose"><i class="fa fa-times"></i></button>
             </div>
             <div class="search-modal-content">
-                <h2>Movies</h2>
                 <div class="search-modal-grid">
-                    <!-- Dizi sonuçları buraya gelecek -->
-            </div>
-                <h2>Films</h2>
-                <div class="search-modal-grid">
-                    <!-- Film sonuçları buraya gelecek -->
+                    <!-- Search results will be displayed here -->
                 </div>
             </div>
         </div>
@@ -46,28 +43,28 @@
             <!-- Main Content -->
             <div class="main-content" id="mainContent">
                 <!-- Content Type Selector -->
-                    <div class="content-type-selector">
-                        <button class="content-type-btn active" data-type="movie">Movies</button>
-                        <button class="content-type-btn" data-type="tv">TV Shows</button>
-                    </div>
+                <div class="content-type-selector">
+                    <button class="content-type-btn active" data-type="movie">Movies</button>
+                    <button class="content-type-btn" data-type="tv">TV Shows</button>
+                </div>
 
-                        <!-- Movie Tabs -->
-                        <div class="film-tabs-header" data-type="movie">
-                                <button class="film-tab active" data-type="movie">New Releases</button>
-                                <button class="film-tab" data-type="movie">Recommended</button>
-                                <button class="film-tab" data-type="movie">IMDB 7+ Films</button>
-                                <button class="film-tab" data-type="movie">Most Commented</button>
-                                <button class="film-tab" data-type="movie">Most Liked</button>
-                            </div>
+                <!-- Movie Tabs -->
+                <div class="film-tabs-header" data-type="movie">
+                    <button class="film-tab active" data-type="movie">New Releases</button>
+                    <button class="film-tab" data-type="movie">Recommended</button>
+                    <button class="film-tab" data-type="movie">IMDB 7+ Films</button>
+                    <button class="film-tab" data-type="movie">Most Commented</button>
+                    <button class="film-tab" data-type="movie">Most Liked</button>
+                </div>
 
-                        <!-- TV Show Tabs -->
-                        <div class="film-tabs-header" data-type="tv" style="display: none;">
-                                <button class="film-tab" data-type="tv">New Episodes</button>
-                                <button class="film-tab" data-type="tv">Popular Shows</button>
-                                <button class="film-tab" data-type="tv">Top Rated</button>
-                                <button class="film-tab" data-type="tv">Trending</button>
-                                <button class="film-tab" data-type="tv">On The Air</button>
-                            </div>
+                <!-- TV Show Tabs -->
+                <div class="film-tabs-header" data-type="tv" style="display: none;">
+                    <button class="film-tab" data-type="tv">New Episodes</button>
+                    <button class="film-tab" data-type="tv">Popular Shows</button>
+                    <button class="film-tab" data-type="tv">Top Rated</button>
+                    <button class="film-tab" data-type="tv">Trending</button>
+                    <button class="film-tab" data-type="tv">On The Air</button>
+                </div>
 
                 <!-- Filter Panel -->
                 <div class="filter-panel">
@@ -76,26 +73,26 @@
                         <button class="filter-toggle">Filter</button>
                     </div>
                     <div class="filter-content">
-                <div class="filter-group">
+                        <div class="filter-group">
                             <label>Genre</label>
                             <select name="genre">
-                        <option value="">All Genres</option>
-                    </select>
-                </div>
-                <div class="filter-group">
+                                <option value="">All Genres</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
                             <label>Year</label>
                             <select name="year">
-                        <option value="">All Years</option>
-                    </select>
-                </div>
-                <div class="filter-group">
+                                <option value="">All Years</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
                             <label>Rating</label>
                             <select name="rating">
                                 <option value="">All Ratings</option>
-                        <option value="8">8+ Stars</option>
-                        <option value="7">7+ Stars</option>
-                        <option value="6">6+ Stars</option>
-                    </select>
+                                <option value="8">8+ Stars</option>
+                                <option value="7">7+ Stars</option>
+                                <option value="6">6+ Stars</option>
+                            </select>
                         </div>
                         <button class="filter-btn" disabled>Apply Filters</button>
                     </div>
@@ -116,7 +113,7 @@
                 </div>
                 <div id="searchResultsGrid" class="search-results-grid"></div>
             </div>
-    </div>
+        </div>
 
         <!-- Majik Modal -->
         <div id="majik-modal" class="majik-modal">

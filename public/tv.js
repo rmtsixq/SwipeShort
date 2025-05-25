@@ -233,7 +233,11 @@ function setupLikeButton(tvId) {
             const doc = await userLikeDoc.get();
             if (!doc.exists) {
                 // Like at
-                await userLikeDoc.set({ liked: true, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+                await userLikeDoc.set({ 
+                    liked: true, 
+                    userId: user.uid,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp() 
+                });
                 likeBtn.classList.add('liked');
             } else {
                 // Like'ı geri al

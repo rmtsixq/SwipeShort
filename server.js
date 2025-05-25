@@ -329,7 +329,7 @@ app.get('/api/get-cloudnestra-embed', async (req, res) => {
     const { movieId, tvId, season, episode } = req.query;
     console.log('\n=== Cloudnestra Embed Fetching Started ===');
     if (movieId) {
-        console.log('Movie ID:', movieId);
+    console.log('Movie ID:', movieId);
     } else if (tvId && season && episode) {
         console.log('TV ID:', tvId, 'Season:', season, 'Episode:', episode);
     } else {

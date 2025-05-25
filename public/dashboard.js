@@ -6,6 +6,24 @@ document.addEventListener('DOMContentLoaded', function() {
     firebase.auth().onAuthStateChanged(function(user) {
         if (!user) {
             window.location.href = 'auth.html?tab=login';
+        } else {
+            // Update profile section
+            const profilePicture = document.getElementById('userProfilePicture');
+            const profileName = document.getElementById('userProfileName');
+            
+            if (profilePicture && profileName) {
+                // Set profile picture
+                if (user.photoURL) {
+                    profilePicture.src = user.photoURL;
+                } else {
+                    // Use first letter of email/name as avatar
+                    const initial = (user.displayName || user.email || '?')[0].toUpperCase();
+                    profilePicture.src = `https://ui-avatars.com/api/?name=${initial}&background=random&color=fff`;
+                }
+                
+                // Set profile name
+                profileName.textContent = user.displayName || user.email.split('@')[0] || 'User';
+            }
         }
     });
 
@@ -14,120 +32,76 @@ document.addEventListener('DOMContentLoaded', function() {
     const searchModal = document.getElementById('searchModal');
     const modalSearchInput = document.getElementById('modalSearchInput');
     const searchModalClose = document.getElementById('searchModalClose');
+    const resultGrid = document.querySelector('.search-modal-grid');
 
-    if (mainSearchInput && searchModal && modalSearchInput && searchModalClose) {
+    if (mainSearchInput && searchModal && modalSearchInput && searchModalClose && resultGrid) {
         function openSearchModal() {
             searchModal.classList.add('active');
             searchModal.style.display = 'flex';
             setTimeout(() => { modalSearchInput.focus(); }, 100);
         }
+
         function closeSearchModal() {
             searchModal.classList.remove('active');
             searchModal.style.display = 'none';
             mainSearchInput.blur();
             modalSearchInput.value = '';
+            resultGrid.innerHTML = '';
         }
+
         mainSearchInput.addEventListener('focus', openSearchModal);
         mainSearchInput.addEventListener('click', openSearchModal);
         searchModalClose.addEventListener('click', closeSearchModal);
+        
         searchModal.addEventListener('mousedown', function(e) {
             if (e.target === searchModal) closeSearchModal();
         });
+
         document.addEventListener('keydown', function(e) {
             if (searchModal.classList.contains('active') && e.key === 'Escape') closeSearchModal();
         });
-    }
 
-    // LIVE SEARCH LOGIC FOR MODAL (COMBINED GRID)
-    const modalContent = document.querySelector('.search-modal-content');
-    const resultGrid = modalContent.querySelector('.search-modal-grid');
-    let searchTimeout;
-
-    // Remove extra grid and headings if present
-    if (modalContent.querySelectorAll('.search-modal-grid').length > 1) {
-        // Remove second grid and both h2 headings
-        const grids = modalContent.querySelectorAll('.search-modal-grid');
-        grids[1].remove();
-        const headings = modalContent.querySelectorAll('h2');
-        headings.forEach(h => h.remove());
-    }
-
-    function renderCombinedResults(results, query) {
-        resultGrid.innerHTML = '';
-        if (results.length === 0) {
-            resultGrid.innerHTML = `<div class="search-loading">No results found${query ? ` for "${query}"` : ''}.</div>`;
-            return;
-        }
-        results.forEach(item => {
-            const isMovie = !!item.title;
-            const title = item.title || item.name;
-            const year = (item.release_date || item.first_air_date || '').split('-')[0] || 'N/A';
-            const rating = item.vote_average ? item.vote_average.toFixed(1) : 'N/A';
-            const poster = item.poster_path ? 'https://image.tmdb.org/t/p/w500' + item.poster_path : '/images/no-poster.png';
-            const typeLabel = isMovie ? '🎬 Movie' : '📺 TV Show';
-            const id = item.id;
-            const type = isMovie ? 'movie' : 'tv';
-            const card = document.createElement('div');
-            card.className = 'search-film-card';
-            card.innerHTML = `
-                <img src="${poster}" alt="${title}" onerror="this.src='/images/no-poster.png'">
-                <div class="search-film-info">
-                    <h3 class="search-film-title">${title}</h3>
-                    <div class="search-film-meta">
-                        <span class="search-film-year">${year}</span>
-                        <span class="search-film-rating"><i class="fas fa-star"></i> ${rating}</span>
-                    </div>
-                </div>
-                <div class="search-film-type">${typeLabel}</div>
-                <div class="card-like-section">
-                    <button class="like-btn"><i class="fas fa-thumbs-up"></i></button>
-                    <span class="like-count">0</span>
-                </div>
-            `;
-            card.addEventListener('click', () => {
-                window.location.href = isMovie ? `movie.html?id=${item.id}` : `tv.html?id=${item.id}`;
-            });
-            resultGrid.appendChild(card);
-            setupCardLikeButton(card, id, type);
-        });
-    }
-
-    async function liveSearchModal(query) {
-        if (!query) {
-            renderCombinedResults([], '');
-            return;
-        }
-        resultGrid.innerHTML = '<div class="search-loading">Searching...</div>';
-        try {
-            const [movieRes, tvRes] = await Promise.all([
-                fetch(`/api/search-movie?query=${encodeURIComponent(query)}`),
-                fetch(`/api/search-tv?query=${encodeURIComponent(query)}`)
-            ]);
-            const [movieData, tvData] = await Promise.all([
-                movieRes.ok ? movieRes.json() : { results: [] },
-                tvRes.ok ? tvRes.json() : { results: [] }
-            ]);
-            // Combine and sort by popularity desc
-            let combined = [
-                ...(movieData.results || []).map(item => ({ ...item, _type: 'movie' })),
-                ...(tvData.results || []).map(item => ({ ...item, _type: 'tv' }))
-            ];
-            combined.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
-            renderCombinedResults(combined, query);
-        } catch (e) {
-            resultGrid.innerHTML = '<div class="search-error">Error loading results.</div>';
-        }
-    }
-
-    if (modalSearchInput) {
+        let searchTimeout;
         modalSearchInput.addEventListener('input', function(e) {
             const query = e.target.value.trim();
             if (searchTimeout) clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                liveSearchModal(query);
-            }, 300);
+            searchTimeout = setTimeout(() => performSearch(query), 300);
         });
     }
+
+    // Content type selector events
+    document.querySelectorAll('.content-type-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const type = this.getAttribute('data-type');
+            
+            // Update active states
+            document.querySelectorAll('.content-type-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Show/hide relevant tabs
+            document.querySelectorAll('.film-tabs-header').forEach(header => {
+                header.style.display = header.getAttribute('data-type') === type ? 'flex' : 'none';
+            });
+            
+            // Update current type and reset to first tab
+            currentType = type;
+            const firstTab = document.querySelector(`.film-tabs-header[data-type="${type}"] .film-tab`);
+            if (firstTab) {
+                document.querySelectorAll('.film-tab').forEach(t => t.classList.remove('active'));
+                firstTab.classList.add('active');
+                currentTab = firstTab.textContent.trim();
+                currentPage = 1;
+                fetchContent(currentTab, 1);
+            }
+        });
+    });
+
+    // Initialize filter panel
+    initializeFilterPanel();
+    
+    // Initial load (Movies tab by default)
+    fetchContent('New Releases', 1);
+    renderGenreButtons();
 });
 
 // Dashboard ana fonksiyonları ve diğer kodlar burada devam edebilir (film grid, filtre, pagination vs.)
@@ -548,312 +522,6 @@ async function renderGenreButtons() {
         console.error('Error loading genres:', error);
     }
 }
-
-document.addEventListener('DOMContentLoaded', () => {
-    // Content type selector events
-    document.querySelectorAll('.content-type-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const type = this.getAttribute('data-type');
-            
-            // Update active states
-            document.querySelectorAll('.content-type-btn').forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-            
-            // Show/hide relevant tabs
-            document.querySelectorAll('.film-tabs-header').forEach(header => {
-                header.style.display = header.getAttribute('data-type') === type ? 'flex' : 'none';
-            });
-            
-            // Update current type and reset to first tab
-            currentType = type;
-            const firstTab = document.querySelector(`.film-tabs-header[data-type="${type}"] .film-tab`);
-            if (firstTab) {
-                document.querySelectorAll('.film-tab').forEach(t => t.classList.remove('active'));
-                firstTab.classList.add('active');
-                currentTab = firstTab.textContent.trim();
-                currentPage = 1;
-                fetchContent(currentTab, 1);
-            }
-        });
-    });
-
-    // Tab click events
-    document.querySelectorAll('.film-tab').forEach(tab => {
-        tab.addEventListener('click', function() {
-            const tabName = this.textContent.trim();
-            const type = this.getAttribute('data-type');
-            
-            // Update active states for tabs of the same type
-            document.querySelectorAll(`.film-tab[data-type="${type}"]`).forEach(t => {
-                t.classList.remove('active');
-            });
-            this.classList.add('active');
-            
-            // Reset to page 1 when changing tabs
-            currentPage = 1;
-            fetchContent(tabName, 1);
-        });
-    });
-
-    // Initialize filter panel
-    initializeFilterPanel();
-    
-    // Initial load (Movies tab by default)
-    fetchContent('New Releases', 1);
-    renderGenreButtons();
-    setupMajikTrigger();
-
-    // Arama kutusunu güncelle
-        const searchInput = document.querySelector('.sidebar-search input');
-        if (searchInput) {
-            searchInput.style.cssText = `
-                padding: 10px 15px;
-                font-size: 16px;
-                border: 2px solid #2c3e50;
-                border-radius: 8px;
-                background-color: #34495e;
-                color: white;
-                width: 100%;
-                transition: all 0.3s ease;
-            `;
-            
-            searchInput.placeholder = 'Search for a movie or TV show...';
-            
-            // Hover efekti
-            searchInput.addEventListener('mouseover', () => {
-                searchInput.style.backgroundColor = '#2c3e50';
-                searchInput.style.borderColor = '#3498db';
-            });
-            
-            searchInput.addEventListener('mouseout', () => {
-                searchInput.style.backgroundColor = '#34495e';
-                searchInput.style.borderColor = '#2c3e50';
-        });
-    }
-
-    // Search input event listener with debounce
-    searchInput.addEventListener('input', function(e) {
-        const searchTerm = e.target.value.toLowerCase().trim();
-        const searchType = document.getElementById('search-type') ? document.getElementById('search-type').value : 'movie';
-        
-        // Clear previous timeout
-        if (searchTimeout) {
-            clearTimeout(searchTimeout);
-        }
-        
-        if (searchTerm.length > 0) {
-            searchResults.style.display = 'block';
-            mainContent.style.display = 'none';
-            searchResultsGrid.innerHTML = '<div class="search-loading">Searching...</div>';
-            
-            searchTimeout = setTimeout(() => {
-                searchContent(searchTerm, searchType);
-            }, 300);
-        } else {
-            searchResults.style.display = 'none';
-            mainContent.style.display = 'block';
-        }
-    });
-
-    // Arama fonksiyonu
-    async function searchContent(query, type) {
-        try {
-            console.log('Searching for:', query);
-            
-            // Loading göster
-            searchResultsGrid.innerHTML = '<div class="search-loading">Searching...</div>';
-            
-            // Her iki API'den de sonuçları al
-            const [movieResponse, tvResponse] = await Promise.all([
-                fetch(`/api/search-movie?query=${encodeURIComponent(query)}`),
-                fetch(`/api/search-tv?query=${encodeURIComponent(query)}`)
-            ]);
-            
-            if (!movieResponse.ok || !tvResponse.ok) {
-                throw new Error(`HTTP error! status: ${movieResponse.status || tvResponse.status}`);
-            }
-            
-            const [movieData, tvData] = await Promise.all([
-                movieResponse.json(),
-                tvResponse.json()
-            ]);
-            
-            console.log('Search results:', { movies: movieData, tv: tvData });
-            
-            // Sonuçları birleştir ve media_type ekle
-            let combinedResults = [
-                ...(movieData.results || []).map(item => ({ ...item, media_type: 'movie' })),
-                ...(tvData.results || []).map(item => ({ ...item, media_type: 'tv' }))
-            ];
-            
-            // Sonra yasaklı içerikleri filtrele
-            combinedResults = filterMovies(combinedResults);
-            
-            // Sonuçları puanlarına göre sırala
-            combinedResults.sort((a, b) => (b.vote_average || 0) - (a.vote_average || 0));
-            
-            searchCount.textContent = combinedResults.length;
-            
-            if (currentUser) {
-                saveSearchToHistory(query, combinedResults);
-            }
-            
-            displaySearchResults(combinedResults, query);
-        } catch (error) {
-            console.error('Error searching:', error);
-            searchResultsGrid.innerHTML = '<div class="search-error">Error loading results. Please try again.</div>';
-        }
-    }
-
-    // Arama sonuçlarını göster
-    function displaySearchResults(movies, searchTerm) {
-        searchResultsGrid.innerHTML = '';
-        
-        if (movies.length === 0) {
-            let message = `No results found for "${searchTerm}"`;
-            if (!showAdultMovies) {
-                message += ' (18+ content is hidden)';
-            }
-            
-            searchResultsGrid.innerHTML = `
-                <div class="search-no-results">
-                    <p>${message}</p>
-                    ${currentUser ? '<p class="search-suggestions">Try one of your recent searches:</p>' : ''}
-                </div>
-            `;
-            
-            if (currentUser) {
-                getSearchSuggestions().then(suggestions => {
-                    if (suggestions.length > 0) {
-                        const suggestionsDiv = document.createElement('div');
-                        suggestionsDiv.className = 'search-suggestions-list';
-                        suggestions.forEach(term => {
-                            const suggestion = document.createElement('button');
-                            suggestion.className = 'search-suggestion-btn';
-                            suggestion.textContent = term;
-                            suggestion.onclick = () => {
-                                searchInput.value = term;
-                                searchContent(term);
-                            };
-                            suggestionsDiv.appendChild(suggestion);
-                        });
-                        searchResultsGrid.appendChild(suggestionsDiv);
-                    }
-                });
-            }
-            return;
-        }
-        
-        movies.forEach(movie => {
-            const movieCard = document.createElement('div');
-            movieCard.className = 'search-film-card';
-            
-            const title = movie.title || movie.name;
-            const releaseDate = movie.release_date || movie.first_air_date;
-            const posterPath = movie.poster_path 
-                ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
-                : '/images/no-poster.png';
-            
-            movieCard.innerHTML = `
-                <img src="${posterPath}" alt="${title}" onerror="this.src='/images/no-poster.png'">
-                <div class="search-film-info">
-                    <h3 class="search-film-title">${title}</h3>
-                    <div class="search-film-meta">
-                        <span class="search-film-year">${releaseDate ? releaseDate.split('-')[0] : 'N/A'}</span>
-                        <span class="search-film-rating">
-                            <i class="fas fa-star"></i>
-                            ${movie.vote_average ? movie.vote_average.toFixed(1) : 'N/A'}
-                        </span>
-                    </div>
-                    <div class="search-film-type">
-                        ${movie.media_type === 'tv' ? '📺 TV Series' : '🎬 Movie'}
-                    </div>
-                </div>
-                <div class="card-like-section">
-                    <button class="like-btn"><i class="fas fa-thumbs-up"></i></button>
-                    <span class="like-count">0</span>
-                </div>
-            `;
-            
-            movieCard.addEventListener('click', () => {
-                window.location.href = `${movie.media_type}.html?id=${movie.id}`;
-            });
-            
-            searchResultsGrid.appendChild(movieCard);
-            setupCardLikeButton(movieCard, movie.id, movie.media_type);
-        });
-    }
-
-    // Function to save search to Firebase
-    async function saveSearchToHistory(searchTerm, results) {
-        if (!currentUser) return;
-
-        try {
-            const searchRef = firebase.firestore().collection('searchHistory').doc(currentUser.uid);
-            const searchData = {
-                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                term: searchTerm,
-                resultCount: results.length,
-                results: results.slice(0, 5).map(movie => ({
-                    id: movie.id,
-                    title: movie.title,
-                    poster_path: movie.poster_path,
-                    release_date: movie.release_date,
-                    vote_average: movie.vote_average
-                }))
-            };
-
-            // Get current history
-            const doc = await searchRef.get();
-            if (doc.exists) {
-                const history = doc.data().history || [];
-                // Add new search to beginning of array
-                history.unshift(searchData);
-                // Keep only last MAX_SEARCH_HISTORY searches
-                if (history.length > MAX_SEARCH_HISTORY) {
-                    history.pop();
-                }
-                // Update history
-                await searchRef.update({ history });
-            } else {
-                // Create new history document
-                await searchRef.set({ history: [searchData] });
-            }
-        } catch (error) {
-            console.error('Error saving search history:', error);
-        }
-    }
-
-    // Function to get search suggestions based on history
-    async function getSearchSuggestions() {
-        if (!currentUser) return [];
-
-        try {
-            const searchRef = firebase.firestore().collection('searchHistory').doc(currentUser.uid);
-            const doc = await searchRef.get();
-            
-            if (doc.exists) {
-                const history = doc.data().history || [];
-                // Get unique search terms from history
-                const suggestions = [...new Set(history.map(item => item.term))];
-                return suggestions.slice(0, 5); // Return top 5 suggestions
-            }
-            return [];
-        } catch (error) {
-            console.error('Error getting search suggestions:', error);
-            return [];
-        }
-    }
-
-    // Clear search when clicking outside
-    document.addEventListener('click', function(e) {
-        if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
-            searchInput.value = '';
-            searchResults.style.display = 'none';
-            mainContent.style.display = 'block';
-        }
-    });
-});
 
 // TMDB API Test
 const testMovie = "Fast X";
@@ -1287,365 +955,193 @@ function filterMovies(movies) {
     });
 }
 
-// Search functionality (Part 2A)
-document.addEventListener('DOMContentLoaded', function() {
-    const searchInput = document.querySelector('.sidebar-search input');
-    const searchResults = document.getElementById('searchResults');
-    const mainContent = document.getElementById('mainContent');
-    const searchResultsGrid = document.getElementById('searchResultsGrid');
-    const searchCount = document.getElementById('searchCount');
+// Search functionality
+const searchModal = document.getElementById('searchModal');
+const modalSearchInput = document.getElementById('modalSearchInput');
+const searchModalClose = document.getElementById('searchModalClose');
+const resultGrid = document.querySelector('.search-modal-grid');
 
-    let searchTimeout;
-    let currentUser = null;
-    const MAX_SEARCH_HISTORY = 10;
-    let showAdultMovies = false;
+let searchTimeout;
+let currentSearchResults = [];
 
-    // Firebase auth state listener
-    firebase.auth().onAuthStateChanged(function(user) {
-        currentUser = user;
+// Initialize search functionality
+function initializeSearch() {
+    if (!searchModal || !modalSearchInput || !searchModalClose || !resultGrid) {
+        console.warn('Some search elements are missing. Search functionality may not work properly.');
+        return;
+    }
+
+    // Setup search event listeners
+    modalSearchInput.addEventListener('input', (e) => {
+        const query = e.target.value.trim();
+        if (searchTimeout) clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => performSearch(query), 300);
     });
 
-    // Add adult content filter toggle to search header
-    const searchHeader = document.querySelector('.search-header');
-    const adultFilterDiv = document.createElement('div');
-    adultFilterDiv.className = 'adult-filter';
-    adultFilterDiv.innerHTML = `
-        <label class="adult-filter-toggle">
-            <input type="checkbox" id="adultContentToggle">
-            <span class="toggle-slider"></span>
-            <span class="toggle-label">Show 18+ Movies</span>
-        </label>
+    // Setup modal close button
+    searchModalClose.addEventListener('click', () => {
+        searchModal.style.display = 'none';
+        modalSearchInput.value = '';
+        resultGrid.innerHTML = '';
+    });
+
+    // Close modal when clicking outside
+    searchModal.addEventListener('click', (e) => {
+        if (e.target === searchModal) {
+            searchModal.style.display = 'none';
+            modalSearchInput.value = '';
+            resultGrid.innerHTML = '';
+        }
+    });
+
+    // Close modal with Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && searchModal.style.display === 'flex') {
+            searchModal.style.display = 'none';
+            modalSearchInput.value = '';
+            resultGrid.innerHTML = '';
+        }
+    });
+}
+
+async function performSearch(query) {
+    if (!query.trim()) {
+        resultGrid.innerHTML = '';
+        return;
+    }
+
+    resultGrid.innerHTML = '<div class="search-loading">Searching...</div>';
+
+    try {
+        // Search both movies and TV shows
+        const [movieRes, tvRes] = await Promise.all([
+            fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}&language=en-US&page=1`),
+            fetch(`https://api.themoviedb.org/3/search/tv?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}&language=en-US&page=1`)
+        ]);
+
+        if (!movieRes.ok || !tvRes.ok) {
+            throw new Error('Search request failed');
+        }
+
+        const [movieData, tvData] = await Promise.all([
+            movieRes.json(),
+            tvRes.json()
+        ]);
+
+        // Combine and sort results
+        currentSearchResults = [
+            ...movieData.results.map(item => ({ ...item, type: 'movie' })),
+            ...tvData.results.map(item => ({ ...item, type: 'tv' }))
+        ].sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+
+        displaySearchResults(currentSearchResults);
+    } catch (error) {
+        console.error('Search error:', error);
+        resultGrid.innerHTML = '<div class="search-error">Error performing search. Please try again.</div>';
+    }
+}
+
+function displaySearchResults(results) {
+    if (!results || results.length === 0) {
+        resultGrid.innerHTML = '<div class="search-no-results">No results found</div>';
+        return;
+    }
+
+    resultGrid.innerHTML = '';
+    
+    results.forEach(item => {
+        const card = createSearchCard(item);
+        resultGrid.appendChild(card);
+    });
+}
+
+function createSearchCard(item) {
+    const isMovie = item.type === 'movie';
+    const title = isMovie ? item.title : item.name;
+    const releaseDate = isMovie ? item.release_date : item.first_air_date;
+    const year = releaseDate ? releaseDate.split('-')[0] : 'N/A';
+    const posterPath = item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : '/images/no-poster.png';
+    const rating = item.vote_average ? item.vote_average.toFixed(1) : 'N/A';
+    const typeLabel = isMovie ? '🎬 Movie' : '📺 TV Show';
+
+    const card = document.createElement('div');
+    card.className = 'search-film-card';
+    card.innerHTML = `
+        <img src="${posterPath}" alt="${title}" onerror="this.src='/images/no-poster.png'">
+        <div class="search-film-info">
+            <h3 class="search-film-title">${title}</h3>
+            <div class="search-film-meta">
+                <span class="search-film-year">${year}</span>
+                <span class="search-film-rating"><i class="fas fa-star"></i> ${rating}</span>
+            </div>
+        </div>
+        <div class="search-film-type">${typeLabel}</div>
+        <div class="card-like-section">
+            <button class="like-btn"><i class="fas fa-thumbs-up"></i></button>
+            <span class="like-count">0</span>
+        </div>
     `;
-    searchHeader.appendChild(adultFilterDiv);
 
-    // Adult content toggle event listener
-    const adultContentToggle = document.getElementById('adultContentToggle');
-    adultContentToggle.addEventListener('change', function() {
-        showAdultMovies = this.checked;
-        // If there's a search term, search again with new filter
-        const currentSearch = searchInput.value.trim();
-        if (currentSearch) {
-            searchMovies(currentSearch);
-        }
+    // Add click handler
+    card.addEventListener('click', () => {
+        window.location.href = isMovie ? `movie.html?id=${item.id}` : `tv.html?id=${item.id}`;
     });
 
-    // Movie filtering function
-    function filterMovies(movies) {
-        return movies.filter(movie => {
-            const title = (movie.title || movie.name || '').toLowerCase();
-            const overview = (movie.overview || '').toLowerCase();
-            
-            // Check title-specific keywords (strict control)
-            const hasFilteredTitle = titleFilteredKeywords.some(keyword => {
-                const keywordLower = keyword.toLowerCase();
-                
-                // Multi-word check (exact match)
-                if (keyword.includes(' ')) {
-                    return title.includes(keywordLower);
-                }
-                
-                // Single word check (word boundary match)
-                const regex = new RegExp(`\\b${keywordLower}\\b`, 'i');
-                return regex.test(title);
-            });
+    // Setup like button
+    setupCardLikeButton(card, item.id, item.type);
 
-            // Filter out if title contains filtered keywords
-            if (hasFilteredTitle) {
-                console.log('Filtered content:', title, 'due to title match');
-                return false;
-            }
+    return card;
+}
 
-            // Check content keywords
-            const hasFilteredContent = contentFilteredKeywords.some(keyword => {
-                const keywordLower = keyword.toLowerCase();
-                // Multi-word check
-                if (keyword.includes(' ')) {
-                    return title.includes(keywordLower) || overview.includes(keywordLower);
-                }
-                // Single word check
-                return title.includes(keywordLower) || overview.includes(keywordLower);
-            });
+// Initialize search when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    initializeSearch();
+    // ... rest of your DOMContentLoaded code ...
+});
 
-            // Filter out if content contains filtered keywords
-            if (hasFilteredContent) {
-                console.log('Filtered content:', title, 'due to content match');
-                return false;
-            }
-
-            // 18+ content check
-            if (!showAdultMovies && movie.adult) {
-                console.log('Filtered content:', title, 'due to adult content');
-                return false;
-            }
-
-            return true;
-        });
-    }
-
-    // Search input event listener with debounce
-    searchInput.addEventListener('input', function(e) {
-        const searchTerm = e.target.value.toLowerCase().trim();
-        const searchType = document.getElementById('search-type') ? document.getElementById('search-type').value : 'movie';
-        
-        // Clear previous timeout
-        if (searchTimeout) {
-            clearTimeout(searchTimeout);
-        }
-        
-        if (searchTerm.length > 0) {
-            searchResults.style.display = 'block';
-            mainContent.style.display = 'none';
-            searchResultsGrid.innerHTML = '<div class="search-loading">Searching...</div>';
-            
-            searchTimeout = setTimeout(() => {
-                searchContent(searchTerm, searchType);
-            }, 300);
-        } else {
-            searchResults.style.display = 'none';
-            mainContent.style.display = 'block';
-        }
-    });
-
-    // Arama fonksiyonu
-    async function searchContent(query, type) {
-        try {
-            console.log('Searching for:', query);
-            
-            // Loading göster
-            searchResultsGrid.innerHTML = '<div class="search-loading">Searching...</div>';
-            
-            // Her iki API'den de sonuçları al
-            const [movieResponse, tvResponse] = await Promise.all([
-                fetch(`/api/search-movie?query=${encodeURIComponent(query)}`),
-                fetch(`/api/search-tv?query=${encodeURIComponent(query)}`)
-            ]);
-            
-            if (!movieResponse.ok || !tvResponse.ok) {
-                throw new Error(`HTTP error! status: ${movieResponse.status || tvResponse.status}`);
-            }
-            
-            const [movieData, tvData] = await Promise.all([
-                movieResponse.json(),
-                tvResponse.json()
-            ]);
-            
-            console.log('Search results:', { movies: movieData, tv: tvData });
-            
-            // Sonuçları birleştir ve media_type ekle
-            let combinedResults = [
-                ...(movieData.results || []).map(item => ({ ...item, media_type: 'movie' })),
-                ...(tvData.results || []).map(item => ({ ...item, media_type: 'tv' }))
-            ];
-            
-            // Sonra yasaklı içerikleri filtrele
-            combinedResults = filterMovies(combinedResults);
-            
-            // Sonuçları puanlarına göre sırala
-            combinedResults.sort((a, b) => (b.vote_average || 0) - (a.vote_average || 0));
-            
-            searchCount.textContent = combinedResults.length;
-            
-            if (currentUser) {
-                saveSearchToHistory(query, combinedResults);
-            }
-            
-            displaySearchResults(combinedResults, query);
-        } catch (error) {
-            console.error('Error searching:', error);
-            searchResultsGrid.innerHTML = '<div class="search-error">Error loading results. Please try again.</div>';
-        }
-    }
-
-    // Arama sonuçlarını göster
-    function displaySearchResults(movies, searchTerm) {
-        searchResultsGrid.innerHTML = '';
-        
-        if (movies.length === 0) {
-            let message = `No results found for "${searchTerm}"`;
-            if (!showAdultMovies) {
-                message += ' (18+ content is hidden)';
-            }
-            
-            searchResultsGrid.innerHTML = `
-                <div class="search-no-results">
-                    <p>${message}</p>
-                    ${currentUser ? '<p class="search-suggestions">Try one of your recent searches:</p>' : ''}
-                </div>
-            `;
-            
-            if (currentUser) {
-                getSearchSuggestions().then(suggestions => {
-                    if (suggestions.length > 0) {
-                        const suggestionsDiv = document.createElement('div');
-                        suggestionsDiv.className = 'search-suggestions-list';
-                        suggestions.forEach(term => {
-                            const suggestion = document.createElement('button');
-                            suggestion.className = 'search-suggestion-btn';
-                            suggestion.textContent = term;
-                            suggestion.onclick = () => {
-                                searchInput.value = term;
-                                searchContent(term);
-                            };
-                            suggestionsDiv.appendChild(suggestion);
-                        });
-                        searchResultsGrid.appendChild(suggestionsDiv);
-                    }
-                });
-            }
-            return;
-        }
-        
-        movies.forEach(movie => {
-            const movieCard = document.createElement('div');
-            movieCard.className = 'search-film-card';
-            
-            const title = movie.title || movie.name;
-            const releaseDate = movie.release_date || movie.first_air_date;
-            const posterPath = movie.poster_path 
-                ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
-                : '/images/no-poster.png';
-            
-            movieCard.innerHTML = `
-                <img src="${posterPath}" alt="${title}" onerror="this.src='/images/no-poster.png'">
-                <div class="search-film-info">
-                    <h3 class="search-film-title">${title}</h3>
-                    <div class="search-film-meta">
-                        <span class="search-film-year">${releaseDate ? releaseDate.split('-')[0] : 'N/A'}</span>
-                        <span class="search-film-rating">
-                            <i class="fas fa-star"></i>
-                            ${movie.vote_average ? movie.vote_average.toFixed(1) : 'N/A'}
-                        </span>
-                    </div>
-                    <div class="search-film-type">
-                        ${movie.media_type === 'tv' ? '📺 TV Series' : '🎬 Movie'}
-                    </div>
-                </div>
-                <div class="card-like-section">
-                    <button class="like-btn"><i class="fas fa-thumbs-up"></i></button>
-                    <span class="like-count">0</span>
-                </div>
-            `;
-            
-            movieCard.addEventListener('click', () => {
-                window.location.href = `${movie.media_type}.html?id=${movie.id}`;
-            });
-            
-            searchResultsGrid.appendChild(movieCard);
-            setupCardLikeButton(movieCard, movie.id, movie.media_type);
-        });
-    }
-
-    // Function to save search to Firebase
-    async function saveSearchToHistory(searchTerm, results) {
-        if (!currentUser) return;
-
-        try {
-            const searchRef = firebase.firestore().collection('searchHistory').doc(currentUser.uid);
-            const searchData = {
-                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                term: searchTerm,
-                resultCount: results.length,
-                results: results.slice(0, 5).map(movie => ({
-                    id: movie.id,
-                    title: movie.title,
-                    poster_path: movie.poster_path,
-                    release_date: movie.release_date,
-                    vote_average: movie.vote_average
-                }))
-            };
-
-            // Get current history
-            const doc = await searchRef.get();
-            if (doc.exists) {
-                const history = doc.data().history || [];
-                // Add new search to beginning of array
-                history.unshift(searchData);
-                // Keep only last MAX_SEARCH_HISTORY searches
-                if (history.length > MAX_SEARCH_HISTORY) {
-                    history.pop();
-                }
-                // Update history
-                await searchRef.update({ history });
-            } else {
-                // Create new history document
-                await searchRef.set({ history: [searchData] });
-            }
-        } catch (error) {
-            console.error('Error saving search history:', error);
-        }
-    }
-
-    // Function to get search suggestions based on history
-    async function getSearchSuggestions() {
-        if (!currentUser) return [];
-
-        try {
-            const searchRef = firebase.firestore().collection('searchHistory').doc(currentUser.uid);
-            const doc = await searchRef.get();
-            
-            if (doc.exists) {
-                const history = doc.data().history || [];
-                // Get unique search terms from history
-                const suggestions = [...new Set(history.map(item => item.term))];
-                return suggestions.slice(0, 5); // Return top 5 suggestions
-            }
-            return [];
-        } catch (error) {
-            console.error('Error getting search suggestions:', error);
-            return [];
-        }
-    }
-
-    // Clear search when clicking outside
-    document.addEventListener('click', function(e) {
-        if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
-            searchInput.value = '';
-            searchResults.style.display = 'none';
-            mainContent.style.display = 'block';
-        }
-    });
-}); 
-
-// --- Like Button for Cards ---
+// Setup card like button functionality
 function setupCardLikeButton(card, id, type) {
-    const db = firebase.firestore();
-    const likeDoc = db.collection('likes').doc(type + '_' + id);
     const likeBtn = card.querySelector('.like-btn');
     const likeCount = card.querySelector('.like-count');
+    
     if (!likeBtn || !likeCount) return;
-    firebase.auth().onAuthStateChanged(function(user) {
-        if (!user) {
-            likeBtn.disabled = true;
-            likeBtn.title = 'You must be logged in to like.';
+
+    const db = firebase.firestore();
+    const likeDoc = db.collection('likes').doc(`${type}_${id}`);
+    const userLikeDoc = likeDoc.collection('userLikes').doc(firebase.auth().currentUser?.uid);
+
+    // Listen for like count changes
+    likeDoc.collection('userLikes').onSnapshot(snapshot => {
+        likeCount.textContent = snapshot.size;
+    });
+
+    // Check if user has liked
+    userLikeDoc.get().then(doc => {
+        if (doc.exists) {
+            likeBtn.classList.add('liked');
+        }
+    });
+
+    // Handle like button click
+    likeBtn.addEventListener('click', async (e) => {
+        e.stopPropagation(); // Prevent card click
+        
+        if (!firebase.auth().currentUser) {
+            window.location.href = 'auth.html?tab=login';
             return;
         }
-        likeBtn.disabled = false;
-        likeBtn.title = '';
-        const userLikeDoc = likeDoc.collection('userLikes').doc(user.uid);
-        // Toplam like sayısını çek
-        likeDoc.collection('userLikes').onSnapshot(snapshot => {
-            likeCount.textContent = snapshot.size;
-        });
-        // Kullanıcı daha önce like'ladı mı?
-        userLikeDoc.get().then(doc => {
-            if (doc.exists) {
-                likeBtn.classList.add('liked');
-            } else {
-                likeBtn.classList.remove('liked');
-            }
-        });
-        likeBtn.addEventListener('click', async (e) => {
-            e.stopPropagation();
-            const doc = await userLikeDoc.get();
-            if (!doc.exists) {
-                // Like at
-                await userLikeDoc.set({ liked: true, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-                likeBtn.classList.add('liked');
-            } else {
-                // Like'ı geri al
-                await userLikeDoc.delete();
-                likeBtn.classList.remove('liked');
-            }
-        });
+
+        const doc = await userLikeDoc.get();
+        if (!doc.exists) {
+            await userLikeDoc.set({
+                liked: true,
+                userId: firebase.auth().currentUser.uid,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            likeBtn.classList.add('liked');
+        } else {
+            await userLikeDoc.delete();
+            likeBtn.classList.remove('liked');
+        }
     });
 } 

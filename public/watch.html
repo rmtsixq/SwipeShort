@@ -272,23 +272,23 @@
                 spinner.style.display = 'none';
                 frame.innerHTML = `<iframe src="${embedUrl}" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true"></iframe>`;
             } catch (e) {
-                spinner.style.display = 'none';
+            spinner.style.display = 'none';
                 frame.innerHTML = `<div class="error-message">Video not available.<br><small>${e.message}</small></div>`;
-            }
+        }
         } else if (movieId) {
             // Movie
-            titleSpan.textContent = 'Loading...';
-            getMovieTitle(movieId).then(title => {
-                if (title) titleSpan.textContent = title;
-                else titleSpan.textContent = 'Movie';
-            });
-            try {
-                const embedUrl = await getCloudnestraEmbedUrl(movieId);
-                spinner.style.display = 'none';
-                frame.innerHTML = `<iframe src="${embedUrl}" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true"></iframe>`;
-            } catch (e) {
-                spinner.style.display = 'none';
-                frame.innerHTML = `<div class="error-message">Video not available.<br><small>${e.message}</small></div>`;
+        titleSpan.textContent = 'Loading...';
+        getMovieTitle(movieId).then(title => {
+            if (title) titleSpan.textContent = title;
+            else titleSpan.textContent = 'Movie';
+        });
+        try {
+            const embedUrl = await getCloudnestraEmbedUrl(movieId);
+            spinner.style.display = 'none';
+            frame.innerHTML = `<iframe src="${embedUrl}" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true"></iframe>`;
+        } catch (e) {
+            spinner.style.display = 'none';
+            frame.innerHTML = `<div class="error-message">Video not available.<br><small>${e.message}</small></div>`;
             }
         } else {
             spinner.style.display = 'none';
@@ -359,20 +359,20 @@
     }
     commentsList.innerHTML = '<div class="comment-loading">Loading comments...</div>';
     if (commentDocKey) {
-        firebase.firestore()
-            .collection('comments')
+    firebase.firestore()
+        .collection('comments')
             .doc(commentDocKey)
-            .collection('userComments')
-            .orderBy('createdAt', 'asc')
-            .onSnapshot(snapshot => {
-                if (snapshot.empty) {
-                    commentsList.innerHTML = '<div class="comment-empty">No comments yet.</div>';
-                } else {
-                    commentsList.innerHTML = Array.from(snapshot.docs).map(renderComment).join('');
-                }
-            }, err => {
-                commentsList.innerHTML = '<div class="comment-error">Error loading comments.</div>';
-            });
+        .collection('userComments')
+        .orderBy('createdAt', 'asc')
+        .onSnapshot(snapshot => {
+            if (snapshot.empty) {
+                commentsList.innerHTML = '<div class="comment-empty">No comments yet.</div>';
+            } else {
+                commentsList.innerHTML = Array.from(snapshot.docs).map(renderComment).join('');
+            }
+        }, err => {
+            commentsList.innerHTML = '<div class="comment-error">Error loading comments.</div>';
+        });
     } else {
         commentsList.innerHTML = '<div class="comment-error">Invalid video ID.</div>';
     }

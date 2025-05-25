@@ -4,125 +4,205 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Profile - SwipeShort</title>
-    <link rel="stylesheet" href="dashboard.css">
-    <link rel="stylesheet" href="profile.css">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background: #23232b;
+            color: #fff;
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+        .profile-container {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 32px;
+            background: #18181c;
+            border-radius: 24px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+        }
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+        .profile-picture {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+        }
+        .profile-info {
+            flex: 1;
+        }
+        .profile-name {
+            font-size: 2rem;
+            font-weight: 600;
+            margin: 0 0 8px 0;
+            color: #fff;
+        }
+        .profile-email {
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.7);
+            margin: 0;
+        }
+        .profile-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 24px;
+            margin-top: 32px;
+            padding-top: 32px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 24px;
+            border-radius: 16px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 600;
+            color: #ff66c4;
+            margin: 0 0 8px 0;
+        }
+        .stat-label {
+            font-size: 1rem;
+            color: rgba(255, 255, 255, 0.7);
+            margin: 0;
+        }
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #fff;
+            text-decoration: none;
+            font-size: 1.1rem;
+            margin-bottom: 24px;
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-2px);
+        }
+        @media (max-width: 768px) {
+            .profile-container {
+                margin: 20px;
+                padding: 24px;
+            }
+            .profile-header {
+                flex-direction: column;
+                text-align: center;
+            }
+            .profile-picture {
+                width: 100px;
+                height: 100px;
+            }
+            .profile-name {
+                font-size: 1.5rem;
+            }
+            .profile-email {
+                font-size: 1rem;
+            }
+        }
+    </style>
 </head>
 <body>
-    <div class="dashboard-container">
-        <!-- Sidebar -->
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <div class="logo">
-                    <img src="https://cdn-icons-png.flaticon.com/512/1179/1179120.png" alt="SwipeShort Logo">
-                    <span>SwipeShort</span>
-                </div>
+    <div class="profile-container">
+        <a href="dashboard.html" class="back-btn">
+            <i class="fas fa-arrow-left"></i> Back to Dashboard
+        </a>
+        <div class="profile-header">
+            <img src="/default-avatar.png" alt="Profile Picture" class="profile-picture" id="userProfilePicture">
+            <div class="profile-info">
+                <h1 class="profile-name" id="userProfileName">Loading...</h1>
+                <p class="profile-email" id="userProfileEmail">Loading...</p>
             </div>
-            
-            <!-- Profile Section -->
-            <div class="profile-section">
-                <a href="profile.html" class="profile-link">
-                    <div class="profile-image">
-                        <img src="/default-avatar.png" alt="Profile" id="sidebarProfileImage">
-                    </div>
-                    <div class="profile-info">
-                        <span class="profile-name" id="sidebarProfileName">Loading...</span>
-                        <span class="profile-email" id="sidebarProfileEmail">Loading...</span>
-                    </div>
-                </a>
+        </div>
+        <div class="profile-stats">
+            <div class="stat-card">
+                <h2 class="stat-value" id="likedCount">0</h2>
+                <p class="stat-label">Liked Movies</p>
             </div>
-
-            <div class="sidebar-menu">
-                <a href="dashboard.html" class="menu-item">
-                    <i class="fas fa-home"></i>
-                    <span>Home</span>
-                </a>
-                <a href="profile.html" class="menu-item active">
-                    <i class="fas fa-user"></i>
-                    <span>Profile</span>
-                </a>
-                <a href="#" class="menu-item">
-                    <i class="fas fa-star"></i>
-                    <span>For You</span>
-                </a>
-                <a href="settings.html" class="menu-item">
-                    <i class="fas fa-cog"></i>
-                    <span>Settings</span>
-                </a>
+            <div class="stat-card">
+                <h2 class="stat-value" id="watchedCount">0</h2>
+                <p class="stat-label">Watched Movies</p>
             </div>
-        </aside>
-
-        <!-- Main Content -->
-        <main class="main-content">
-            <div class="profile-page">
-                <!-- Profile Header -->
-                <div class="profile-header">
-                    <div class="profile-cover">
-                        <div class="profile-avatar">
-                            <img src="/default-avatar.png" alt="Profile" id="profileAvatar">
-                            <button class="change-avatar-btn" id="changeAvatarBtn">
-                                <i class="fas fa-camera"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="profile-details">
-                        <h1 id="profileName">Loading...</h1>
-                        <p id="profileEmail">Loading...</p>
-                        <div class="profile-stats">
-                            <div class="stat">
-                                <span class="stat-value" id="likedMoviesCount">0</span>
-                                <span class="stat-label">Liked Movies</span>
-                            </div>
-                            <div class="stat">
-                                <span class="stat-value" id="dislikedMoviesCount">0</span>
-                                <span class="stat-label">Disliked Movies</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Profile Content -->
-                <div class="profile-content">
-                    <!-- Profile Settings -->
-                    <div class="profile-section-card">
-                        <h2>Profile Settings</h2>
-                        <form id="profileSettingsForm" class="profile-settings-form">
-                            <div class="form-group">
-                                <label for="displayName">Display Name</label>
-                                <input type="text" id="displayName" name="displayName" placeholder="Enter your display name">
-                            </div>
-                            <div class="form-group">
-                                <label for="bio">Bio</label>
-                                <textarea id="bio" name="bio" placeholder="Tell us about yourself"></textarea>
-                            </div>
-                            <button type="submit" class="save-btn">Save Changes</button>
-                        </form>
-                    </div>
-
-                    <!-- Liked Movies -->
-                    <div class="profile-section-card">
-                        <h2>Liked Movies</h2>
-                        <div class="liked-movies-grid" id="likedMoviesGrid">
-                            <!-- Liked movies will be loaded here -->
-                        </div>
-                    </div>
-
-                    <!-- Disliked Movies -->
-                    <div class="profile-section-card">
-                        <h2>Disliked Movies</h2>
-                        <div class="disliked-movies-grid" id="dislikedMoviesGrid">
-                            <!-- Disliked movies will be loaded here -->
-                        </div>
-                    </div>
-                </div>
+            <div class="stat-card">
+                <h2 class="stat-value" id="commentCount">0</h2>
+                <p class="stat-label">Comments</p>
             </div>
-        </main>
+        </div>
     </div>
 
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
-    <script src="scripts/firebase-config.js"></script>
-    <script src="profile.js"></script>
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="firebase-config.js"></script>
+    <script>
+        // Check if user is logged in
+        firebase.auth().onAuthStateChanged(function(user) {
+            if (!user) {
+                window.location.href = 'auth.html?tab=login';
+            } else {
+                // Update profile information
+                const profilePicture = document.getElementById('userProfilePicture');
+                const profileName = document.getElementById('userProfileName');
+                const profileEmail = document.getElementById('userProfileEmail');
+                
+                if (profilePicture && profileName && profileEmail) {
+                    // Set profile picture
+                    if (user.photoURL) {
+                        profilePicture.src = user.photoURL;
+                    } else {
+                        // Use first letter of email/name as avatar
+                        const initial = (user.displayName || user.email || '?')[0].toUpperCase();
+                        profilePicture.src = `https://ui-avatars.com/api/?name=${initial}&background=random&color=fff`;
+                    }
+                    
+                    // Set profile name and email
+                    profileName.textContent = user.displayName || user.email.split('@')[0] || 'User';
+                    profileEmail.textContent = user.email;
+
+                    // Get user stats
+                    const db = firebase.firestore();
+                    
+                    // Get liked movies and TV shows count
+                    Promise.all([
+                        // Get liked movies
+                        db.collectionGroup('userLikes')
+                            .where('liked', '==', true)
+                            .where('userId', '==', user.uid)
+                            .get()
+                            .then(snapshot => snapshot.size)
+                    ]).then(([totalLikes]) => {
+                        document.getElementById('likedCount').textContent = totalLikes;
+                    });
+
+                    // Get watched movies count (you'll need to implement this collection)
+                    db.collection('watched').where('userId', '==', user.uid).get()
+                        .then(snapshot => {
+                            document.getElementById('watchedCount').textContent = snapshot.size;
+                        });
+
+                    // Get comments count
+                    db.collection('comments').where('userId', '==', user.uid).get()
+                        .then(snapshot => {
+                            document.getElementById('commentCount').textContent = snapshot.size;
+                        });
+                }
+            }
+        });
+    </script>
 </body>
 </html> 
