@@ -278,6 +278,31 @@
                 font-size: 1rem;
             }
         }
+        .episode-nav-btn {
+            background: linear-gradient(90deg,#23232b 0%,#23232b 100%);
+            color: #fff;
+            border: none;
+            border-radius: 16px;
+            padding: 10px 22px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 2px 8px #0003;
+            margin: 0 4px;
+            opacity: 1;
+            transition: background 0.18s, color 0.18s, opacity 0.18s;
+        }
+        .episode-nav-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        @media (max-width: 600px) {
+            .episode-nav-btn {
+                font-size: 0.95rem;
+                padding: 8px 12px;
+                border-radius: 12px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -290,6 +315,10 @@
             <div class="watch-content">
                 <div id="video-frame" class="video-frame">
                     <div class="spinner" id="spinner"></div>
+                </div>
+                <div id="episodeNavBtns" style="display:none;justify-content:center;gap:16px;margin:18px 0 0 0;">
+                    <button id="prevEpisodeBtn" class="episode-nav-btn">Previous Episode</button>
+                    <button id="nextEpisodeBtn" class="episode-nav-btn">Next Episode</button>
                 </div>
                 <div class="comments-section">
                     <div class="comments-title">Comments</div>
@@ -481,10 +510,8 @@
         const season = params.get('season');
         const episode = params.get('episode');
         if (tvId && season && episode) {
-            
             document.getElementById('episodeListPanel').style.display = '';
-            
-            const totalEpisodes = 5; 
+            const totalEpisodes = 5;
             const episodeList = document.getElementById('episodeList');
             episodeList.innerHTML = '';
             for (let i = 1; i <= totalEpisodes; i++) {
@@ -492,12 +519,34 @@
                 btn.className = 'episode-list-item' + (String(i) === episode ? ' active' : '');
                 btn.textContent = `${season}. Season Episode ${i}`;
                 btn.onclick = () => {
-                    
                     params.set('episode', i);
                     window.location.search = params.toString();
                 };
                 episodeList.appendChild(btn);
             }
+            // Video altı nav butonları
+            const navBtns = document.getElementById('episodeNavBtns');
+            navBtns.style.display = 'flex';
+            const prevBtn = document.getElementById('prevEpisodeBtn');
+            const nextBtn = document.getElementById('nextEpisodeBtn');
+            prevBtn.disabled = (parseInt(episode) <= 1);
+            nextBtn.disabled = (parseInt(episode) >= totalEpisodes);
+            prevBtn.onclick = () => {
+                if (parseInt(episode) > 1) {
+                    params.set('episode', parseInt(episode) - 1);
+                    window.location.search = params.toString();
+                }
+            };
+            nextBtn.onclick = () => {
+                if (parseInt(episode) < totalEpisodes) {
+                    params.set('episode', parseInt(episode) + 1);
+                    window.location.search = params.toString();
+                }
+            };
+        } else {
+            // Dizi değilse nav butonlarını gizle
+            const navBtns = document.getElementById('episodeNavBtns');
+            if (navBtns) navBtns.style.display = 'none';
         }
     })();
     </script>
