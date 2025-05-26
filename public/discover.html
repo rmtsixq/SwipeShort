@@ -100,6 +100,8 @@
             display: flex;
             gap: 12px;
             margin-top: 8px;
+            position: relative;
+            z-index: 10;
         }
         .action-btn {
             background: rgba(255,255,255,0.1);
@@ -113,6 +115,8 @@
             align-items: center;
             gap: 6px;
             transition: all 0.2s;
+            position: relative;
+            z-index: 10;
         }
         .action-btn:hover {
             background: rgba(255,255,255,0.2);
@@ -176,9 +180,10 @@
         }
         .swipe-overlay {
             position: absolute;
-            top: 0; left: 0;
+            top: 0;
+            left: 0;
             width: 100%;
-            height: 100%;
+            height: calc(100% - 120px); /* Butonların olduğu alanı hariç tut */
             z-index: 2;
             background: transparent;
             cursor: grab;
@@ -287,45 +292,76 @@
 
     async function fetchTrailers() {
         try {
+            // Loading mesajını güncelle
             swiperWrapper.innerHTML = `
                 <div class="loading-message">
                     <div class="loading-spinner"></div>
-                    <div>Loading trailers...</div>
+                    <div>Discovering amazing trailers...</div>
                 </div>
             `;
             
-            const res = await fetch(`https://api.themoviedb.org/3/movie/popular?api_key=${TMDB_API_KEY}&language=en-US&page=1`);
+            // Farklı kategorilerden filmleri al
+            const categories = [
+                { type: 'popular', page: Math.floor(Math.random() * 5) + 1 },
+                { type: 'top_rated', page: Math.floor(Math.random() * 5) + 1 },
+                { type: 'upcoming', page: Math.floor(Math.random() * 5) + 1 },
+                { type: 'now_playing', page: Math.floor(Math.random() * 5) + 1 }
+            ];
+
+            // Rastgele bir kategori seç
+            const randomCategory = categories[Math.floor(Math.random() * categories.length)];
+            
+            const res = await fetch(`https://api.themoviedb.org/3/movie/${randomCategory.type}?api_key=${TMDB_API_KEY}&language=en-US&page=${randomCategory.page}`);
             if (!res.ok) throw new Error('Failed to fetch movies');
             
             const data = await res.json();
             const movies = data.results || [];
+            
+            if (!movies.length) {
+                throw new Error('No movies found');
+            }
+
+            // Filmleri karıştır
+            const shuffledMovies = movies.sort(() => Math.random() - 0.5);
             const slides = [];
             
-            for (const movie of movies) {
-                const vidRes = await fetch(`https://api.themoviedb.org/3/movie/${movie.id}/videos?api_key=${TMDB_API_KEY}&language=en-US`);
-                if (!vidRes.ok) continue;
-                
-                const vidData = await vidRes.json();
-                const trailer = (vidData.results || []).find(v => v.type === 'Trailer' && v.site === 'YouTube');
-                if (!trailer) continue;
-                
-                slides.push({
-                    youtubeId: trailer.key,
-                    title: movie.title,
-                    year: (movie.release_date || '').split('-')[0] || '',
-                    poster: movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : '',
-                    rating: movie.vote_average ? movie.vote_average.toFixed(1) : null,
-                    overview: movie.overview
-                });
-                
-                if (slides.length >= 10) break;
-            }
+            // Paralel olarak trailer'ları yükle
+            const trailerPromises = shuffledMovies.map(async (movie) => {
+                try {
+                    const vidRes = await fetch(`https://api.themoviedb.org/3/movie/${movie.id}/videos?api_key=${TMDB_API_KEY}&language=en-US`);
+                    if (!vidRes.ok) return null;
+                    
+                    const vidData = await vidRes.json();
+                    const trailer = (vidData.results || []).find(v => v.type === 'Trailer' && v.site === 'YouTube');
+                    if (!trailer) return null;
+                    
+                    return {
+                        youtubeId: trailer.key,
+                        title: movie.title,
+                        year: (movie.release_date || '').split('-')[0] || '',
+                        poster: movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : '',
+                        rating: movie.vote_average ? movie.vote_average.toFixed(1) : null,
+                        overview: movie.overview,
+                        id: movie.id,
+                        mediaType: 'movie' // Film olduğu için 'movie' olarak işaretliyoruz
+                    };
+                } catch (error) {
+                    console.error(`Error fetching trailer for ${movie.title}:`, error);
+                    return null;
+                }
+            });
+
+            // Tüm trailer'ları bekle
+            const results = await Promise.all(trailerPromises);
             
-            if (!slides.length) {
-                throw new Error('No trailers found');
-            }
+            // Geçerli sonuçları filtrele
+            const validSlides = results.filter(slide => slide !== null);
             
-            return slides;
+            if (!validSlides.length) {
+                throw new Error('No valid trailers found');
+            }
+
+            return validSlides.slice(0, 10); // En fazla 10 trailer
         } catch (error) {
             console.error('Error fetching trailers:', error);
             swiperWrapper.innerHTML = `
@@ -339,9 +375,9 @@
         }
     }
 
-    function createSlide({youtubeId, title, year, poster, rating, overview}) {
+    function createSlide({youtubeId, title, year, poster, rating, overview, id, mediaType}) {
         return `
-        <div class="swiper-slide" data-youtubeid="${youtubeId}">
+        <div class="swiper-slide" data-youtubeid="${youtubeId}" data-id="${id}" data-type="${mediaType}">
             <button class="back-arrow-btn" onclick="window.location.href='dashboard.html'" aria-label="Back to Dashboard">
                 <i class="fa fa-arrow-left"></i>
             </button>
@@ -359,11 +395,11 @@
                         </span>
                     </div>
                     <div class="trailer-actions">
-                        <button class="action-btn like" onclick="toggleLike(this)">
+                        <button class="action-btn like" data-youtubeid="${youtubeId}" onclick="toggleLike(this)">
                             <i class="far fa-heart"></i>
                             <span>Like</span>
                         </button>
-                        <button class="action-btn" onclick="window.open('https://www.youtube.com/watch?v=${youtubeId}', '_blank')">
+                        <button class="action-btn watch" data-id="${id}" data-type="${mediaType}" onclick="openDetails(this)">
                             <i class="fas fa-external-link-alt"></i>
                             <span>Watch</span>
                         </button>
@@ -380,7 +416,7 @@
         if (!youtubeId) return;
         const iframe = document.createElement('iframe');
         iframe.className = 'trailer-iframe';
-        iframe.src = `https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${youtubeId}`;
+        iframe.src = `https://www.youtube.com/embed/${youtubeId}?autoplay=0&mute=1&controls=0&loop=1&playlist=${youtubeId}&enablejsapi=1`;
         iframe.allow = 'autoplay; encrypted-media';
         iframe.allowFullscreen = true;
         slide.prepend(iframe);
@@ -388,6 +424,23 @@
         const poster = slide.querySelector('.trailer-poster-lazy');
         if (poster) poster.style.display = 'none';
     }
+
+    function playVideo(slide, shouldUnmute = false) {
+        const iframe = slide.querySelector('iframe');
+        if (iframe) {
+            const youtubeId = slide.getAttribute('data-youtubeid');
+            const mute = shouldUnmute ? 0 : 1;
+            iframe.src = `https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=${mute}&controls=0&loop=1&playlist=${youtubeId}&enablejsapi=1`;
+        }
+    }
+
+    function pauseVideo(slide) {
+        const iframe = slide.querySelector('iframe');
+        if (iframe) {
+            iframe.src = iframe.src.replace('autoplay=1', 'autoplay=0');
+        }
+    }
+
     function unloadIframeForSlide(slide) {
         if (!slide) return;
         const iframe = slide.querySelector('iframe');
@@ -406,9 +459,8 @@
         btn.onclick = () => {
             const iframe = slide.querySelector('iframe');
             if (iframe) {
-                const src = iframe.src.replace('mute=1', 'mute=0');
-                iframe.src = '';
-                setTimeout(() => { iframe.src = src; }, 50);
+                const youtubeId = slide.getAttribute('data-youtubeid');
+                iframe.src = `https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=0&controls=0&loop=1&playlist=${youtubeId}&enablejsapi=1`;
                 btn.style.display = 'none';
                 isUnmuted = true;
             }
@@ -416,90 +468,155 @@
         slide.appendChild(btn);
     }
 
-    async function initFeed() {
-        swiperWrapper.innerHTML = '<div class="loading-message">Loading trailers...</div>';
-        const slides = await fetchTrailers();
-        if (!slides.length) {
-            swiperWrapper.innerHTML = '<div class="loading-message">No trailers found.</div>';
-            return;
-        }
-        swiperWrapper.innerHTML = slides.map(createSlide).join('');
-        // Swiper.js initialization
-        const swiper = new Swiper('.swiper', {
-            direction: 'vertical',
-            slidesPerView: 1,
-            spaceBetween: 0,
-            mousewheel: {
-                sensitivity: 1,
-                releaseOnEdges: true
-            },
-            simulateTouch: true,
-            allowTouchMove: true,
-            grabCursor: true,
-            speed: 800,
-            effect: 'fade',
-            fadeEffect: {
-                crossFade: true
-            },
-            watchSlidesProgress: true,
-            on: {
-                slideChange: function () {
-                    // Lazy load: aktif ve komşu slide'lara iframe ekle, diğerlerinden kaldır
-                    [swiper.activeIndex-1, swiper.activeIndex, swiper.activeIndex+1].forEach(idx => {
-                        const slide = swiper.slides[idx];
-                        if (slide) loadIframeForSlide(slide);
-                    });
-                    swiper.slides.forEach((slide, idx) => {
-                        if (Math.abs(idx - swiper.activeIndex) > 1) {
-                            unloadIframeForSlide(slide);
-                        }
-                    });
-                    // Aktif slide'da sesi aç, diğerlerinde mute
-                    swiper.slides.forEach((slide, idx) => {
-                        const iframe = slide.querySelector('iframe');
-                        if (iframe) {
-                            const youtubeId = slide.getAttribute('data-youtubeid');
-                            const mute = (idx === swiper.activeIndex) ? 0 : 1;
-                            iframe.src = `https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=${mute}&controls=0&loop=1&playlist=${youtubeId}`;
-                        }
-                    });
-                    isUnmuted = false;
-                    addUnmuteButton(swiper.slides[swiper.activeIndex]);
-                },
-                touchStart: function() {
-                    document.body.style.overflow = 'hidden';
-                },
-                touchEnd: function() {
-                    document.body.style.overflow = '';
-                }
+    let currentPage = 1;
+    let isLoading = false;
+    let hasMoreContent = true;
+
+    async function loadMoreContent() {
+        if (isLoading || !hasMoreContent) return;
+        
+        isLoading = true;
+        currentPage++;
+        
+        try {
+            const newSlides = await fetchTrailers();
+            if (newSlides.length === 0) {
+                hasMoreContent = false;
+                return;
             }
-        });
-        // İlk başta ilk 2-3 slide'ı yükle
-        [0,1,2].forEach(idx => loadIframeForSlide(swiper.slides[idx]));
-        // İlk slide'a unmute butonu ekle
-        addUnmuteButton(swiper.slides[0]);
-        isUnmuted = false;
+            
+            const newSlidesHTML = newSlides.map(createSlide).join('');
+            swiperWrapper.insertAdjacentHTML('beforeend', newSlidesHTML);
+            
+            // Yeni slide'ları Swiper'a ekle
+            swiper.appendSlide(newSlidesHTML);
+            
+        } catch (error) {
+            console.error('Error loading more content:', error);
+        } finally {
+            isLoading = false;
+        }
     }
 
-    initFeed();
+    async function initFeed() {
+        try {
+            const slides = await fetchTrailers();
+            if (!slides.length) {
+                swiperWrapper.innerHTML = `
+                    <div class="error-message">
+                        <div>No trailers available at the moment.</div>
+                        <button class="retry-btn" onclick="initFeed()">Try Again</button>
+                    </div>
+                `;
+                return;
+            }
 
-    // Modal logic
+            swiperWrapper.innerHTML = slides.map(createSlide).join('');
+            
+            // Swiper.js initialization
+            const swiper = new Swiper('.swiper', {
+                direction: 'vertical',
+                slidesPerView: 1,
+                spaceBetween: 0,
+                mousewheel: {
+                    sensitivity: 1.2,
+                    releaseOnEdges: true,
+                    forceToAxis: true
+                },
+                simulateTouch: true,
+                allowTouchMove: true,
+                grabCursor: true,
+                speed: 400,
+                effect: 'slide',
+                resistance: true,
+                resistanceRatio: 0.85,
+                touchRatio: 1,
+                touchAngle: 45,
+                threshold: 20,
+                followFinger: true,
+                watchSlidesProgress: true,
+                on: {
+                    slideChange: function () {
+                        // Aktif ve komşu slide'ları yükle
+                        [swiper.activeIndex-1, swiper.activeIndex, swiper.activeIndex+1].forEach(idx => {
+                            const slide = swiper.slides[idx];
+                            if (slide) {
+                                if (!slide.querySelector('iframe')) {
+                                    loadIframeForSlide(slide);
+                                }
+                                if (idx === swiper.activeIndex) {
+                                    playVideo(slide, isUnmuted);
+                                } else {
+                                    pauseVideo(slide);
+                                }
+                            }
+                        });
+
+                        // Diğer slide'ları temizle
+                        swiper.slides.forEach((slide, idx) => {
+                            if (Math.abs(idx - swiper.activeIndex) > 1) {
+                                unloadIframeForSlide(slide);
+                            }
+                        });
+
+                        addUnmuteButton(swiper.slides[swiper.activeIndex]);
+
+                        // Son slide'a yaklaşıldığında yeni içerik yükle
+                        if (swiper.activeIndex >= swiper.slides.length - 3) {
+                            loadMoreContent();
+                        }
+                    },
+                    touchStart: function() {
+                        document.body.style.overflow = 'hidden';
+                    },
+                    touchEnd: function() {
+                        document.body.style.overflow = '';
+                    }
+                }
+            });
+            
+            // İlk başta ilk 3 slide'ı yükle ve ilk videoyu başlat
+            [0,1,2].forEach(idx => {
+                const slide = swiper.slides[idx];
+                if (slide) {
+                    loadIframeForSlide(slide);
+                    if (idx === 0) {
+                        playVideo(slide, false);
+                    }
+                }
+            });
+            
+            // İlk slide'a unmute butonu ekle
+            addUnmuteButton(swiper.slides[0]);
+        } catch (error) {
+            console.error('Error initializing feed:', error);
+            swiperWrapper.innerHTML = `
+                <div class="error-message">
+                    <div>Failed to initialize feed.</div>
+                    <button class="retry-btn" onclick="initFeed()">Try Again</button>
+                </div>
+            `;
+        }
+    }
+
+    // Sayfa yüklendiğinde feed'i başlat
     document.addEventListener('DOMContentLoaded', function() {
+        initFeed();
+        
         const modal = document.getElementById('instructionModal');
         const okBtn = document.getElementById('modalOkBtn');
         okBtn.addEventListener('click', function() {
             modal.style.display = 'none';
             // İlk slide'ın sesi açılsın
-            setTimeout(() => {
-                const firstSlide = document.querySelector('.swiper-slide');
-                if (firstSlide) {
-                    const iframe = firstSlide.querySelector('iframe');
-                    const youtubeId = firstSlide.getAttribute('data-youtubeid');
-                    if (iframe && youtubeId) {
-                        iframe.src = `https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=0&controls=0&loop=1&playlist=${youtubeId}`;
-                    }
+            const firstSlide = document.querySelector('.swiper-slide');
+            if (firstSlide) {
+                const iframe = firstSlide.querySelector('iframe');
+                const youtubeId = firstSlide.getAttribute('data-youtubeid');
+                if (iframe && youtubeId) {
+                    iframe.src = `https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=0&controls=0&loop=1&playlist=${youtubeId}&enablejsapi=1`;
+                    isUnmuted = true;
                 }
-            }, 100);
+            }
         });
     });
 
@@ -510,11 +627,80 @@
         if (btn.classList.contains('liked')) {
             icon.className = 'fas fa-heart';
             text.textContent = 'Liked';
+            // Like işlemi başarılı olduğunda hafif bir animasyon ekle
+            btn.style.transform = 'scale(1.1)';
+            setTimeout(() => {
+                btn.style.transform = 'scale(1)';
+            }, 200);
         } else {
             icon.className = 'far fa-heart';
             text.textContent = 'Like';
         }
     }
+
+    function openDetails(btn) {
+        const id = btn.getAttribute('data-id');
+        const type = btn.getAttribute('data-type');
+        if (id && type) {
+            // Media type'a göre doğru sayfaya yönlendir
+            const url = type === 'movie' ? `movie.html?id=${id}` : `tv.html?id=${id}`;
+            window.location.href = url;
+        }
+    }
+
+    // CSS güncellemeleri
+    const style = document.createElement('style');
+    style.textContent = `
+        .trailer-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 8px;
+            position: relative;
+            z-index: 10;
+        }
+        .action-btn {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            border-radius: 8px;
+            padding: 8px 12px;
+            color: #fff;
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+            position: relative;
+            z-index: 10;
+        }
+        .action-btn:hover {
+            background: rgba(255,255,255,0.2);
+            transform: translateY(-1px);
+        }
+        .action-btn.like {
+            background: rgba(255,102,196,0.2);
+        }
+        .action-btn.like:hover {
+            background: rgba(255,102,196,0.3);
+        }
+        .action-btn.liked {
+            background: #ff66c4;
+        }
+        .swipe-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: calc(100% - 120px); /* Butonların olduğu alanı hariç tut */
+            z-index: 2;
+            background: transparent;
+            cursor: grab;
+        }
+        .swipe-overlay:active {
+            cursor: grabbing;
+        }
+    `;
+    document.head.appendChild(style);
     </script>
 </body>
 </html> 

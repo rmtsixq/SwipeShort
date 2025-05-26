@@ -410,9 +410,6 @@ body {
         display: block;
     }
     .filter-content {
-        display: none;
-    }
-    .filter-panel.active .filter-content {
         display: grid;
     }
     .film-grid,
@@ -935,3 +932,18 @@ body {
 .swipe-overlay {
     z-index: 2;
 } 
+@media (max-width: 600px) {
+    .filter-panel {
+      padding: 12px;
+    }
+    .filter-content {
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+    .filter-group select {
+      font-size: 1rem;
+      padding: 10px;
+      min-width: 0;
+      width: 100%;
+    }
+  }
