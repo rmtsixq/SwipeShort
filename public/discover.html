@@ -63,29 +63,80 @@
             box-sizing: border-box;
             display: flex;
             align-items: center;
-        }
-        .trailer-title {
-            font-size: 1.2rem;
-            font-weight: 600;
-            margin-bottom: 8px;
-            color: #fff;
-        }
-        .trailer-meta {
-            color: #ff66c4;
-            font-size: 1rem;
-            margin-bottom: 6px;
+            gap: 12px;
         }
         .trailer-poster {
             width: 48px;
             height: 72px;
             object-fit: cover;
             border-radius: 8px;
-            margin-right: 12px;
             box-shadow: 0 2px 8px #0005;
             vertical-align: middle;
         }
-        .swiper-pagination {
-            display: none !important;
+        .trailer-info {
+            flex: 1;
+        }
+        .trailer-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: #fff;
+        }
+        .trailer-meta {
+            color: #ff66c4;
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .trailer-rating {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            color: #ffd700;
+        }
+        .trailer-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 8px;
+        }
+        .action-btn {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            border-radius: 8px;
+            padding: 8px 12px;
+            color: #fff;
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+        .action-btn:hover {
+            background: rgba(255,255,255,0.2);
+            transform: translateY(-1px);
+        }
+        .action-btn.like {
+            background: rgba(255,102,196,0.2);
+        }
+        .action-btn.like:hover {
+            background: rgba(255,102,196,0.3);
+        }
+        .action-btn.liked {
+            background: #ff66c4;
+        }
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255,255,255,0.1);
+            border-radius: 50%;
+            border-top-color: #ff66c4;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
         .loading-message {
             color: #fff;
@@ -93,6 +144,35 @@
             text-align: center;
             padding: 40px 0;
             font-size: 1.1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+        .error-message {
+            color: #ff4444;
+            text-align: center;
+            padding: 40px 20px;
+            font-size: 1.1rem;
+            line-height: 1.5;
+        }
+        .retry-btn {
+            background: #ff66c4;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-top: 16px;
+            transition: all 0.2s;
+        }
+        .retry-btn:hover {
+            background: #ff4db8;
+            transform: translateY(-1px);
+        }
+        .swiper-pagination {
+            display: none !important;
         }
         .swipe-overlay {
             position: absolute;
@@ -206,30 +286,60 @@
     let isUnmuted = false;
 
     async function fetchTrailers() {
-        // 1. Popüler filmleri çek
-        const res = await fetch(`https://api.themoviedb.org/3/movie/popular?api_key=${TMDB_API_KEY}&language=en-US&page=1`);
-        const data = await res.json();
-        const movies = data.results || [];
-        const slides = [];
-        for (const movie of movies) {
-            // 2. Her film için fragmanları çek
-            const vidRes = await fetch(`https://api.themoviedb.org/3/movie/${movie.id}/videos?api_key=${TMDB_API_KEY}&language=en-US`);
-            const vidData = await vidRes.json();
-            const trailer = (vidData.results || []).find(v => v.type === 'Trailer' && v.site === 'YouTube');
-            if (!trailer) continue;
-            // 3. Slide HTML'i oluştur
-            const youtubeId = trailer.key;
-            const title = movie.title;
-            const year = (movie.release_date || '').split('-')[0] || '';
-            const poster = movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : '';
-            slides.push({ youtubeId, title, year, poster });
-            if (slides.length >= 10) break; // 10 fragman yeterli
+        try {
+            swiperWrapper.innerHTML = `
+                <div class="loading-message">
+                    <div class="loading-spinner"></div>
+                    <div>Loading trailers...</div>
+                </div>
+            `;
+            
+            const res = await fetch(`https://api.themoviedb.org/3/movie/popular?api_key=${TMDB_API_KEY}&language=en-US&page=1`);
+            if (!res.ok) throw new Error('Failed to fetch movies');
+            
+            const data = await res.json();
+            const movies = data.results || [];
+            const slides = [];
+            
+            for (const movie of movies) {
+                const vidRes = await fetch(`https://api.themoviedb.org/3/movie/${movie.id}/videos?api_key=${TMDB_API_KEY}&language=en-US`);
+                if (!vidRes.ok) continue;
+                
+                const vidData = await vidRes.json();
+                const trailer = (vidData.results || []).find(v => v.type === 'Trailer' && v.site === 'YouTube');
+                if (!trailer) continue;
+                
+                slides.push({
+                    youtubeId: trailer.key,
+                    title: movie.title,
+                    year: (movie.release_date || '').split('-')[0] || '',
+                    poster: movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : '',
+                    rating: movie.vote_average ? movie.vote_average.toFixed(1) : null,
+                    overview: movie.overview
+                });
+                
+                if (slides.length >= 10) break;
+            }
+            
+            if (!slides.length) {
+                throw new Error('No trailers found');
+            }
+            
+            return slides;
+        } catch (error) {
+            console.error('Error fetching trailers:', error);
+            swiperWrapper.innerHTML = `
+                <div class="error-message">
+                    <div>Oops! Something went wrong.</div>
+                    <div style="opacity: 0.7; font-size: 0.9rem;">${error.message}</div>
+                    <button class="retry-btn" onclick="initFeed()">Try Again</button>
+                </div>
+            `;
+            return [];
         }
-        return slides;
     }
 
-    function createSlide({youtubeId, title, year, poster}) {
-        // Lazy: only poster at first, iframe is injected dynamically
+    function createSlide({youtubeId, title, year, poster, rating, overview}) {
         return `
         <div class="swiper-slide" data-youtubeid="${youtubeId}">
             <button class="back-arrow-btn" onclick="window.location.href='dashboard.html'" aria-label="Back to Dashboard">
@@ -238,10 +348,26 @@
             <div class="trailer-poster-lazy" style="background-image:url('${poster}')"></div>
             <div class="swipe-overlay"></div>
             <div class="trailer-info-flex">
-                <img class="trailer-poster" src="${poster}" alt="${title}">
-                <div>
+                <img class="trailer-poster" src="${poster}" alt="${title}" loading="lazy">
+                <div class="trailer-info">
                     <div class="trailer-title">${title}</div>
-                    <div class="trailer-meta">${year}</div>
+                    <div class="trailer-meta">
+                        <span>${year}</span>
+                        <span class="trailer-rating">
+                            <i class="fas fa-star"></i>
+                            ${rating || 'N/A'}
+                        </span>
+                    </div>
+                    <div class="trailer-actions">
+                        <button class="action-btn like" onclick="toggleLike(this)">
+                            <i class="far fa-heart"></i>
+                            <span>Like</span>
+                        </button>
+                        <button class="action-btn" onclick="window.open('https://www.youtube.com/watch?v=${youtubeId}', '_blank')">
+                            <i class="fas fa-external-link-alt"></i>
+                            <span>Watch</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -303,16 +429,19 @@
             direction: 'vertical',
             slidesPerView: 1,
             spaceBetween: 0,
-            mousewheel: true,
+            mousewheel: {
+                sensitivity: 1,
+                releaseOnEdges: true
+            },
             simulateTouch: true,
             allowTouchMove: true,
             grabCursor: true,
-            pagination: {
-                el: '.swiper-pagination',
-                clickable: true,
+            speed: 800,
+            effect: 'fade',
+            fadeEffect: {
+                crossFade: true
             },
-            speed: 600,
-            effect: 'slide',
+            watchSlidesProgress: true,
             on: {
                 slideChange: function () {
                     // Lazy load: aktif ve komşu slide'lara iframe ekle, diğerlerinden kaldır
@@ -336,6 +465,12 @@
                     });
                     isUnmuted = false;
                     addUnmuteButton(swiper.slides[swiper.activeIndex]);
+                },
+                touchStart: function() {
+                    document.body.style.overflow = 'hidden';
+                },
+                touchEnd: function() {
+                    document.body.style.overflow = '';
                 }
             }
         });
@@ -367,6 +502,19 @@
             }, 100);
         });
     });
+
+    function toggleLike(btn) {
+        btn.classList.toggle('liked');
+        const icon = btn.querySelector('i');
+        const text = btn.querySelector('span');
+        if (btn.classList.contains('liked')) {
+            icon.className = 'fas fa-heart';
+            text.textContent = 'Liked';
+        } else {
+            icon.className = 'far fa-heart';
+            text.textContent = 'Like';
+        }
+    }
     </script>
 </body>
 </html> 

@@ -992,7 +992,7 @@ function initializeSearch() {
         const query = e.target.value.trim();
         if (searchTimeout) clearTimeout(searchTimeout);
         searchTimeout = setTimeout(() => performSearch(query), 300);
-    });
+            });
 
     // Setup modal close button
     searchModalClose.addEventListener('click', () => {
@@ -1027,14 +1027,14 @@ async function performSearch(query) {
     }
 
     resultGrid.innerHTML = '<div class="search-loading">Searching...</div>';
-
+            
     try {
         // Search both movies and TV shows
         const [movieRes, tvRes] = await Promise.all([
             fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}&language=en-US&page=1`),
             fetch(`https://api.themoviedb.org/3/search/tv?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}&language=en-US&page=1`)
-        ]);
-
+            ]);
+            
         if (!movieRes.ok || !tvRes.ok) {
             throw new Error('Search request failed');
             }
@@ -1042,8 +1042,8 @@ async function performSearch(query) {
             const [movieData, tvData] = await Promise.all([
             movieRes.json(),
             tvRes.json()
-        ]);
-
+            ]);
+            
         // Combine and sort results
         currentSearchResults = [
             ...movieData.results.map(item => ({ ...item, type: 'movie' })),
@@ -1054,8 +1054,8 @@ async function performSearch(query) {
         } catch (error) {
         console.error('Search error:', error);
         resultGrid.innerHTML = '<div class="search-error">Error performing search. Please try again.</div>';
+        }
     }
-}
 
 function displaySearchResults(results) {
     if (!results || results.length === 0) {
@@ -1068,8 +1068,8 @@ function displaySearchResults(results) {
     results.forEach(item => {
         const card = createSearchCard(item);
         resultGrid.appendChild(card);
-    });
-}
+                });
+            }
 
 function createSearchCard(item) {
     const isMovie = item.type === 'movie';
@@ -1101,7 +1101,7 @@ function createSearchCard(item) {
     // Add click handler
     card.addEventListener('click', () => {
         window.location.href = isMovie ? `movie.html?id=${item.id}` : `tv.html?id=${item.id}`;
-    });
+        });
 
     // Setup like button
     setupCardLikeButton(card, item.id, item.type);

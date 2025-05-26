@@ -761,8 +761,8 @@ body {
 
 .search-modal-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 24px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
     margin-top: 24px;
 }
 
@@ -773,6 +773,9 @@ body {
     transition: transform 0.2s, box-shadow 0.2s;
     cursor: pointer;
     position: relative;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
 }
 
 .search-film-card:hover {
@@ -787,13 +790,13 @@ body {
 }
 
 .search-film-info {
-    padding: 16px;
+    padding: 12px;
 }
 
 .search-film-title {
-    font-size: 1rem;
+    font-size: 0.9rem;
     font-weight: 600;
-    margin: 0 0 8px 0;
+    margin: 0 0 6px 0;
     color: #fff;
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -803,19 +806,19 @@ body {
 
 .search-film-meta {
     display: flex;
-    gap: 12px;
-    font-size: 0.9rem;
+    gap: 8px;
+    font-size: 0.8rem;
     color: rgba(255, 255, 255, 0.7);
 }
 
 .search-film-type {
     position: absolute;
-    top: 12px;
-    right: 12px;
+    top: 8px;
+    right: 8px;
     background: rgba(0, 0, 0, 0.8);
-    padding: 4px 8px;
-    border-radius: 6px;
-    font-size: 0.8rem;
+    padding: 4px 6px;
+    border-radius: 4px;
+    font-size: 0.7rem;
     color: #fff;
 }
 
@@ -869,17 +872,28 @@ body {
 }
 
 /* Responsive adjustments */
-@media (max-width: 768px) {
+@media (min-width: 768px) {
     .search-modal-grid {
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-        gap: 16px;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 24px;
     }
 
     .search-film-title {
-        font-size: 0.9rem;
+        font-size: 1rem;
     }
 
     .search-film-meta {
+        font-size: 0.9rem;
+    }
+
+    .search-film-info {
+        padding: 16px;
+    }
+
+    .search-film-type {
+        top: 12px;
+        right: 12px;
+        padding: 4px 8px;
         font-size: 0.8rem;
     }
 }
