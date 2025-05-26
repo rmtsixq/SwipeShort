@@ -4,27 +4,28 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Kullanıcı login kontrolü ve diğer dashboard fonksiyonları burada kalabilir
     firebase.auth().onAuthStateChanged(function(user) {
-        if (!user) {
-            window.location.href = 'auth.html?tab=login';
-        } else {
+        // Remove the automatic redirect to auth.html
+        // if (!user) {
+        //     window.location.href = 'auth.html?tab=login';
+        // } else {
             // Update profile section
             const profilePicture = document.getElementById('userProfilePicture');
             const profileName = document.getElementById('userProfileName');
             
             if (profilePicture && profileName) {
                 // Set profile picture
-                if (user.photoURL) {
+                if (user && user.photoURL) {
                     profilePicture.src = user.photoURL;
                 } else {
                     // Use first letter of email/name as avatar
-                    const initial = (user.displayName || user.email || '?')[0].toUpperCase();
+                    const initial = user ? (user.displayName || user.email || '?')[0].toUpperCase() : '?';
                     profilePicture.src = `https://ui-avatars.com/api/?name=${initial}&background=random&color=fff`;
                 }
                 
                 // Set profile name
-                profileName.textContent = user.displayName || user.email.split('@')[0] || 'User';
+                profileName.textContent = user ? (user.displayName || user.email.split('@')[0] || 'User') : 'Guest';
             }
-        }
+        // }
     });
 
     // Sadece header arama modalı için kodlar:
@@ -1162,4 +1163,34 @@ function setupCardLikeButton(card, id, type) {
             }
         };
     });
-} 
+}
+
+// Handle authentication state
+firebase.auth().onAuthStateChanged((user) => {
+    const loggedInSection = document.querySelector('.profile-section.logged-in');
+    const loggedOutSection = document.querySelector('.profile-section.logged-out');
+    
+    if (user) {
+        // User is signed in
+        loggedInSection.style.display = 'flex';
+        loggedOutSection.style.display = 'none';
+        
+        // Update profile picture and name
+        const profilePicture = document.getElementById('userProfilePicture');
+        const profileName = document.getElementById('userProfileName');
+        
+        if (user.photoURL) {
+            profilePicture.src = user.photoURL;
+        }
+        
+        if (user.displayName) {
+            profileName.textContent = user.displayName;
+        } else {
+            profileName.textContent = user.email;
+        }
+    } else {
+        // User is signed out
+        loggedInSection.style.display = 'none';
+        loggedOutSection.style.display = 'flex';
+    }
+}); 

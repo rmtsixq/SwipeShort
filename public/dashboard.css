@@ -947,3 +947,58 @@ body {
       width: 100%;
     }
   }
+
+.profile-section {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.auth-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.auth-btn.login {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.auth-btn.login:hover {
+    background: rgba(255, 255, 255, 0.15);
+    transform: translateY(-2px);
+}
+
+.auth-btn.signup {
+    background: linear-gradient(90deg, #a259ff 0%, #38cfff 100%);
+    color: #fff;
+    border: none;
+}
+
+.auth-btn.signup:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(56, 207, 255, 0.3);
+}
+
+.auth-btn i {
+    font-size: 1rem;
+}
+
+@media (max-width: 900px) {
+    .auth-btn {
+        padding: 6px 12px;
+        font-size: 0.9rem;
+    }
+    
+    .auth-btn i {
+        font-size: 0.9rem;
+    }
+}
