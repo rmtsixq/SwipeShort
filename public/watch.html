@@ -35,6 +35,7 @@
             border-radius: 18px;
             padding: 8px 18px;
             transition: background 0.2s, color 0.2s;
+            border: 1px solid #38cfff;
         }
         .back-btn:hover {
             background: #38cfff;
@@ -303,11 +304,14 @@
                 border-radius: 12px;
             }
         }
+       
     </style>
 </head>
 <body>
     <div class="watch-header">
-        <a href="dashboard.html" class="back-btn"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+        <button class="back-btn" onclick="window.history.length > 1 ? window.history.back() : window.location.href='dashboard.html'">
+            <i class="fas fa-arrow-left"></i> Go Back
+        </button>
         <span id="movie-title" class="movie-title">Loading...</span>
     </div>
     <div class="watch-container">

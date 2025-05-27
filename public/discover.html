@@ -289,17 +289,10 @@
     const TMDB_API_KEY = 'fda9bed2dd52a349ecb7cfe38b050ca5';
     const swiperWrapper = document.getElementById('swiperWrapper');
     let isUnmuted = false;
+    let swiper; // Global swiper instance
 
     async function fetchTrailers() {
         try {
-            // Loading mesajını güncelle
-            swiperWrapper.innerHTML = `
-                <div class="loading-message">
-                    <div class="loading-spinner"></div>
-                    <div>Discovering amazing trailers...</div>
-                </div>
-            `;
-            
             // Farklı kategorilerden filmleri al
             const categories = [
                 { type: 'popular', page: Math.floor(Math.random() * 5) + 1 },
@@ -474,23 +467,17 @@
 
     async function loadMoreContent() {
         if (isLoading || !hasMoreContent) return;
-        
         isLoading = true;
-        currentPage++;
-        
         try {
             const newSlides = await fetchTrailers();
             if (newSlides.length === 0) {
                 hasMoreContent = false;
                 return;
             }
-            
-            const newSlidesHTML = newSlides.map(createSlide).join('');
-            swiperWrapper.insertAdjacentHTML('beforeend', newSlidesHTML);
-            
-            // Yeni slide'ları Swiper'a ekle
-            swiper.appendSlide(newSlidesHTML);
-            
+            // Sadece HTML string olarak ekle
+            newSlides.forEach(slideData => {
+                swiper.appendSlide(createSlide(slideData));
+            });
         } catch (error) {
             console.error('Error loading more content:', error);
         } finally {
@@ -500,6 +487,13 @@
 
     async function initFeed() {
         try {
+            // İlk yüklemede loading mesajı göster
+            swiperWrapper.innerHTML = `
+                <div class="loading-message">
+                    <div class="loading-spinner"></div>
+                    <div>Discovering amazing trailers...</div>
+                </div>
+            `;
             const slides = await fetchTrailers();
             if (!slides.length) {
                 swiperWrapper.innerHTML = `
@@ -514,7 +508,7 @@
             swiperWrapper.innerHTML = slides.map(createSlide).join('');
             
             // Swiper.js initialization
-            const swiper = new Swiper('.swiper', {
+            swiper = new Swiper('.swiper', {
                 direction: 'vertical',
                 slidesPerView: 1,
                 spaceBetween: 0,

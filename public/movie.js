@@ -108,7 +108,7 @@ async function loadMovieDetails() {
             startBtn.disabled = false;
             startBtn.title = '';
             startBtn.onclick = () => {
-                window.open(`watch.html?id=${movieId}`, '_blank');
+                window.location.href = `watch.html?id=${movieId}`;
             };
         } else {
             startBtn.disabled = true;

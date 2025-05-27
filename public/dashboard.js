@@ -1163,7 +1163,7 @@ function setupCardLikeButton(card, id, type) {
             }
         };
     });
-}
+} 
 
 // Handle authentication state
 firebase.auth().onAuthStateChanged((user) => {

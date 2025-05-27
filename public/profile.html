@@ -193,14 +193,18 @@
                         document.getElementById('likedCount').textContent = totalLikes;
                     });
 
-                    // Get watched movies count (you'll need to implement this collection)
-                    db.collection('watched').where('userId', '==', user.uid).get()
+                    // Get watched movies count
+                    db.collectionGroup('userWatched')
+                        .where('userId', '==', user.uid)
+                        .get()
                         .then(snapshot => {
                             document.getElementById('watchedCount').textContent = snapshot.size;
                         });
 
                     // Get comments count
-                    db.collection('comments').where('userId', '==', user.uid).get()
+                    db.collectionGroup('userComments')
+                        .where('uid', '==', user.uid)
+                        .get()
                         .then(snapshot => {
                             document.getElementById('commentCount').textContent = snapshot.size;
                         });

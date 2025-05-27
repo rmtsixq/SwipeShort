@@ -156,7 +156,7 @@ async function loadEpisodes(seasonNumber) {
                         <span class="episode-like-count">${likeCount}</span>
                     </div>
                     <p class="episode-overview">${ep.overview || ''}</p>
-                    <button class="episode-watch-btn" onclick="window.open('watch.html?tv=${getTvIdFromUrl()}&season=${ep.season_number}&episode=${ep.episode_number}','_blank')">Watch</button>
+                    <button class="episode-watch-btn" onclick="window.location.href='watch.html?tv=${getTvIdFromUrl()}&season=${ep.season_number}&episode=${ep.episode_number}'">Watch</button>
                 </div>
             `;
             const likeBtn = epDiv.querySelector('.episode-like-btn');
