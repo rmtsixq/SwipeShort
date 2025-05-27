@@ -8,9 +8,72 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Fira+Mono&display=swap" rel="stylesheet">
+    <style>
+        #robot-container {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 96px;
+            height: 96px;
+            z-index: 1000;
+            pointer-events: none;
+        }
+
+        #robot-character {
+            width: 96px;
+            height: 96px;
+            background-size: 96px 96px;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+
+        .robot-idle-right {
+            background-image: url('images/idle right.png');
+        }
+
+        .robot-idle-left {
+            background-image: url('images/idle left.png');
+        }
+
+        .robot-walk-right {
+            background-image: url('images/right.png');
+        }
+
+        .robot-walk-left {
+            background-image: url('images/left.png');
+        }
+
+        .robot-loading {
+            background-image: url('images/loading.gif');
+            animation: loading 1s linear infinite;
+        }
+
+        @keyframes loading {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            #robot-container {
+                width: 72px;
+                height: 72px;
+                bottom: 20px;
+                right: 20px;
+            }
+            
+            #robot-character {
+                width: 72px;
+                height: 72px;
+                background-size: 72px 72px;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="dashboard-outer">
+        <div id="robot-container">
+            <div id="robot-character" class="robot-idle-right"></div>
+        </div>
         <div class="dashboard-header">
             <div class="header-logo">
                 <img src="/images/logo.png" alt="SwipeShort Logo" class="header-logo-img" />

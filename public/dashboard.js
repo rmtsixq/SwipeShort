@@ -1,7 +1,112 @@
 // Firebase initialization requires config file and CDN!
 // This file should be called at the bottom of dashboard.html
 
+// Robot Character Class
+class RobotCharacter {
+    constructor() {
+        this.robot = document.getElementById('robot-character');
+        this.container = document.getElementById('robot-container');
+        this.isMoving = false;
+        this.currentDirection = 'right';
+        this.currentX = window.innerWidth - 100;
+        this.screenBounds = {
+            minX: 0,
+            maxX: window.innerWidth - 96,
+            minY: 0,
+            maxY: window.innerHeight - 96
+        };
+        
+        this.init();
+    }
+
+    init() {
+        this.container.style.left = `${this.currentX}px`;
+        this.setIdleState('right');
+        window.addEventListener('resize', () => this.updateScreenBounds());
+        this.startMovement();
+    }
+
+    setIdleState(direction) {
+        this.robot.className = '';
+        this.robot.classList.add(`robot-idle-${direction}`);
+        this.currentDirection = direction;
+    }
+
+    updateScreenBounds() {
+        this.screenBounds = {
+            minX: 0,
+            maxX: window.innerWidth - 96,
+            minY: 0,
+            maxY: window.innerHeight - 96
+        };
+    }
+
+    async startMovement() {
+        while (true) {
+            if (!this.isMoving) {
+                if (Math.random() < 0.5) {
+                    await this.move();
+                } else {
+                    await this.sleep(Math.random() * 1000 + 1000);
+                }
+            }
+            await this.sleep(300);
+        }
+    }
+
+    async move() {
+        if (this.isMoving) return;
+        this.isMoving = true;
+
+        const direction = Math.random() > 0.5 ? 'right' : 'left';
+        this.robot.className = '';
+        this.robot.classList.add(`robot-walk-${direction}`);
+
+        const distance = Math.random() * 200 + 200;
+        const targetX = direction === 'right'
+            ? Math.min(this.currentX + distance, this.screenBounds.maxX)
+            : Math.max(this.currentX - distance, this.screenBounds.minX);
+
+        const duration = Math.abs(targetX - this.currentX) * 30;
+        const startTime = performance.now();
+
+        const animate = (currentTime) => {
+            if (!this.isMoving) return;
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            this.currentX = this.currentX + (targetX - this.currentX) * progress;
+            this.container.style.left = `${this.currentX}px`;
+
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                this.currentX = targetX;
+                this.container.style.left = `${this.currentX}px`;
+                this.isMoving = false;
+                this.setIdleState(direction);
+            }
+        };
+
+        requestAnimationFrame(animate);
+    }
+
+    sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    startLoading() {
+        this.robot.className = '';
+        this.robot.classList.add('robot-loading');
+    }
+
+    stopLoading() {
+        this.setIdleState(this.currentDirection);
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
+    new RobotCharacter();
+
     // Kullanıcı login kontrolü ve diğer dashboard fonksiyonları burada kalabilir
     firebase.auth().onAuthStateChanged(function(user) {
         // Remove the automatic redirect to auth.html
