@@ -235,6 +235,36 @@
             font-weight: 700;
             margin: 0 0 18px 32px;
         }
+        .season-nav-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 16px;
+            padding: 0 16px;
+        }
+        .season-nav-btn {
+            background: linear-gradient(90deg,#23232b 0%,#23232b 100%);
+            color: #fff;
+            border: 1px solid #38cfff;
+            border-radius: 16px;
+            padding: 10px 22px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 2px 8px #0003;
+            opacity: 1;
+            transition: background 0.18s, color 0.18s, opacity 0.18s;
+            flex: 1;
+        }
+        .season-nav-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            border-color: #666;
+        }
+        .season-nav-btn:not(:disabled):hover {
+            background: #38cfff;
+            color: #111;
+        }
         .episode-list {
             width: 100%;
         }
@@ -339,6 +369,10 @@
                 <div class="episode-list-title">Season Episodes</div>
                 <div class="episode-list" id="episodeList">
                     <!-- Bölümler JS ile eklenecek -->
+                </div>
+                <div class="season-nav-buttons">
+                    <button id="prevSeasonBtn" class="season-nav-btn">Previous Season</button>
+                    <button id="nextSeasonBtn" class="season-nav-btn">Next Season</button>
                 </div>
             </div>
         </div>
@@ -528,6 +562,30 @@
                 };
                 episodeList.appendChild(btn);
             }
+            // Season navigation buttons
+            const prevSeasonBtn = document.getElementById('prevSeasonBtn');
+            const nextSeasonBtn = document.getElementById('nextSeasonBtn');
+            const currentSeason = parseInt(season);
+            
+            prevSeasonBtn.disabled = (currentSeason <= 1);
+            nextSeasonBtn.disabled = (currentSeason >= 5); // Assuming max 5 seasons
+
+            prevSeasonBtn.onclick = () => {
+                if (currentSeason > 1) {
+                    params.set('season', currentSeason - 1);
+                    params.set('episode', '1'); // Reset to first episode of new season
+                    window.location.search = params.toString();
+                }
+            };
+
+            nextSeasonBtn.onclick = () => {
+                if (currentSeason < 5) { // Assuming max 5 seasons
+                    params.set('season', currentSeason + 1);
+                    params.set('episode', '1'); // Reset to first episode of new season
+                    window.location.search = params.toString();
+                }
+            };
+
             // Video altı nav butonları
             const navBtns = document.getElementById('episodeNavBtns');
             navBtns.style.display = 'flex';
