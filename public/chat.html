@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat Interface</title>
+    <title>Chat with Botty</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -138,6 +139,112 @@
         .chat-messages::-webkit-scrollbar-thumb:hover {
             background: #52525b;
         }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+            font-size: 0.9rem;
+        }
+
+        .message-avatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .message-sender {
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .message-time {
+            color: #71717a;
+            font-size: 0.8rem;
+        }
+
+        .message-content {
+            line-height: 1.5;
+        }
+
+        .message-content p {
+            margin-bottom: 8px;
+        }
+
+        .message-content p:last-child {
+            margin-bottom: 0;
+        }
+
+        .message-content code {
+            background: rgba(0,0,0,0.2);
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+
+        .message-content pre {
+            background: rgba(0,0,0,0.2);
+            padding: 12px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 8px 0;
+        }
+
+        .message-content pre code {
+            background: none;
+            padding: 0;
+        }
+
+        .user-message .message-sender {
+            color: #93c5fd;
+        }
+
+        .assistant-message .message-sender {
+            color: #a1a1aa;
+        }
+
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 16px;
+            background: #3f3f46;
+            border-radius: 12px;
+            width: fit-content;
+            margin-bottom: 20px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .typing-indicator img {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background: #71717a;
+            border-radius: 50%;
+            animation: typingBounce 1.4s infinite;
+        }
+
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes typingBounce {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-4px); }
+        }
     </style>
 </head>
 <body>
@@ -167,6 +274,35 @@
             this.style.height = (this.scrollHeight) + 'px';
         });
 
+        // Format timestamp
+        function formatTime(date) {
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
+        // Show typing indicator
+        function showTypingIndicator() {
+            const indicator = document.createElement('div');
+            indicator.className = 'typing-indicator';
+            indicator.innerHTML = `
+                <img src="images/face.png" alt="Botty">
+                <div class="typing-dots">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+            `;
+            chatMessages.appendChild(indicator);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            return indicator;
+        }
+
+        // Remove typing indicator
+        function removeTypingIndicator(indicator) {
+            if (indicator && indicator.parentNode) {
+                indicator.parentNode.removeChild(indicator);
+            }
+        }
+
         // Send message function
         function sendMessage() {
             const message = messageInput.value.trim();
@@ -176,10 +312,14 @@
                 messageInput.value = '';
                 messageInput.style.height = 'auto';
                 
+                // Show typing indicator
+                const typingIndicator = showTypingIndicator();
+                
                 // Simulate assistant response (for now)
                 setTimeout(() => {
+                    removeTypingIndicator(typingIndicator);
                     addMessage('This is a simulated response.', 'assistant');
-                }, 1000);
+                }, 1500);
             }
         }
 
@@ -187,7 +327,22 @@
         function addMessage(text, type) {
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${type}-message`;
-            messageDiv.textContent = text;
+            
+            const time = formatTime(new Date());
+            const sender = type === 'user' ? 'You' : 'Botty';
+            const avatar = type === 'user' ? 'images/user.jpg' : 'images/face.png';
+            
+            messageDiv.innerHTML = `
+                <div class="message-header">
+                    <span class="message-sender">
+                        <img src="${avatar}" alt="${sender}" class="message-avatar">
+                        ${sender}
+                    </span>
+                    <span class="message-time">${time}</span>
+                </div>
+                <div class="message-content">${text}</div>
+            `;
+            
             chatMessages.appendChild(messageDiv);
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
