@@ -99,5 +99,51 @@
             <button class="send-button" id="sendButton">Send</button>
         </div>
     </div>
+
+    <script>
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const chatMessages = document.getElementById('chatMessages');
+
+        // Auto-resize textarea
+        messageInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+        });
+
+        // Send message function
+        function sendMessage() {
+            const message = messageInput.value.trim();
+            if (message) {
+                // Add user message
+                addMessage(message, 'user');
+                messageInput.value = '';
+                messageInput.style.height = 'auto';
+                
+                // Simulate assistant response (for now)
+                setTimeout(() => {
+                    addMessage('This is a simulated response.', 'assistant');
+                }, 1000);
+            }
+        }
+
+        // Add message to chat
+        function addMessage(text, type) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}-message`;
+            messageDiv.textContent = text;
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Event listeners
+        sendButton.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+    </script>
 </body>
 </html> 
