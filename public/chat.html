@@ -249,112 +249,28 @@
 </head>
 <body>
     <div class="chat-container">
-        <div class="chat-messages" id="chatMessages">
-            <!-- Messages will be added here -->
+        <div class="chat-messages">
+            <!-- Messages will be added here dynamically -->
+        </div>
+        <div class="typing-indicator" style="display: none;">
+            <img src="/images/face.png" alt="Botty">
+            <div class="typing-dots">
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+            </div>
         </div>
         <div class="input-container">
-            <textarea class="message-input" id="messageInput" placeholder="Type your message..." rows="1"></textarea>
-            <button class="send-button" id="sendButton">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M22 2L11 13M22 2L15 22L11 13L2 9L22 2Z"/>
+            <textarea class="message-input" placeholder="Type your message here..." rows="1"></textarea>
+            <button class="send-button">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
                 </svg>
                 Send
             </button>
         </div>
     </div>
-
-    <script>
-        const messageInput = document.getElementById('messageInput');
-        const sendButton = document.getElementById('sendButton');
-        const chatMessages = document.getElementById('chatMessages');
-
-        // Auto-resize textarea
-        messageInput.addEventListener('input', function() {
-            this.style.height = 'auto';
-            this.style.height = (this.scrollHeight) + 'px';
-        });
-
-        // Format timestamp
-        function formatTime(date) {
-            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        }
-
-        // Show typing indicator
-        function showTypingIndicator() {
-            const indicator = document.createElement('div');
-            indicator.className = 'typing-indicator';
-            indicator.innerHTML = `
-                <img src="images/face.png" alt="Botty">
-                <div class="typing-dots">
-                    <div class="typing-dot"></div>
-                    <div class="typing-dot"></div>
-                    <div class="typing-dot"></div>
-                </div>
-            `;
-            chatMessages.appendChild(indicator);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-            return indicator;
-        }
-
-        // Remove typing indicator
-        function removeTypingIndicator(indicator) {
-            if (indicator && indicator.parentNode) {
-                indicator.parentNode.removeChild(indicator);
-            }
-        }
-
-        // Send message function
-        function sendMessage() {
-            const message = messageInput.value.trim();
-            if (message) {
-                // Add user message
-                addMessage(message, 'user');
-                messageInput.value = '';
-                messageInput.style.height = 'auto';
-                
-                // Show typing indicator
-                const typingIndicator = showTypingIndicator();
-                
-                // Simulate assistant response (for now)
-                setTimeout(() => {
-                    removeTypingIndicator(typingIndicator);
-                    addMessage('This is a simulated response.', 'assistant');
-                }, 1500);
-            }
-        }
-
-        // Add message to chat
-        function addMessage(text, type) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${type}-message`;
-            
-            const time = formatTime(new Date());
-            const sender = type === 'user' ? 'You' : 'Botty';
-            const avatar = type === 'user' ? 'images/user.jpg' : 'images/face.png';
-            
-            messageDiv.innerHTML = `
-                <div class="message-header">
-                    <span class="message-sender">
-                        <img src="${avatar}" alt="${sender}" class="message-avatar">
-                        ${sender}
-                    </span>
-                    <span class="message-time">${time}</span>
-                </div>
-                <div class="message-content">${text}</div>
-            `;
-            
-            chatMessages.appendChild(messageDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-
-        // Event listeners
-        sendButton.addEventListener('click', sendMessage);
-        messageInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-            }
-        });
-    </script>
+    <script src="chat.js"></script>
 </body>
 </html> 
