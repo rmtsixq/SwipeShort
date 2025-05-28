@@ -16,7 +16,8 @@
             width: 96px;
             height: 96px;
             z-index: 1000;
-            pointer-events: none;
+            cursor: pointer;
+            transition: transform 0.2s ease;
         }
 
         #robot-character {
@@ -73,6 +74,7 @@
     <div class="dashboard-outer">
         <div id="robot-container">
             <div id="robot-character" class="robot-idle-right"></div>
+            <div class="robot-speech-bubble" id="robotSpeechBubble"></div>
         </div>
         <div class="dashboard-header">
             <div class="header-logo">

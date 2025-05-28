@@ -6,6 +6,13 @@ class RobotCharacter {
     constructor() {
         this.robot = document.getElementById('robot-character');
         this.container = document.getElementById('robot-container');
+        this.speechBubble = document.getElementById('robotSpeechBubble');
+        
+        if (!this.robot || !this.container || !this.speechBubble) {
+            console.error('Robot elements not found in the DOM');
+            return;
+        }
+
         this.isMoving = false;
         this.currentDirection = 'right';
         this.currentX = window.innerWidth - 100;
@@ -24,6 +31,39 @@ class RobotCharacter {
         this.setIdleState('right');
         window.addEventListener('resize', () => this.updateScreenBounds());
         this.startMovement();
+        this.setupInteraction();
+    }
+
+    setupInteraction() {
+        this.container.addEventListener('click', () => {
+            this.speak("Let me help you find the perfect movie! Click again to chat with me.");
+            this.container.addEventListener('click', () => {
+                window.location.href = 'chat.html';
+            }, { once: true });
+        });
+    }
+
+    showRandomTip() {
+        const tips = [
+            "Hey! I can help you find great movies and TV shows. Just use the search bar at the top!",
+            "Did you know? You can filter movies by genre, year, and rating using the filter panel.",
+            "Try clicking on a movie card to see more details and watch the trailer!",
+            "You can switch between Movies and TV Shows using the tabs above.",
+            "Need help? Just click on me anytime for tips and guidance!"
+        ];
+
+        const randomTip = tips[Math.floor(Math.random() * tips.length)];
+        this.speak(randomTip);
+    }
+
+    speak(message) {
+        this.speechBubble.textContent = message;
+        this.speechBubble.classList.add('visible');
+        
+        // Hide the speech bubble after 5 seconds
+        setTimeout(() => {
+            this.speechBubble.classList.remove('visible');
+        }, 5000);
     }
 
     setIdleState(direction) {
@@ -104,6 +144,7 @@ class RobotCharacter {
     }
 }
 
+// Initialize robot when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     new RobotCharacter();
 
@@ -1272,30 +1313,21 @@ function setupCardLikeButton(card, id, type) {
 
 // Handle authentication state
 firebase.auth().onAuthStateChanged((user) => {
-    const loggedInSection = document.querySelector('.profile-section.logged-in');
-    const loggedOutSection = document.querySelector('.profile-section.logged-out');
+    // Update profile section
+    const profilePicture = document.getElementById('userProfilePicture');
+    const profileName = document.getElementById('userProfileName');
     
-    if (user) {
-        // User is signed in
-        loggedInSection.style.display = 'flex';
-        loggedOutSection.style.display = 'none';
-        
-        // Update profile picture and name
-        const profilePicture = document.getElementById('userProfilePicture');
-        const profileName = document.getElementById('userProfileName');
-        
-        if (user.photoURL) {
+    if (profilePicture && profileName) {
+        // Set profile picture
+        if (user && user.photoURL) {
             profilePicture.src = user.photoURL;
+        } else {
+            // Use first letter of email/name as avatar
+            const initial = user ? (user.displayName || user.email || '?')[0].toUpperCase() : '?';
+            profilePicture.src = `https://ui-avatars.com/api/?name=${initial}&background=random&color=fff`;
         }
         
-        if (user.displayName) {
-            profileName.textContent = user.displayName;
-        } else {
-            profileName.textContent = user.email;
-        }
-    } else {
-        // User is signed out
-        loggedInSection.style.display = 'none';
-        loggedOutSection.style.display = 'flex';
+        // Set profile name
+        profileName.textContent = user ? (user.displayName || user.email.split('@')[0] || 'User') : 'Guest';
     }
 }); 

@@ -1002,3 +1002,53 @@ body {
         font-size: 0.9rem;
     }
 }
+
+#robot-container {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 96px;
+    height: 96px;
+    z-index: 1000;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+#robot-container:hover {
+    transform: scale(1.05);
+}
+
+.robot-speech-bubble {
+    position: absolute;
+    bottom: 110px;
+    right: 0;
+    background: rgba(40, 40, 50, 0.95);
+    padding: 16px;
+    border-radius: 12px;
+    max-width: 280px;
+    color: #fff;
+    font-size: 0.95rem;
+    line-height: 1.4;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    pointer-events: none;
+}
+
+.robot-speech-bubble.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.robot-speech-bubble::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    right: 20px;
+    width: 0;
+    height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-top: 8px solid rgba(40, 40, 50, 0.95);
+}
