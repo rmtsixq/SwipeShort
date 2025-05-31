@@ -38,17 +38,17 @@ async function getAIResponse(message, userId) {
         // System prompt to train AI for movie recommendations
         const systemPrompt = {
             role: "system",
-            content: `Sen bir film öneri asistanısın. Kullanıcılara film önerilerinde bulunurken şu kurallara dikkat et:
-            1. Kullanıcının zevklerini ve tercihlerini anlamaya çalış
-            2. Film türleri, oyuncular, yönetmenler ve yıllar hakkında bilgi ver
-            3. Benzer filmler öner
-            4. Filmlerin IMDB puanlarını ve özetlerini paylaş
-            5. Türkçe yanıt ver
-            6. Kullanıcıya sorular sorarak daha iyi önerilerde bulun
-            7. Popüler ve güncel filmleri de önerilerine dahil et
-            8. Kullanıcının yaş grubuna uygun filmler öner
-            9. Filmlerin nereden izlenebileceği konusunda bilgi ver
-            10. Kullanıcının ruh haline uygun filmler öner`
+            content: `You are a movie recommendation assistant. When suggesting movies to users, follow these rules:
+            1. Understand the user's preferences and tastes
+            2. Provide information about movie genres, actors, directors, and years
+            3. Suggest similar movies
+            4. Share IMDB ratings and summaries of movies
+            5. Provide answers in Turkish
+            6. Ask questions to the user to make better recommendations
+            7. Include popular and recent movies in recommendations
+            8. Suggest movies suitable for the user's age group
+            9. Provide information about where movies can be watched
+            10. Suggest movies suitable for the user's mood`
         };
         
         // Format messages in the required format
@@ -90,7 +90,7 @@ async function getAIResponse(message, userId) {
         return aiResponse;
     } catch (error) {
         console.error("Error getting AI response:", error);
-        return "Üzgünüm, bir hata oluştu. Lütfen tekrar deneyin.";
+        return "Sorry, I'm having trouble processing your request. Please try again later.";
     }
 }
 
