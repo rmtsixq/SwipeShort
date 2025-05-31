@@ -10,28 +10,79 @@ const execPromise = util.promisify(exec);
 const { v4: uuidv4 } = require('uuid');
 const axios = require('axios');
 const cors = require('cors');
+const { HfInference } = require('@huggingface/inference');
 require('dotenv').config();
+
+// HuggingFace API setup
+const HUGGINGFACE_API_KEY = process.env.HUGGINGFACE_API_KEY;
+const MODEL_ID = "deepseek-ai/DeepSeek-V3-0324";
+const PROVIDER = "novita";
+
+// Initialize HuggingFace client
+const hf = new HfInference(HUGGINGFACE_API_KEY);
+
+// Chat history to maintain context
+const chatHistories = new Map();
+
+// Get AI response using HuggingFace API
+async function getAIResponse(message, userId) {
+    try {
+        // Initialize chat history for new users
+        if (!chatHistories.has(userId)) {
+            chatHistories.set(userId, []);
+        }
+        
+        // Get user's chat history
+        const history = chatHistories.get(userId);
+        
+        // Format messages in the required format
+        const messages = [
+            ...history.map(msg => ({
+                role: msg.startsWith("User:") ? "user" : "assistant",
+                content: msg.replace(/^(User:|Assistant:)\s*/, "")
+            })),
+            { role: "user", content: message }
+        ];
+        
+        // Call HuggingFace API using chatCompletion
+        const result = await hf.chatCompletion({
+            provider: PROVIDER,
+            model: MODEL_ID,
+            messages: messages,
+            parameters: {
+                max_new_tokens: 100,
+                temperature: 0.7,
+                top_p: 0.9,
+                repetition_penalty: 1.2,
+                do_sample: true
+            }
+        });
+        
+        // Get the generated text
+        const aiResponse = result.choices[0].message.content.trim();
+        
+        // Add messages to history
+        history.push(`User: ${message}`);
+        history.push(`Assistant: ${aiResponse}`);
+        
+        // Keep only last 5 message pairs
+        if (history.length > 10) {
+            history.splice(0, 2);
+        }
+        
+        return aiResponse;
+    } catch (error) {
+        console.error("Error getting AI response:", error);
+        return "Üzgünüm, bir hata oluştu. Lütfen tekrar deneyin.";
+    }
+}
 
 const app = express();
 const PORT = process.env.PORT || 8080;
 const upload = multer({ dest: process.env.UPLOAD_DIR || 'uploads/' });
 
-// Check and create directories
-const uploadsDir = path.join(__dirname, process.env.UPLOAD_DIR || 'uploads');
-const clipsDir = path.join(__dirname, process.env.CLIPS_DIR || 'clips');
-
-if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir);
-}
-if (!fs.existsSync(clipsDir)) {
-    fs.mkdirSync(clipsDir);
-}
-
-// Middleware
-app.use(express.static('public')); // for serving static files (html, css, js)
-app.use('/uploads', express.static('uploads'));
-app.use('/clips', express.static('clips'));
-app.use('/videos', express.static('videos'));
+// Serve static files from public directory
+app.use(express.static('public'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -497,13 +548,19 @@ app.post('/api/chat', async (req, res) => {
             return res.status(400).json({ error: 'Message is required' });
         }
 
-        // TODO: Burada gerçek AI entegrasyonu yapılacak
-        // Şimdilik basit bir yanıt döndürelim
-        const response = `I received your message: "${message}". This is a temporary response until we integrate the AI service.`;
+        // Generate a unique user ID if not provided
+        const userId = req.headers['x-user-id'] || Date.now().toString();
+
+        // Get AI response
+        const response = await getAIResponse(message, userId);
         
         res.json({ response });
     } catch (error) {
         console.error('Chat endpoint error:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        res.status(500).json({ 
+            error: 'Internal server error',
+            response: 'Sorry, I am having trouble right now. Please try again later.'
+        });
     }
 });
+

@@ -18,14 +18,19 @@ class ChatBot {
                 this.handleSendMessage();
             }
         });
+
+        // Auto-resize textarea
+        this.messageInput.addEventListener('input', () => {
+            this.messageInput.style.height = 'auto';
+            this.messageInput.style.height = (this.messageInput.scrollHeight) + 'px';
+        });
     }
 
     addWelcomeMessage() {
-        const welcomeMessage = {
+        this.addMessage({
             role: 'assistant',
-            content: "Hi! I'm your movie recommendation assistant. I can help you find the perfect movie or TV show. Just tell me what you're in the mood for!"
-        };
-        this.addMessage(welcomeMessage);
+            content: "Hello! I'm your AI assistant. How can I help you today?"
+        });
     }
 
     async handleSendMessage() {
@@ -35,6 +40,7 @@ class ChatBot {
         // Add user message
         this.addMessage({ role: 'user', content: message });
         this.messageInput.value = '';
+        this.messageInput.style.height = 'auto';
 
         // Show typing indicator
         this.showTypingIndicator();
@@ -84,10 +90,7 @@ class ChatBot {
         
         messageElement.innerHTML = `
             <div class="message-header">
-                <img src="${message.role === 'user' ? '/images/user.jpg' : '/images/face.png'}" 
-                     alt="${message.role}" 
-                     class="message-avatar">
-                <span class="message-sender">${message.role === 'user' ? 'You' : 'MovieBot'}</span>
+                <span class="message-sender">${message.role === 'user' ? 'You' : 'Assistant'}</span>
                 <span class="message-time">${timeString}</span>
             </div>
             <div class="message-content">
@@ -105,12 +108,16 @@ class ChatBot {
     }
 
     showTypingIndicator() {
-        this.typingIndicator.style.display = 'flex';
-        this.scrollToBottom();
+        if (this.typingIndicator) {
+            this.typingIndicator.style.display = 'flex';
+            this.scrollToBottom();
+        }
     }
 
     hideTypingIndicator() {
-        this.typingIndicator.style.display = 'none';
+        if (this.typingIndicator) {
+            this.typingIndicator.style.display = 'none';
+        }
     }
 
     scrollToBottom() {
