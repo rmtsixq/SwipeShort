@@ -35,8 +35,25 @@ async function getAIResponse(message, userId) {
         // Get user's chat history
         const history = chatHistories.get(userId);
         
+        // System prompt to train AI for movie recommendations
+        const systemPrompt = {
+            role: "system",
+            content: `Sen bir film öneri asistanısın. Kullanıcılara film önerilerinde bulunurken şu kurallara dikkat et:
+            1. Kullanıcının zevklerini ve tercihlerini anlamaya çalış
+            2. Film türleri, oyuncular, yönetmenler ve yıllar hakkında bilgi ver
+            3. Benzer filmler öner
+            4. Filmlerin IMDB puanlarını ve özetlerini paylaş
+            5. Türkçe yanıt ver
+            6. Kullanıcıya sorular sorarak daha iyi önerilerde bulun
+            7. Popüler ve güncel filmleri de önerilerine dahil et
+            8. Kullanıcının yaş grubuna uygun filmler öner
+            9. Filmlerin nereden izlenebileceği konusunda bilgi ver
+            10. Kullanıcının ruh haline uygun filmler öner`
+        };
+        
         // Format messages in the required format
         const messages = [
+            systemPrompt,
             ...history.map(msg => ({
                 role: msg.startsWith("User:") ? "user" : "assistant",
                 content: msg.replace(/^(User:|Assistant:)\s*/, "")
@@ -50,8 +67,8 @@ async function getAIResponse(message, userId) {
             model: MODEL_ID,
             messages: messages,
             parameters: {
-                max_new_tokens: 100,
-                temperature: 0.7,
+                max_new_tokens: 250,
+                temperature: 0.8,
                 top_p: 0.9,
                 repetition_penalty: 1.2,
                 do_sample: true
