@@ -35,20 +35,20 @@ async function getAIResponse(message, userId) {
         // Get user's chat history
         const history = chatHistories.get(userId);
         
-        // System prompt to train AI for movie recommendations
+        // System prompt to train AI for movie recommendations (ENGLISH)
         const systemPrompt = {
             role: "system",
-            content: `You are a movie recommendation assistant. When suggesting movies to users, follow these rules:
-            1. Understand the user's preferences and tastes
-            2. Provide information about movie genres, actors, directors, and years
+            content: `You are a movie recommendation assistant. Your job is to help users find movies. Please follow these rules:
+            1. Try to understand the user's tastes and preferences
+            2. Provide information about genres, actors, directors, and years
             3. Suggest similar movies
-            4. Share IMDB ratings and summaries of movies
-            5. Provide answers in Turkish
-            6. Ask questions to the user to make better recommendations
-            7. Include popular and recent movies in recommendations
-            8. Suggest movies suitable for the user's age group
-            9. Provide information about where movies can be watched
-            10. Suggest movies suitable for the user's mood`
+            4. Share IMDB ratings and summaries
+            5. Always respond in English
+            6. Ask questions to make better recommendations
+            7. Include popular and recent movies in your suggestions
+            8. Suggest age-appropriate movies
+            9. Inform where the movies can be watched
+            10. Suggest movies suitable for the user's mood.`
         };
         
         // Format messages in the required format
@@ -556,6 +556,14 @@ app.get('/api/search-tv', async (req, res) => {
     }
 });
 
+// Function to extract IMDB IDs from AI response
+function extractIMDBIds(text) {
+    // Regular expression to match IMDB IDs (tt followed by 7-8 digits)
+    const imdbRegex = /tt\d{7,8}/g;
+    const matches = text.match(imdbRegex);
+    return matches ? [...new Set(matches)] : []; // Remove duplicates
+}
+
 // Chat endpoint
 app.post('/api/chat', async (req, res) => {
     try {
@@ -571,7 +579,13 @@ app.post('/api/chat', async (req, res) => {
         // Get AI response
         const response = await getAIResponse(message, userId);
         
-        res.json({ response });
+        // Extract IMDB IDs from the response
+        const imdbIds = extractIMDBIds(response);
+        
+        res.json({ 
+            response,
+            imdbIds // Send IMDB IDs to client
+        });
     } catch (error) {
         console.error('Chat endpoint error:', error);
         res.status(500).json({ 
