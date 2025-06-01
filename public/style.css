@@ -1454,7 +1454,123 @@ body, html {
     padding: 0 8px;
   }
 }
-/* === HEADER END === */
+
+@media (max-width: 768px) {
+    .main-header {
+        padding: 10px 20px;
+    }
+    .main-header__brand {
+        display: none; /* Hide ShortSwipe text on mobile */
+    }
+    .main-header__nav {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+    .main-header__auth-btn {
+        padding: 8px 12px;
+        font-size: 14px;
+        white-space: nowrap;
+    }
+    .main-header__divider {
+        display: none; /* Hide divider on mobile */
+    }
+    .watch-anywhere {
+        width: 95%;
+        padding: 30px 20px;
+        margin: 60px auto;
+        flex-direction: column;
+    }
+    .watch-anywhere__content {
+        padding-right: 0;
+        margin-bottom: 30px;
+        text-align: center;
+    }
+    .watch-anywhere__content h3 {
+        font-size: 2rem;
+        margin-bottom: 15px;
+    }
+    .watch-anywhere__content p {
+        font-size: 1.1rem;
+    }
+    .watch-anywhere__image {
+        min-height: 200px;
+    }
+    .watch-anywhere__image img {
+        max-width: 90%;
+    }
+    .features-grid {
+        grid-template-columns: 1fr;
+        padding: 20px 15px;
+        gap: 20px;
+    }
+    .feature-card {
+        padding: 20px;
+    }
+    .feature-card i {
+        font-size: 2rem;
+    }
+    .feature-card h3 {
+        font-size: 1.3rem;
+    }
+    .feature-card p {
+        font-size: 0.95rem;
+    }
+    .movie-slider__slide {
+        flex: 0 0 140px;
+    }
+    .movie-slider__slide img {
+        height: 210px;
+    }
+    .watch-clever-section {
+        padding: 40px 15px;
+    }
+    .watch-clever-section h2 {
+        font-size: 2rem;
+    }
+    .watch-clever-section p {
+        font-size: 1rem;
+        padding: 0 15px;
+    }
+    .watch-clever-section .button2 {
+        width: 160px;
+        height: 50px;
+        font-size: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .main-header {
+        padding: 8px 10px;
+    }
+    .main-header__logo {
+        width: 32px;
+        height: 32px;
+    }
+    .watch-anywhere__content h3 {
+        font-size: 1.8rem;
+    }
+    .watch-anywhere__content p {
+        font-size: 1rem;
+    }
+    .feature-card {
+        padding: 15px;
+    }
+    .movie-slider__slide {
+        flex: 0 0 120px;
+    }
+    .movie-slider__slide img {
+        height: 180px;
+    }
+    .watch-clever-section h2 {
+        font-size: 1.8rem;
+    }
+    .watch-clever-section .button2 {
+        width: 140px;
+        height: 45px;
+        font-size: 0.9rem;
+    }
+}
 
 /* Remove discover section styles */
 .discover-section,

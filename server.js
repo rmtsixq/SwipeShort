@@ -233,14 +233,14 @@ app.get('/api/clips', (req, res) => {
             console.error('Error reading clips directory:', err);
             return res.status(500).json({ error: 'Error reading clips directory' });
         }
-
+        
         const clips = files
             .filter(file => file.endsWith('.mp4'))
             .map(filename => ({
                 filename,
                 title: filename.replace('.mp4', '').replace(/_/g, ' ')
             }));
-
+            
         res.json(clips);
     });
 });
@@ -369,8 +369,8 @@ app.get('/proxy/stream', async (req, res) => {
     } catch (error) {
         console.error('Proxy Error: Exception during proxying', error);
         if (!res.headersSent) {
-            res.status(500).json({
-                error: 'Failed to proxy stream due to internal error',
+            res.status(500).json({ 
+                error: 'Failed to proxy stream due to internal error', 
                 details: error.message,
                 url: streamUrl,
                 stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
@@ -495,7 +495,7 @@ app.get('/api/get-cloudnestra-embed', async (req, res) => {
         }
         if (embedUrl) {
             console.log('Found embed URL:', embedUrl);
-            res.json({
+            res.json({ 
                 cloudnestraEmbedUrl: embedUrl,
                 source: source
             });
@@ -517,7 +517,7 @@ app.get('/api/get-cloudnestra-embed', async (req, res) => {
             errorMessage = 'Request timed out. Please try again.';
             statusCode = 504;
         }
-        res.status(statusCode).json({
+        res.status(statusCode).json({ 
             error: errorMessage,
             details: error.message
         });
@@ -570,7 +570,7 @@ function extractIMDBIds(text) {
 app.post('/api/chat', async (req, res) => {
     try {
         const { message } = req.body;
-
+        
         if (!message) {
             return res.status(400).json({ error: 'Message is required' });
         }
@@ -580,7 +580,7 @@ app.post('/api/chat', async (req, res) => {
 
         // Get AI response
         const response = await getAIResponse(message, userId);
-
+        
         // Extract IMDB IDs from the response
         const imdbIds = extractIMDBIds(response);
 
@@ -590,7 +590,7 @@ app.post('/api/chat', async (req, res) => {
         });
     } catch (error) {
         console.error('Chat endpoint error:', error);
-        res.status(500).json({
+        res.status(500).json({ 
             error: 'Internal server error',
             response: 'Sorry, I am having trouble right now. Please try again later.'
         });
