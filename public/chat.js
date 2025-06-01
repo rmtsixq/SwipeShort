@@ -114,25 +114,37 @@ class ChatBot {
                     posterElement.style.cursor = 'pointer';
                     posterElement.style.transition = 'transform 0.2s';
                     
-                    posterElement.innerHTML = `
+                    console.log('Creating poster for:', movie); // Debug log
+                    
+                    // Create a link element instead of a div
+                    const linkElement = document.createElement('a');
+                    linkElement.href = `/movie?id=${movie.imdbId}`;
+                    linkElement.style.textDecoration = 'none';
+                    linkElement.style.color = 'inherit';
+                    linkElement.style.display = 'block';
+                    
+                    linkElement.innerHTML = `
                         <img src="${posterUrl}" alt="${movie.title}" style="width: 100%; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
                         <div style="margin-top: 5px; font-size: 12px; color: #e4e4e7; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                             ${movie.title}
                         </div>
                     `;
                     
-                    posterElement.addEventListener('click', () => {
+                    linkElement.addEventListener('click', (e) => {
+                        e.preventDefault(); // Prevent default link behavior
+                        console.log('Link clicked for movie:', movie.title); // Debug log
                         window.location.href = `/movie?id=${movie.imdbId}`;
                     });
                     
-                    posterElement.addEventListener('mouseover', () => {
-                        posterElement.style.transform = 'scale(1.05)';
+                    linkElement.addEventListener('mouseover', () => {
+                        linkElement.style.transform = 'scale(1.05)';
                     });
                     
-                    posterElement.addEventListener('mouseout', () => {
-                        posterElement.style.transform = 'scale(1)';
+                    linkElement.addEventListener('mouseout', () => {
+                        linkElement.style.transform = 'scale(1)';
                     });
                     
+                    posterElement.appendChild(linkElement);
                     postersContainer.appendChild(posterElement);
                 }
             }
