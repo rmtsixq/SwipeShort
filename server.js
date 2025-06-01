@@ -584,9 +584,46 @@ app.post('/api/chat', async (req, res) => {
         // Extract IMDB IDs from the response
         const imdbIds = extractIMDBIds(response);
 
+        // Fetch movie details from TMDB for each IMDB ID
+        const apiKey = process.env.TMDB_API_KEY || 'fda9bed2dd52a349ecb7cfe38b050ca5';
+        const movieDetails = await Promise.all(
+            imdbIds.map(async (imdbId) => {
+                try {
+                    // First, find the TMDB ID using the IMDB ID
+                    const findUrl = `https://api.themoviedb.org/3/find/${imdbId}?api_key=${apiKey}&language=en-US&external_source=imdb_id`;
+                    const findResponse = await fetch(findUrl);
+                    const findData = await findResponse.json();
+
+                    if (findData.movie_results && findData.movie_results.length > 0) {
+                        const tmdbId = findData.movie_results[0].id;
+                        // Then get the movie details
+                        const detailsUrl = `https://api.themoviedb.org/3/movie/${tmdbId}?api_key=${apiKey}&language=en-US`;
+                        const detailsResponse = await fetch(detailsUrl);
+                        const detailsData = await detailsResponse.json();
+
+                        return {
+                            imdbId,
+                            title: detailsData.title,
+                            posterPath: detailsData.poster_path,
+                            overview: detailsData.overview,
+                            releaseDate: detailsData.release_date
+                        };
+                    }
+                    return null;
+                } catch (error) {
+                    console.error(`Error fetching details for IMDB ID ${imdbId}:`, error);
+                    return null;
+                }
+            })
+        );
+
+        // Filter out any null results
+        const validMovieDetails = movieDetails.filter(details => details !== null);
+
         res.json({
             response,
-            imdbIds // Send IMDB IDs to client
+            imdbIds,
+            movieDetails: validMovieDetails
         });
     } catch (error) {
         console.error('Chat endpoint error:', error);

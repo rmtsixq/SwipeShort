@@ -48,7 +48,11 @@ class ChatBot {
         try {
             const response = await this.getAIResponse(message);
             this.hideTypingIndicator();
-            this.addMessage({ role: 'assistant', content: response });
+            this.addMessage({ 
+                role: 'assistant', 
+                content: response.response, 
+                movieDetails: response.movieDetails 
+            });
         } catch (error) {
             console.error('Error getting AI response:', error);
             this.hideTypingIndicator();
@@ -74,19 +78,67 @@ class ChatBot {
             }
 
             const data = await response.json();
-            return data.response;
+            return data;
         } catch (error) {
             console.error('Error in getAIResponse:', error);
             throw error;
         }
     }
 
-    addMessage(message) {
+    async addMessage(message) {
         const messageElement = document.createElement('div');
         messageElement.className = `message ${message.role}-message`;
         
         const now = new Date();
         const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        
+        let content = this.formatMessage(message.content);
+        
+        // If there are movie details, display movie posters
+        if (message.movieDetails && message.movieDetails.length > 0) {
+            const postersContainer = document.createElement('div');
+            postersContainer.className = 'movie-posters';
+            postersContainer.style.display = 'flex';
+            postersContainer.style.gap = '10px';
+            postersContainer.style.marginTop = '10px';
+            postersContainer.style.overflowX = 'auto';
+            postersContainer.style.padding = '10px 0';
+            
+            for (const movie of message.movieDetails) {
+                if (movie.posterPath) {
+                    const posterUrl = `https://image.tmdb.org/t/p/w200${movie.posterPath}`;
+                    const posterElement = document.createElement('div');
+                    posterElement.className = 'movie-poster';
+                    posterElement.style.flex = '0 0 auto';
+                    posterElement.style.width = '120px';
+                    posterElement.style.cursor = 'pointer';
+                    posterElement.style.transition = 'transform 0.2s';
+                    
+                    posterElement.innerHTML = `
+                        <img src="${posterUrl}" alt="${movie.title}" style="width: 100%; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+                        <div style="margin-top: 5px; font-size: 12px; color: #e4e4e7; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                            ${movie.title}
+                        </div>
+                    `;
+                    
+                    posterElement.addEventListener('click', () => {
+                        window.location.href = `/movie?id=${movie.imdbId}`;
+                    });
+                    
+                    posterElement.addEventListener('mouseover', () => {
+                        posterElement.style.transform = 'scale(1.05)';
+                    });
+                    
+                    posterElement.addEventListener('mouseout', () => {
+                        posterElement.style.transform = 'scale(1)';
+                    });
+                    
+                    postersContainer.appendChild(posterElement);
+                }
+            }
+            
+            content += postersContainer.outerHTML;
+        }
         
         messageElement.innerHTML = `
             <div class="message-header">
@@ -94,7 +146,7 @@ class ChatBot {
                 <span class="message-time">${timeString}</span>
             </div>
             <div class="message-content">
-                ${this.formatMessage(message.content)}
+                ${content}
             </div>
         `;
         
