@@ -118,11 +118,24 @@ app.use(limiter);
 // Serve static files from public directory
 app.use(express.static('public'));
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-    console.error('Server error:', err);
-    res.status(500).json({ error: 'Internal server error', details: err.message });
-});
+// Centralized error handler middleware
+const errorHandler = (err, req, res, next) => {
+    console.error('Error:', err);
+
+    // Default error status and message
+    let status = err.status || 500;
+    let message = err.message || 'Internal Server Error';
+    let details = process.env.NODE_ENV === 'development' ? err.stack : undefined;
+
+    // Send error response
+    res.status(status).json({
+        error: message,
+        details: details
+    });
+};
+
+// Apply error handler after all routes
+app.use(errorHandler);
 
 // CORS header ekle (güvenli test için)
 app.use((req, res, next) => {
