@@ -147,6 +147,7 @@ class RobotCharacter {
 // Initialize robot when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     new RobotCharacter();
+    setupMajikTrigger();
 
     // Kullanıcı login kontrolü ve diğer dashboard fonksiyonları burada kalabilir
     firebase.auth().onAuthStateChanged(function(user) {
@@ -797,14 +798,35 @@ function showMajikModal() {
 
 // Sidebar search'a dinleme
 function setupMajikTrigger() {
-    const searchInput = document.querySelector('.sidebar-search input');
-    if (!searchInput) return;
-    searchInput.addEventListener('input', function() {
-        if (this.value.trim().toLowerCase() === 'majik') {
-            showMajikModal();
-            this.value = '';
-        }
-    });
+    console.log('Setting up MAJIK trigger...');
+    
+    // Sidebar search
+    const sidebarSearchInput = document.querySelector('.sidebar-search input');
+    console.log('Sidebar search input found:', !!sidebarSearchInput);
+    if (sidebarSearchInput) {
+        sidebarSearchInput.addEventListener('input', function() {
+            console.log('Sidebar search input value:', this.value);
+            if (this.value.trim().toLowerCase() === 'majik') {
+                console.log('MAJIK detected in sidebar search!');
+                showMajikModal();
+                this.value = '';
+            }
+        });
+    }
+
+    // Header search
+    const headerSearchInput = document.getElementById('mainSearchInput');
+    console.log('Header search input found:', !!headerSearchInput);
+    if (headerSearchInput) {
+        headerSearchInput.addEventListener('input', function() {
+            console.log('Header search input value:', this.value);
+            if (this.value.trim().toLowerCase() === 'majik') {
+                console.log('MAJIK detected in header search!');
+                showMajikModal();
+                this.value = '';
+            }
+        });
+    }
 }
 
 // Dummy majik game (şimdilik placeholder)

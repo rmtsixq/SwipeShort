@@ -11,6 +11,8 @@ const { v4: uuidv4 } = require('uuid');
 const axios = require('axios');
 const cors = require('cors');
 const { HfInference } = require('@huggingface/inference');
+const rateLimit = require('express-rate-limit');
+const helmet = require('helmet');
 require('dotenv').config();
 
 // HuggingFace API setup
@@ -31,10 +33,10 @@ async function getAIResponse(message, userId) {
         if (!chatHistories.has(userId)) {
             chatHistories.set(userId, []);
         }
-        
+
         // Get user's chat history
         const history = chatHistories.get(userId);
-        
+
         // System prompt to train AI for movie recommendations (ENGLISH)
         const systemPrompt = {
             role: "system",
@@ -51,7 +53,7 @@ async function getAIResponse(message, userId) {
             10. Suggest movies suitable for the user's mood.
             11. Always include IMDB IDs (tt format) for movies you mention.`
         };
-        
+
         // Format messages in the required format
         const messages = [
             systemPrompt,
@@ -61,7 +63,7 @@ async function getAIResponse(message, userId) {
             })),
             { role: "user", content: message }
         ];
-        
+
         // Call HuggingFace API using chatCompletion with optimized parameters
         const result = await hf.chatCompletion({
             provider: PROVIDER,
@@ -76,19 +78,19 @@ async function getAIResponse(message, userId) {
                 return_full_text: false // Don't return the full context
             }
         });
-        
+
         // Get the generated text
         const aiResponse = result.choices[0].message.content.trim();
-        
+
         // Add messages to history
         history.push(`User: ${message}`);
         history.push(`Assistant: ${aiResponse}`);
-        
+
         // Keep only last 3 message pairs (reduced from 5)
         if (history.length > 6) {
             history.splice(0, 2);
         }
-        
+
         return aiResponse;
     } catch (error) {
         console.error("Error getting AI response:", error);
@@ -99,6 +101,19 @@ async function getAIResponse(message, userId) {
 const app = express();
 const PORT = process.env.PORT || 8080;
 const upload = multer({ dest: process.env.UPLOAD_DIR || 'uploads/' });
+
+// Security middleware
+app.use(helmet());
+
+// Rate limiting
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // Limit each IP to 100 requests per windowMs
+    message: 'Too many requests from this IP, please try again later.'
+});
+
+// Apply rate limiting to all routes
+app.use(limiter);
 
 // Serve static files from public directory
 app.use(express.static('public'));
@@ -162,6 +177,23 @@ app.post('/upload', upload.fields([{ name: 'video' }, { name: 'duration' }]), (r
 
 // Now add JSON middleware for other endpoints
 app.use(express.json());
+
+// Input validation middleware
+const validateMovieSearch = (req, res, next) => {
+    const { query } = req.query;
+    if (!query || typeof query !== 'string' || query.length < 2) {
+        return res.status(400).json({ error: 'Invalid search query. Must be at least 2 characters long.' });
+    }
+    next();
+};
+
+const validateChatInput = (req, res, next) => {
+    const { message } = req.body;
+    if (!message || typeof message !== 'string' || message.length > 1000) {
+        return res.status(400).json({ error: 'Invalid message. Must be a string between 1 and 1000 characters.' });
+    }
+    next();
+};
 
 /* Video processing and splitting */
 async function splitVideoIntoClips(videoPath, transcript = [], customDuration = process.env.DEFAULT_CLIP_DURATION || 20) {
@@ -233,14 +265,14 @@ app.get('/api/clips', (req, res) => {
             console.error('Error reading clips directory:', err);
             return res.status(500).json({ error: 'Error reading clips directory' });
         }
-        
+
         const clips = files
             .filter(file => file.endsWith('.mp4'))
             .map(filename => ({
                 filename,
                 title: filename.replace('.mp4', '').replace(/_/g, ' ')
             }));
-            
+
         res.json(clips);
     });
 });
@@ -369,8 +401,8 @@ app.get('/proxy/stream', async (req, res) => {
     } catch (error) {
         console.error('Proxy Error: Exception during proxying', error);
         if (!res.headersSent) {
-            res.status(500).json({ 
-                error: 'Failed to proxy stream due to internal error', 
+            res.status(500).json({
+                error: 'Failed to proxy stream due to internal error',
                 details: error.message,
                 url: streamUrl,
                 stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
@@ -500,7 +532,7 @@ app.get('/api/get-cloudnestra-embed', async (req, res) => {
         }
         if (embedUrl) {
             console.log('Found embed URL:', embedUrl);
-            res.json({ 
+            res.json({
                 cloudnestraEmbedUrl: embedUrl,
                 source: source
             });
@@ -522,7 +554,7 @@ app.get('/api/get-cloudnestra-embed', async (req, res) => {
             errorMessage = 'Request timed out. Please try again.';
             statusCode = 504;
         }
-        res.status(statusCode).json({ 
+        res.status(statusCode).json({
             error: errorMessage,
             details: error.message
         });
@@ -530,7 +562,7 @@ app.get('/api/get-cloudnestra-embed', async (req, res) => {
 });
 
 // TMDB Movie Search endpoint
-app.get('/api/search-movie', async (req, res) => {
+app.get('/api/search-movie', validateMovieSearch, async (req, res) => {
     const query = req.query.query;
     const apiKey = process.env.TMDB_API_KEY || 'fda9bed2dd52a349ecb7cfe38b050ca5';
     if (!query) {
@@ -547,7 +579,7 @@ app.get('/api/search-movie', async (req, res) => {
 });
 
 // TMDB TV Search endpoint
-app.get('/api/search-tv', async (req, res) => {
+app.get('/api/search-tv', validateMovieSearch, async (req, res) => {
     const query = req.query.query;
     const apiKey = process.env.TMDB_API_KEY || 'fda9bed2dd52a349ecb7cfe38b050ca5';
     if (!query) {
@@ -575,7 +607,7 @@ function extractIMDBIds(text) {
 app.post('/api/chat', async (req, res) => {
     try {
         const { message } = req.body;
-        
+
         if (!message) {
             return res.status(400).json({ error: 'Message is required' });
         }
@@ -585,7 +617,7 @@ app.post('/api/chat', async (req, res) => {
 
         // Get AI response
         const response = await getAIResponse(message, userId);
-        
+
         // Extract IMDB IDs from the response
         const imdbIds = extractIMDBIds(response);
         console.log('Extracted IMDB IDs:', imdbIds); // Debug log
@@ -652,7 +684,7 @@ app.post('/api/chat', async (req, res) => {
         });
     } catch (error) {
         console.error('Chat endpoint error:', error);
-        res.status(500).json({ 
+        res.status(500).json({
             error: 'Internal server error',
             response: 'Sorry, I am having trouble right now. Please try again later.'
         });
