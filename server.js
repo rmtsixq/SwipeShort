@@ -1,3 +1,4 @@
+
 const express = require('express');
 const multer = require('multer');
 const ffmpeg = require('fluent-ffmpeg');
@@ -11,8 +12,6 @@ const { v4: uuidv4 } = require('uuid');
 const axios = require('axios');
 const cors = require('cors');
 const { HfInference } = require('@huggingface/inference');
-const rateLimit = require('express-rate-limit');
-const helmet = require('helmet');
 require('dotenv').config();
 
 // HuggingFace API setup
@@ -102,40 +101,14 @@ const app = express();
 const PORT = process.env.PORT || 8080;
 const upload = multer({ dest: process.env.UPLOAD_DIR || 'uploads/' });
 
-// Security middleware
-app.use(helmet());
-
-// Rate limiting
-const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // Limit each IP to 100 requests per windowMs
-    message: 'Too many requests from this IP, please try again later.'
-});
-
-// Apply rate limiting to all routes
-app.use(limiter);
-
 // Serve static files from public directory
 app.use(express.static('public'));
 
-// Centralized error handler middleware
-const errorHandler = (err, req, res, next) => {
-    console.error('Error:', err);
-
-    // Default error status and message
-    let status = err.status || 500;
-    let message = err.message || 'Internal Server Error';
-    let details = process.env.NODE_ENV === 'development' ? err.stack : undefined;
-
-    // Send error response
-    res.status(status).json({
-        error: message,
-        details: details
-    });
-};
-
-// Apply error handler after all routes
-app.use(errorHandler);
+// Error handling middleware
+app.use((err, req, res, next) => {
+    console.error('Server error:', err);
+    res.status(500).json({ error: 'Internal server error', details: err.message });
+});
 
 // CORS header ekle (güvenli test için)
 app.use((req, res, next) => {
@@ -190,23 +163,6 @@ app.post('/upload', upload.fields([{ name: 'video' }, { name: 'duration' }]), (r
 
 // Now add JSON middleware for other endpoints
 app.use(express.json());
-
-// Input validation middleware
-const validateMovieSearch = (req, res, next) => {
-    const { query } = req.query;
-    if (!query || typeof query !== 'string' || query.length < 2) {
-        return res.status(400).json({ error: 'Invalid search query. Must be at least 2 characters long.' });
-    }
-    next();
-};
-
-const validateChatInput = (req, res, next) => {
-    const { message } = req.body;
-    if (!message || typeof message !== 'string' || message.length > 1000) {
-        return res.status(400).json({ error: 'Invalid message. Must be a string between 1 and 1000 characters.' });
-    }
-    next();
-};
 
 /* Video processing and splitting */
 async function splitVideoIntoClips(videoPath, transcript = [], customDuration = process.env.DEFAULT_CLIP_DURATION || 20) {
@@ -575,7 +531,7 @@ app.get('/api/get-cloudnestra-embed', async (req, res) => {
 });
 
 // TMDB Movie Search endpoint
-app.get('/api/search-movie', validateMovieSearch, async (req, res) => {
+app.get('/api/search-movie', async (req, res) => {
     const query = req.query.query;
     const apiKey = process.env.TMDB_API_KEY || 'fda9bed2dd52a349ecb7cfe38b050ca5';
     if (!query) {
@@ -592,7 +548,7 @@ app.get('/api/search-movie', validateMovieSearch, async (req, res) => {
 });
 
 // TMDB TV Search endpoint
-app.get('/api/search-tv', validateMovieSearch, async (req, res) => {
+app.get('/api/search-tv', async (req, res) => {
     const query = req.query.query;
     const apiKey = process.env.TMDB_API_KEY || 'fda9bed2dd52a349ecb7cfe38b050ca5';
     if (!query) {
