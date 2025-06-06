@@ -339,15 +339,65 @@
         let currentUser = null;
         const db = firebase.firestore();
 
+        // Function to create/update user document
+        async function createUserDocument(user) {
+            try {
+                const userRef = db.collection('users').doc(user.uid);
+                const userDoc = await userRef.get();
+
+                if (!userDoc.exists) {
+                    // Create new user document
+                    await userRef.set({
+                        uid: user.uid,
+                        email: user.email,
+                        displayName: user.displayName || user.email.split('@')[0],
+                        photoURL: user.photoURL || '/default-avatar.png',
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        online: true,
+                        lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    console.log('New user document created');
+                } else {
+                    // Update existing user document
+                    await userRef.update({
+                        online: true,
+                        lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    console.log('User document updated');
+                }
+            } catch (error) {
+                console.error('Error creating/updating user document:', error);
+            }
+        }
+
+        // Function to update user's online status
+        function updateOnlineStatus(isOnline) {
+            if (currentUser) {
+                const userRef = db.collection('users').doc(currentUser.uid);
+                userRef.update({
+                    online: isOnline,
+                    lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            }
+        }
+
         // Auth state observer
-        firebase.auth().onAuthStateChanged(function(user) {
+        firebase.auth().onAuthStateChanged(async function(user) {
             currentUser = user;
             if (user) {
+                console.log('User logged in:', user.uid);
+                await createUserDocument(user);
                 loadFriends();
                 loadFriendRequests();
             } else {
+                console.log('No user logged in');
                 window.location.href = 'index.html';
             }
+        });
+
+        // Update online status when page is closed
+        window.addEventListener('beforeunload', () => {
+            updateOnlineStatus(false);
         });
 
         // Tab switching
@@ -385,14 +435,16 @@
         let searchTimeout;
         searchInput.addEventListener('input', (e) => {
             clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                const query = e.target.value.trim();
-                if (query.length >= 3) {
+            const query = e.target.value.trim();
+            console.log('Search input:', query); // Debug log
+            
+            if (query.length >= 1) { // Reduced to 1 character minimum
+                searchTimeout = setTimeout(() => {
                     searchUsers(query);
-                } else {
-                    document.getElementById('searchResults').innerHTML = '';
-                }
-            }, 300);
+                }, 100); // Reduced timeout for faster response
+            } else {
+                document.getElementById('searchResults').innerHTML = '';
+            }
         });
 
         async function searchUsers(query) {
@@ -400,34 +452,89 @@
             resultsDiv.innerHTML = '<div class="loading">Searching...</div>';
 
             try {
-                const usersSnapshot = await db.collection('users')
-                    .where('email', '>=', query)
-                    .where('email', '<=', query + '\uf8ff')
-                    .limit(5)
-                    .get();
+                console.log('Searching for:', query);
+                
+                // Get users collection
+                const usersRef = db.collection('users');
+                const allUsersSnapshot = await usersRef.get();
+                
+                if (allUsersSnapshot.empty) {
+                    console.log('No users found in collection');
+                    resultsDiv.innerHTML = '<div class="error">No users found in database</div>';
+                    return;
+                }
 
-                if (usersSnapshot.empty) {
+                console.log('Total users in database:', allUsersSnapshot.size);
+
+                // Filter users client-side
+                const filteredUsers = allUsersSnapshot.docs.filter(doc => {
+                    const userData = doc.data();
+                    console.log('Checking user:', userData);
+                    const searchableText = `${userData.displayName || ''} ${userData.email || ''}`.toLowerCase();
+                    return searchableText.includes(query.toLowerCase());
+                });
+
+                console.log('Filtered users:', filteredUsers.length);
+
+                if (filteredUsers.length === 0) {
                     resultsDiv.innerHTML = '<div class="no-results">No users found</div>';
                     return;
                 }
 
+                // Check existing friend requests
+                const existingRequests = await db.collection('friendRequests')
+                    .where('from', '==', currentUser.uid)
+                    .where('status', '==', 'pending')
+                    .get();
+
+                const pendingRequests = new Set();
+                existingRequests.forEach(doc => {
+                    pendingRequests.add(doc.data().to);
+                });
+
+                // Check existing friendships
+                const existingFriends = await db.collection('friends')
+                    .where('users', 'array-contains', currentUser.uid)
+                    .get();
+
+                const friendIds = new Set();
+                existingFriends.forEach(doc => {
+                    const users = doc.data().users;
+                    users.forEach(id => {
+                        if (id !== currentUser.uid) {
+                            friendIds.add(id);
+                        }
+                    });
+                });
+
                 resultsDiv.innerHTML = '';
-                usersSnapshot.forEach(doc => {
+                filteredUsers.forEach(doc => {
                     const userData = doc.data();
                     if (userData.uid !== currentUser.uid) {
                         const userDiv = document.createElement('div');
                         userDiv.className = 'search-result-item';
+                        
+                        let buttonHtml = '';
+                        if (friendIds.has(doc.id)) {
+                            buttonHtml = '<button class="accept-btn" disabled>Friends</button>';
+                        } else if (pendingRequests.has(doc.id)) {
+                            buttonHtml = '<button class="accept-btn" disabled>Request Sent</button>';
+                        } else {
+                            buttonHtml = `<button class="accept-btn" onclick="sendFriendRequest('${doc.id}')">Add Friend</button>`;
+                        }
+
                         userDiv.innerHTML = `
                             <img src="${userData.photoURL || '/default-avatar.png'}" alt="${userData.displayName}" class="search-result-avatar">
                             <div class="search-result-info">
-                                <h3 class="search-result-name">${userData.displayName}</h3>
-                                <p class="search-result-email">${userData.email}</p>
+                                <h3 class="search-result-name">${userData.displayName || 'No Name'}</h3>
+                                <p class="search-result-email">${userData.email || 'No Email'}</p>
                             </div>
-                            <button class="accept-btn" onclick="sendFriendRequest('${doc.id}')">Add</button>
+                            ${buttonHtml}
                         `;
                         resultsDiv.appendChild(userDiv);
                     }
                 });
+
             } catch (error) {
                 console.error('Error searching users:', error);
                 resultsDiv.innerHTML = '<div class="error">Error searching users</div>';
@@ -436,6 +543,30 @@
 
         async function sendFriendRequest(userId) {
             try {
+                // Check if request already exists
+                const existingRequest = await db.collection('friendRequests')
+                    .where('from', '==', currentUser.uid)
+                    .where('to', '==', userId)
+                    .where('status', '==', 'pending')
+                    .get();
+
+                if (!existingRequest.empty) {
+                    alert('Friend request already sent!');
+                    return;
+                }
+
+                // Check if already friends
+                const existingFriendship = await db.collection('friends')
+                    .where('users', 'array-contains', currentUser.uid)
+                    .get();
+
+                for (const doc of existingFriendship.docs) {
+                    if (doc.data().users.includes(userId)) {
+                        alert('You are already friends!');
+                        return;
+                    }
+                }
+
                 const requestRef = db.collection('friendRequests').doc();
                 await requestRef.set({
                     from: currentUser.uid,
@@ -443,6 +574,14 @@
                     status: 'pending',
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
+
+                // Update UI immediately
+                const button = document.querySelector(`[onclick="sendFriendRequest('${userId}')"]`);
+                if (button) {
+                    button.disabled = true;
+                    button.textContent = 'Request Sent';
+                }
+
                 alert('Friend request sent!');
             } catch (error) {
                 console.error('Error sending friend request:', error);
