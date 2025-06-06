@@ -745,6 +745,11 @@
             const friendsGrid = document.getElementById('friendsGrid');
             const friendCards = friendsGrid.querySelectorAll('.friend-card');
 
+            if (tabType === 'requests') {
+                displayFriendRequests();
+                return;
+            }
+
             friendCards.forEach(card => {
                 switch (tabType) {
                     case 'online':
@@ -758,6 +763,76 @@
                         card.style.display = 'flex';
                 }
             });
+        }
+
+        async function displayFriendRequests() {
+            const friendsGrid = document.getElementById('friendsGrid');
+            friendsGrid.innerHTML = '<div class="loading">Loading friend requests...</div>';
+
+            try {
+                const requestsSnapshot = await db.collection('friendRequests')
+                    .where('to', '==', currentUser.uid)
+                    .where('status', '==', 'pending')
+                    .get();
+
+                if (requestsSnapshot.empty) {
+                    friendsGrid.innerHTML = '<div class="no-friends">No pending friend requests</div>';
+                    return;
+                }
+
+                friendsGrid.innerHTML = '';
+                for (const doc of requestsSnapshot.docs) {
+                    const requestData = doc.data();
+                    const senderDoc = await db.collection('users').doc(requestData.from).get();
+                    const senderData = senderDoc.data();
+
+                    const requestCard = document.createElement('div');
+                    requestCard.className = 'friend-request-card';
+                    requestCard.innerHTML = `
+                        <img src="${senderData.photoURL || '/default-avatar.png'}" alt="${senderData.displayName}" class="friend-avatar">
+                        <div class="friend-info">
+                            <h3 class="friend-name">${senderData.displayName}</h3>
+                            <p class="friend-status">Wants to be your friend</p>
+                        </div>
+                        <div class="request-actions">
+                            <button class="accept-btn" onclick="handleFriendRequest('${doc.id}', '${requestData.from}', 'accept')">Accept</button>
+                            <button class="decline-btn" onclick="handleFriendRequest('${doc.id}', '${requestData.from}', 'decline')">Decline</button>
+                        </div>
+                    `;
+                    friendsGrid.appendChild(requestCard);
+                }
+            } catch (error) {
+                console.error('Error loading friend requests:', error);
+                friendsGrid.innerHTML = '<div class="error">Error loading friend requests</div>';
+            }
+        }
+
+        async function handleFriendRequest(requestId, senderId, action) {
+            try {
+                const requestRef = db.collection('friendRequests').doc(requestId);
+                
+                if (action === 'accept') {
+                    // Create friendship document
+                    await db.collection('friends').add({
+                        users: [currentUser.uid, senderId],
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                }
+                
+                // Update request status
+                await requestRef.update({
+                    status: action === 'accept' ? 'accepted' : 'declined',
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                // Refresh the display
+                displayFriendRequests();
+                loadFriends();
+                loadFriendRequests();
+            } catch (error) {
+                console.error('Error handling friend request:', error);
+                alert('Error handling friend request');
+            }
         }
 
         function startChat(friendId) {
@@ -819,3 +894,4 @@
     </script>
 </body>
 </html> 
+
