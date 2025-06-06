@@ -7,6 +7,14 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Firebase App (core) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <!-- Firebase Auth -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <!-- Firebase Firestore -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <!-- Firebase Config -->
+    <script src="firebase-config.js"></script>
     <style>
         body {
             background: #23232b;
@@ -131,6 +139,147 @@
         .add-friend-btn:hover {
             transform: translateY(-2px);
         }
+        .friend-request-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        .request-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .accept-btn {
+            background: #38cfff;
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.3s ease;
+        }
+        .accept-btn:hover {
+            background: #2ba8d8;
+        }
+        .decline-btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.3s ease;
+        }
+        .decline-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        .online-indicator {
+            width: 8px;
+            height: 8px;
+            background: #4CAF50;
+            border-radius: 50%;
+            margin-right: 8px;
+            display: inline-block;
+        }
+        .offline-indicator {
+            width: 8px;
+            height: 8px;
+            background: #666;
+            border-radius: 50%;
+            margin-right: 8px;
+            display: inline-block;
+        }
+        .add-friend-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background: #18181c;
+            padding: 32px;
+            border-radius: 24px;
+            width: 90%;
+            max-width: 500px;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin: 0;
+        }
+        .close-modal {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 8px;
+        }
+        .search-input {
+            width: 100%;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 12px;
+            color: #fff;
+            font-size: 1rem;
+            margin-bottom: 16px;
+        }
+        .search-input:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.15);
+        }
+        .search-results {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .search-result-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+        .search-result-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .search-result-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        .search-result-info {
+            flex: 1;
+        }
+        .search-result-name {
+            font-weight: 500;
+            margin: 0;
+        }
+        .search-result-email {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.7);
+            margin: 0;
+        }
         @media (max-width: 768px) {
             .friends-container {
                 margin: 20px;
@@ -168,23 +317,257 @@
         </div>
         <div class="friends-grid">
             <!-- Friend cards will be dynamically added here -->
-            <div class="friend-card">
-                <img src="/default-avatar.png" alt="Friend Avatar" class="friend-avatar">
-                <div class="friend-info">
-                    <h3 class="friend-name">John Doe</h3>
-                    <p class="friend-status">Watching: Inception</p>
-                </div>
-                <div class="friend-actions">
-                    <button class="friend-action-btn">
-                        <i class="fa-solid fa-message"></i>
-                    </button>
-                    <button class="friend-action-btn">
-                        <i class="fa-solid fa-ellipsis"></i>
-                    </button>
-                </div>
-            </div>
-            <!-- More friend cards will be added dynamically -->
         </div>
     </div>
+
+    <!-- Add Friend Modal -->
+    <div class="add-friend-modal" id="addFriendModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Add Friend</h2>
+                <button class="close-modal" id="closeModal">&times;</button>
+            </div>
+            <input type="text" class="search-input" id="friendSearchInput" placeholder="Search by email or username...">
+            <div class="search-results" id="searchResults">
+                <!-- Search results will be added here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase initialization
+        let currentUser = null;
+        const db = firebase.firestore();
+
+        // Auth state observer
+        firebase.auth().onAuthStateChanged(function(user) {
+            currentUser = user;
+            if (user) {
+                loadFriends();
+                loadFriendRequests();
+            } else {
+                window.location.href = 'index.html';
+            }
+        });
+
+        // Tab switching
+        const tabs = document.querySelectorAll('.friends-tab');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                const tabType = tab.dataset.tab;
+                filterFriends(tabType);
+            });
+        });
+
+        // Modal handling
+        const modal = document.getElementById('addFriendModal');
+        const addFriendBtn = document.querySelector('.add-friend-btn');
+        const closeModal = document.getElementById('closeModal');
+        const searchInput = document.getElementById('friendSearchInput');
+
+        addFriendBtn.addEventListener('click', () => {
+            modal.style.display = 'flex';
+        });
+
+        closeModal.addEventListener('click', () => {
+            modal.style.display = 'none';
+        });
+
+        window.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+
+        // Search functionality
+        let searchTimeout;
+        searchInput.addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                const query = e.target.value.trim();
+                if (query.length >= 3) {
+                    searchUsers(query);
+                } else {
+                    document.getElementById('searchResults').innerHTML = '';
+                }
+            }, 300);
+        });
+
+        async function searchUsers(query) {
+            const resultsDiv = document.getElementById('searchResults');
+            resultsDiv.innerHTML = '<div class="loading">Searching...</div>';
+
+            try {
+                const usersSnapshot = await db.collection('users')
+                    .where('email', '>=', query)
+                    .where('email', '<=', query + '\uf8ff')
+                    .limit(5)
+                    .get();
+
+                if (usersSnapshot.empty) {
+                    resultsDiv.innerHTML = '<div class="no-results">No users found</div>';
+                    return;
+                }
+
+                resultsDiv.innerHTML = '';
+                usersSnapshot.forEach(doc => {
+                    const userData = doc.data();
+                    if (userData.uid !== currentUser.uid) {
+                        const userDiv = document.createElement('div');
+                        userDiv.className = 'search-result-item';
+                        userDiv.innerHTML = `
+                            <img src="${userData.photoURL || '/default-avatar.png'}" alt="${userData.displayName}" class="search-result-avatar">
+                            <div class="search-result-info">
+                                <h3 class="search-result-name">${userData.displayName}</h3>
+                                <p class="search-result-email">${userData.email}</p>
+                            </div>
+                            <button class="accept-btn" onclick="sendFriendRequest('${doc.id}')">Add</button>
+                        `;
+                        resultsDiv.appendChild(userDiv);
+                    }
+                });
+            } catch (error) {
+                console.error('Error searching users:', error);
+                resultsDiv.innerHTML = '<div class="error">Error searching users</div>';
+            }
+        }
+
+        async function sendFriendRequest(userId) {
+            try {
+                const requestRef = db.collection('friendRequests').doc();
+                await requestRef.set({
+                    from: currentUser.uid,
+                    to: userId,
+                    status: 'pending',
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                alert('Friend request sent!');
+            } catch (error) {
+                console.error('Error sending friend request:', error);
+                alert('Error sending friend request');
+            }
+        }
+
+        async function loadFriends() {
+            const friendsGrid = document.querySelector('.friends-grid');
+            friendsGrid.innerHTML = '<div class="loading">Loading friends...</div>';
+
+            try {
+                const friendsSnapshot = await db.collection('friends')
+                    .where('users', 'array-contains', currentUser.uid)
+                    .get();
+
+                if (friendsSnapshot.empty) {
+                    friendsGrid.innerHTML = '<div class="no-friends">No friends yet</div>';
+                    return;
+                }
+
+                friendsGrid.innerHTML = '';
+                for (const doc of friendsSnapshot.docs) {
+                    const friendId = doc.data().users.find(id => id !== currentUser.uid);
+                    const friendDoc = await db.collection('users').doc(friendId).get();
+                    const friendData = friendDoc.data();
+
+                    const friendCard = document.createElement('div');
+                    friendCard.className = 'friend-card';
+                    friendCard.innerHTML = `
+                        <img src="${friendData.photoURL || '/default-avatar.png'}" alt="${friendData.displayName}" class="friend-avatar">
+                        <div class="friend-info">
+                            <h3 class="friend-name">${friendData.displayName}</h3>
+                            <p class="friend-status">
+                                <span class="${friendData.online ? 'online-indicator' : 'offline-indicator'}"></span>
+                                ${friendData.online ? 'Online' : 'Offline'}
+                            </p>
+                        </div>
+                        <div class="friend-actions">
+                            <button class="friend-action-btn" onclick="startChat('${friendId}')">
+                                <i class="fa-solid fa-message"></i>
+                            </button>
+                            <button class="friend-action-btn" onclick="showFriendOptions('${friendId}')">
+                                <i class="fa-solid fa-ellipsis"></i>
+                            </button>
+                        </div>
+                    `;
+                    friendsGrid.appendChild(friendCard);
+                }
+            } catch (error) {
+                console.error('Error loading friends:', error);
+                friendsGrid.innerHTML = '<div class="error">Error loading friends</div>';
+            }
+        }
+
+        async function loadFriendRequests() {
+            const requestsTab = document.querySelector('[data-tab="requests"]');
+            const requestsCount = await db.collection('friendRequests')
+                .where('to', '==', currentUser.uid)
+                .where('status', '==', 'pending')
+                .get()
+                .then(snapshot => snapshot.size);
+
+            if (requestsCount > 0) {
+                requestsTab.textContent = `Friend Requests (${requestsCount})`;
+            }
+        }
+
+        function filterFriends(tabType) {
+            const friendsGrid = document.querySelector('.friends-grid');
+            const friendCards = friendsGrid.querySelectorAll('.friend-card');
+
+            friendCards.forEach(card => {
+                switch (tabType) {
+                    case 'online':
+                        card.style.display = card.querySelector('.online-indicator') ? 'flex' : 'none';
+                        break;
+                    case 'recent':
+                        // Implement recent activity filtering
+                        card.style.display = 'flex';
+                        break;
+                    default:
+                        card.style.display = 'flex';
+                }
+            });
+        }
+
+        function startChat(friendId) {
+            // Implement chat functionality
+            console.log('Starting chat with:', friendId);
+        }
+
+        function showFriendOptions(friendId) {
+            // Implement friend options menu
+            console.log('Showing options for:', friendId);
+        }
+
+        // Real-time friend status updates
+        function setupFriendStatusListener() {
+            db.collection('users').where('friends', 'array-contains', currentUser.uid)
+                .onSnapshot(snapshot => {
+                    snapshot.docChanges().forEach(change => {
+                        if (change.type === 'modified') {
+                            const friendData = change.doc.data();
+                            updateFriendStatus(change.doc.id, friendData.online);
+                        }
+                    });
+                });
+        }
+
+        function updateFriendStatus(friendId, isOnline) {
+            const friendCard = document.querySelector(`[data-friend-id="${friendId}"]`);
+            if (friendCard) {
+                const statusIndicator = friendCard.querySelector('.online-indicator, .offline-indicator');
+                const statusText = friendCard.querySelector('.friend-status');
+                
+                statusIndicator.className = isOnline ? 'online-indicator' : 'offline-indicator';
+                statusText.textContent = isOnline ? 'Online' : 'Offline';
+            }
+        }
+
+        // Initialize
+        if (currentUser) {
+            setupFriendStatusListener();
+        }
+    </script>
 </body>
 </html> 
