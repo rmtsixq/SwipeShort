@@ -247,17 +247,27 @@
             background: rgba(255, 255, 255, 0.15);
         }
         .search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: #18181c;
+            border-radius: 12px;
+            margin-top: 8px;
             max-height: 300px;
             overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
         }
         .search-result-item {
             display: flex;
             align-items: center;
             gap: 12px;
-            padding: 12px;
-            border-radius: 12px;
+            padding: 12px 16px;
+            border-radius: 8px;
             cursor: pointer;
             transition: background 0.3s ease;
+            margin: 4px;
         }
         .search-result-item:hover {
             background: rgba(255, 255, 255, 0.1);
@@ -274,11 +284,36 @@
         .search-result-name {
             font-weight: 500;
             margin: 0;
+            color: #fff;
         }
         .search-result-email {
             font-size: 0.9rem;
             color: rgba(255, 255, 255, 0.7);
             margin: 0;
+        }
+        .search-result-username {
+            font-size: 0.85rem;
+            color: #38cfff;
+            margin: 2px 0 0 0;
+        }
+        .search-container {
+            position: relative;
+            margin-bottom: 24px;
+        }
+        .no-results {
+            padding: 16px;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        .loading {
+            padding: 16px;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        .error {
+            padding: 16px;
+            text-align: center;
+            color: #ff4d4d;
         }
         @media (max-width: 768px) {
             .friends-container {
@@ -327,9 +362,11 @@
                 <h2 class="modal-title">Add Friend</h2>
                 <button class="close-modal" id="closeModal">&times;</button>
             </div>
-            <input type="text" class="search-input" id="friendSearchInput" placeholder="Search by email or username...">
-            <div class="search-results" id="searchResults">
-                <!-- Search results will be added here -->
+            <div class="search-container">
+                <input type="text" class="search-input" id="friendSearchInput" placeholder="Search by username, name or email...">
+                <div class="search-results" id="searchResults">
+                    <!-- Search results will be added here -->
+                </div>
             </div>
         </div>
     </div>
@@ -388,7 +425,36 @@
             currentUser = user;
             if (user) {
                 console.log('User logged in:', user.uid);
-                await createUserDocument(user);
+                
+                // Ensure user document exists
+                const userRef = db.collection('users').doc(user.uid);
+                const userDoc = await userRef.get();
+                
+                if (!userDoc.exists) {
+                    // Create new user document
+                    await userRef.set({
+                        uid: user.uid,
+                        email: user.email,
+                        displayName: user.displayName || user.email.split('@')[0],
+                        username: (user.displayName || user.email.split('@')[0]).toLowerCase(),
+                        photoURL: user.photoURL || '/default-avatar.png',
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        online: true,
+                        lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    console.log('New user document created');
+                } else {
+                    // Update existing user document
+                    await userRef.update({
+                        online: true,
+                        lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
+                        email: user.email, // Update email in case it changed
+                        displayName: user.displayName || userDoc.data().displayName,
+                        photoURL: user.photoURL || userDoc.data().photoURL
+                    });
+                    console.log('User document updated');
+                }
+
                 loadFriends();
                 loadFriendRequests();
             } else {
@@ -455,15 +521,15 @@
 
             try {
                 console.log('Searching for:', query);
-                const searchQuery = query.toLowerCase();
+                const searchQuery = query.toLowerCase().trim();
                 
-                // Get users collection
+                // Get all users from the database
                 const usersRef = db.collection('users');
                 const allUsersSnapshot = await usersRef.get();
                 
                 if (allUsersSnapshot.empty) {
                     console.log('No users found in collection');
-                    resultsDiv.innerHTML = '<div class="error">No users found in database</div>';
+                    resultsDiv.innerHTML = '<div class="no-results">No users found in database</div>';
                     return;
                 }
 
@@ -474,7 +540,12 @@
                     const userData = doc.data();
                     console.log('Checking user:', userData);
                     
-                    // Search in multiple fields
+                    // Skip current user
+                    if (userData.uid === currentUser.uid) {
+                        return false;
+                    }
+
+                    // Search in multiple fields with partial matching
                     const searchableFields = [
                         userData.username || '',
                         userData.displayName || '',
@@ -482,7 +553,17 @@
                     ].map(field => field.toLowerCase());
 
                     // Check if any field contains the search query
-                    return searchableFields.some(field => field.includes(searchQuery));
+                    return searchableFields.some(field => {
+                        // For email addresses, check both full email and username part
+                        if (field.includes('@')) {
+                            const emailParts = field.split('@');
+                            return field.includes(searchQuery) || 
+                                   emailParts[0].includes(searchQuery) || 
+                                   emailParts[1].includes(searchQuery);
+                        }
+                        // For other fields, check if they contain the search query
+                        return field.includes(searchQuery);
+                    });
                 });
 
                 console.log('Filtered users:', filteredUsers.length);
@@ -521,30 +602,28 @@
                 resultsDiv.innerHTML = '';
                 filteredUsers.forEach(doc => {
                     const userData = doc.data();
-                    if (userData.uid !== currentUser.uid) {
-                        const userDiv = document.createElement('div');
-                        userDiv.className = 'search-result-item';
-                        
-                        let buttonHtml = '';
-                        if (friendIds.has(doc.id)) {
-                            buttonHtml = '<button class="accept-btn" disabled>Friends</button>';
-                        } else if (pendingRequests.has(doc.id)) {
-                            buttonHtml = '<button class="accept-btn" disabled>Request Sent</button>';
-                        } else {
-                            buttonHtml = `<button class="accept-btn" onclick="sendFriendRequest('${doc.id}')">Add Friend</button>`;
-                        }
-
-                        userDiv.innerHTML = `
-                            <img src="${userData.photoURL || '/default-avatar.png'}" alt="${userData.displayName}" class="search-result-avatar">
-                            <div class="search-result-info">
-                                <h3 class="search-result-name">${userData.displayName || 'No Name'}</h3>
-                                <p class="search-result-email">${userData.email || 'No Email'}</p>
-                                ${userData.username ? `<p class="search-result-username">@${userData.username}</p>` : ''}
-                            </div>
-                            ${buttonHtml}
-                        `;
-                        resultsDiv.appendChild(userDiv);
+                    const userDiv = document.createElement('div');
+                    userDiv.className = 'search-result-item';
+                    
+                    let buttonHtml = '';
+                    if (friendIds.has(doc.id)) {
+                        buttonHtml = '<button class="accept-btn" disabled>Friends</button>';
+                    } else if (pendingRequests.has(doc.id)) {
+                        buttonHtml = '<button class="accept-btn" disabled>Request Sent</button>';
+                    } else {
+                        buttonHtml = `<button class="accept-btn" onclick="sendFriendRequest('${doc.id}')">Add Friend</button>`;
                     }
+
+                    userDiv.innerHTML = `
+                        <img src="${userData.photoURL || '/default-avatar.png'}" alt="${userData.displayName}" class="search-result-avatar">
+                        <div class="search-result-info">
+                            <h3 class="search-result-name">${userData.displayName || 'No Name'}</h3>
+                            <p class="search-result-email">${userData.email || 'No Email'}</p>
+                            ${userData.username ? `<p class="search-result-username">@${userData.username}</p>` : ''}
+                        </div>
+                        ${buttonHtml}
+                    `;
+                    resultsDiv.appendChild(userDiv);
                 });
 
             } catch (error) {
@@ -719,6 +798,24 @@
         if (currentUser) {
             setupFriendStatusListener();
         }
+
+        // Add click outside handler to close search results
+        document.addEventListener('click', (e) => {
+            const searchContainer = document.querySelector('.search-container');
+            const searchResults = document.getElementById('searchResults');
+            
+            if (searchContainer && !searchContainer.contains(e.target)) {
+                searchResults.style.display = 'none';
+            }
+        });
+
+        // Show search results when input is focused
+        searchInput.addEventListener('focus', () => {
+            const searchResults = document.getElementById('searchResults');
+            if (searchResults.innerHTML.trim() !== '') {
+                searchResults.style.display = 'block';
+            }
+        });
     </script>
 </body>
 </html> 
