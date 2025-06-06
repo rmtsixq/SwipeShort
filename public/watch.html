@@ -267,6 +267,24 @@
         }
         .episode-list {
             width: 100%;
+            max-height: 400px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #38cfff #23232b;
+        }
+        .episode-list::-webkit-scrollbar {
+            width: 8px;
+        }
+        .episode-list::-webkit-scrollbar-track {
+            background: #23232b;
+            border-radius: 4px;
+        }
+        .episode-list::-webkit-scrollbar-thumb {
+            background: #38cfff;
+            border-radius: 4px;
+        }
+        .episode-list::-webkit-scrollbar-thumb:hover {
+            background: #2ba8d8;
         }
         .episode-list-item {
             width: 100%;
@@ -549,62 +567,80 @@
         const episode = params.get('episode');
         if (tvId && season && episode) {
             document.getElementById('episodeListPanel').style.display = '';
-            const totalEpisodes = 5;
             const episodeList = document.getElementById('episodeList');
             episodeList.innerHTML = '';
-            for (let i = 1; i <= totalEpisodes; i++) {
-                const btn = document.createElement('button');
-                btn.className = 'episode-list-item' + (String(i) === episode ? ' active' : '');
-                btn.textContent = `${season}. Season Episode ${i}`;
-                btn.onclick = () => {
-                    params.set('episode', i);
-                    window.location.search = params.toString();
+
+            // Fetch TV show details first to get total number of seasons
+            const apiKey = 'fda9bed2dd52a349ecb7cfe38b050ca5';
+            Promise.all([
+                fetch(`https://api.themoviedb.org/3/tv/${tvId}?api_key=${apiKey}&language=en-US`),
+                fetch(`https://api.themoviedb.org/3/tv/${tvId}/season/${season}?api_key=${apiKey}&language=en-US`)
+            ])
+            .then(responses => Promise.all(responses.map(res => res.json())))
+            .then(([showData, seasonData]) => {
+                const totalSeasons = showData.number_of_seasons;
+                const totalEpisodes = seasonData.episodes ? seasonData.episodes.length : 0;
+                
+                // Create episode buttons
+                for (let i = 1; i <= totalEpisodes; i++) {
+                    const btn = document.createElement('button');
+                    btn.className = 'episode-list-item' + (String(i) === episode ? ' active' : '');
+                    btn.textContent = `${season}. Season Episode ${i}`;
+                    btn.onclick = () => {
+                        params.set('episode', i);
+                        window.location.search = params.toString();
+                    };
+                    episodeList.appendChild(btn);
+                }
+
+                // Season navigation buttons
+                const prevSeasonBtn = document.getElementById('prevSeasonBtn');
+                const nextSeasonBtn = document.getElementById('nextSeasonBtn');
+                const currentSeason = parseInt(season);
+                
+                prevSeasonBtn.disabled = (currentSeason <= 1);
+                nextSeasonBtn.disabled = (currentSeason >= totalSeasons);
+
+                prevSeasonBtn.onclick = () => {
+                    if (currentSeason > 1) {
+                        params.set('season', currentSeason - 1);
+                        params.set('episode', '1');
+                        window.location.search = params.toString();
+                    }
                 };
-                episodeList.appendChild(btn);
-            }
-            // Season navigation buttons
-            const prevSeasonBtn = document.getElementById('prevSeasonBtn');
-            const nextSeasonBtn = document.getElementById('nextSeasonBtn');
-            const currentSeason = parseInt(season);
-            
-            prevSeasonBtn.disabled = (currentSeason <= 1);
-            nextSeasonBtn.disabled = (currentSeason >= 5); // Assuming max 5 seasons
 
-            prevSeasonBtn.onclick = () => {
-                if (currentSeason > 1) {
-                    params.set('season', currentSeason - 1);
-                    params.set('episode', '1'); // Reset to first episode of new season
-                    window.location.search = params.toString();
-                }
-            };
+                nextSeasonBtn.onclick = () => {
+                    if (currentSeason < totalSeasons) {
+                        params.set('season', currentSeason + 1);
+                        params.set('episode', '1');
+                        window.location.search = params.toString();
+                    }
+                };
 
-            nextSeasonBtn.onclick = () => {
-                if (currentSeason < 5) { // Assuming max 5 seasons
-                    params.set('season', currentSeason + 1);
-                    params.set('episode', '1'); // Reset to first episode of new season
-                    window.location.search = params.toString();
-                }
-            };
-
-            // Video altı nav butonları
-            const navBtns = document.getElementById('episodeNavBtns');
-            navBtns.style.display = 'flex';
-            const prevBtn = document.getElementById('prevEpisodeBtn');
-            const nextBtn = document.getElementById('nextEpisodeBtn');
-            prevBtn.disabled = (parseInt(episode) <= 1);
-            nextBtn.disabled = (parseInt(episode) >= totalEpisodes);
-            prevBtn.onclick = () => {
-                if (parseInt(episode) > 1) {
-                    params.set('episode', parseInt(episode) - 1);
-                    window.location.search = params.toString();
-                }
-            };
-            nextBtn.onclick = () => {
-                if (parseInt(episode) < totalEpisodes) {
-                    params.set('episode', parseInt(episode) + 1);
-                    window.location.search = params.toString();
-                }
-            };
+                // Video altı nav butonları
+                const navBtns = document.getElementById('episodeNavBtns');
+                navBtns.style.display = 'flex';
+                const prevBtn = document.getElementById('prevEpisodeBtn');
+                const nextBtn = document.getElementById('nextEpisodeBtn');
+                prevBtn.disabled = (parseInt(episode) <= 1);
+                nextBtn.disabled = (parseInt(episode) >= totalEpisodes);
+                prevBtn.onclick = () => {
+                    if (parseInt(episode) > 1) {
+                        params.set('episode', parseInt(episode) - 1);
+                        window.location.search = params.toString();
+                    }
+                };
+                nextBtn.onclick = () => {
+                    if (parseInt(episode) < totalEpisodes) {
+                        params.set('episode', parseInt(episode) + 1);
+                        window.location.search = params.toString();
+                    }
+                };
+            })
+            .catch(error => {
+                console.error('Error fetching data:', error);
+                episodeList.innerHTML = '<div class="error-message">Error loading episodes</div>';
+            });
         } else {
             // Dizi değilse nav butonlarını gizle
             const navBtns = document.getElementById('episodeNavBtns');

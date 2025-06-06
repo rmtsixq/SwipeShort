@@ -97,18 +97,37 @@ async function loadTvDetails() {
 function populateSeasonSelect(seasons) {
     const select = document.getElementById('season-select');
     select.innerHTML = '';
+    
+    // Add "All Episodes" option
+    const allOption = document.createElement('option');
+    allOption.value = 'all';
+    allOption.textContent = 'All Episodes';
+    select.appendChild(allOption);
+    
+    // Add "Special Episodes" option if season 0 exists
+    const specialSeason = seasons.find(s => s.season_number === 0);
+    if (specialSeason) {
+        const specialOption = document.createElement('option');
+        specialOption.value = '0';
+        specialOption.textContent = 'Special Episodes';
+        select.appendChild(specialOption);
+    }
+    
+    // Add regular seasons
     seasons.forEach(season => {
-        if (season.season_number === 0) return; // Skip specials
+        if (season.season_number === 0) return; // Skip specials as we already added them
         const option = document.createElement('option');
         option.value = season.season_number;
         option.textContent = `Season ${season.season_number}`;
         select.appendChild(option);
     });
+    
     if (seasons.length > 0) {
-        loadEpisodes(seasons[0].season_number);
+        loadEpisodes('all'); // Start with all episodes
     }
+    
     select.addEventListener('change', function() {
-        loadEpisodes(parseInt(this.value));
+        loadEpisodes(this.value);
     });
 }
 
@@ -116,89 +135,129 @@ async function loadEpisodes(seasonNumber) {
     const tvId = getTvIdFromUrl();
     const episodeListDiv = document.getElementById('episode-list');
     episodeListDiv.innerHTML = '<div class="loading">Loading episodes...</div>';
+    
     try {
-        const res = await fetch(`https://api.themoviedb.org/3/tv/${tvId}/season/${seasonNumber}?api_key=${TMDB_API_KEY}&language=en-US`);
-        if (!res.ok) throw new Error('Could not load episodes');
-        const data = await res.json();
-        episodeListDiv.innerHTML = '';
-        data.episodes.forEach(ep => {
-            const likeKey = `tv_${tvId}_s${ep.season_number}_e${ep.episode_number}`;
-            const db = firebase.firestore();
-            const likeDoc = db.collection('likes').doc(likeKey);
-            let likeCount = 0;
-            let liked = false;
-            // Firestore'dan like sayısını çek
-            likeDoc.get().then(doc => {
-                if (doc.exists && doc.data().count) {
-                    likeCount = doc.data().count;
-                }
-                updateLikeUI();
-            });
-            // Kullanıcıya özel like durumu (isteğe bağlı: localStorage ile tutulabilir)
-            liked = localStorage.getItem(likeKey + '_liked') === '1';
-            const epDiv = document.createElement('div');
-            epDiv.className = 'episode-card';
-            epDiv.innerHTML = `
-                <div class="episode-thumb">
-                    <img src="${ep.still_path ? 'https://image.tmdb.org/t/p/w300' + ep.still_path : '/images/no-poster.png'}" alt="${ep.name}" />
-                    <div class="episode-code">S${String(ep.season_number).padStart(2, '0')} E${String(ep.episode_number).padStart(2, '0')}</div>
-                </div>
-                <div class="episode-info">
-                    <h3 class="episode-title">${ep.name}</h3>
-                    <div class="episode-meta">
-                        <span class="episode-number">Episode ${ep.episode_number}</span>
-                        <span class="episode-date">${ep.air_date || ''}</span>
-                    </div>
-                    <div class="episode-like-area">
-                        <button class="episode-like-btn${liked ? ' liked' : ''}" title="Like this episode">
-                            <span class="like-icon">${liked ? '❤️' : '🤍'}</span>
-                        </button>
-                        <span class="episode-like-count">${likeCount}</span>
-                    </div>
-                    <p class="episode-overview">${ep.overview || ''}</p>
-                    <button class="episode-watch-btn" onclick="window.location.href='watch.html?tv=${getTvIdFromUrl()}&season=${ep.season_number}&episode=${ep.episode_number}'">Watch</button>
-                </div>
-            `;
-            const likeBtn = epDiv.querySelector('.episode-like-btn');
-            const likeIcon = likeBtn.querySelector('.like-icon');
-            const likeCountSpan = epDiv.querySelector('.episode-like-count');
-            function updateLikeUI() {
-                likeCountSpan.textContent = likeCount;
-                likeBtn.classList.toggle('liked', liked);
-                likeIcon.textContent = liked ? '❤️' : '🤍';
+        if (seasonNumber === 'all') {
+            // Load all seasons
+            const allEpisodes = [];
+            const seasons = Array.from(document.getElementById('season-select').options)
+                .map(opt => parseInt(opt.value))
+                .filter(val => !isNaN(val));
+            
+            for (const season of seasons) {
+                const res = await fetch(`https://api.themoviedb.org/3/tv/${tvId}/season/${season}?api_key=${TMDB_API_KEY}&language=en-US`);
+                if (!res.ok) continue;
+                const data = await res.json();
+                allEpisodes.push(...data.episodes);
             }
-            // Firestore'dan gerçek zamanlı güncelleme
-            likeDoc.onSnapshot(doc => {
-                if (doc.exists && doc.data().count !== undefined) {
-                    likeCount = doc.data().count;
-                    updateLikeUI();
+            
+            // Sort episodes by season and episode number
+            allEpisodes.sort((a, b) => {
+                if (a.season_number !== b.season_number) {
+                    return a.season_number - b.season_number;
                 }
+                return a.episode_number - b.episode_number;
             });
-            likeBtn.addEventListener('click', async function() {
-                if (!liked) {
-                    await db.runTransaction(async (transaction) => {
-                        const docSnap = await transaction.get(likeDoc);
-                        const current = docSnap.exists && docSnap.data().count ? docSnap.data().count : 0;
-                        transaction.set(likeDoc, { count: current + 1 }, { merge: true });
-                    });
-                    liked = true;
-                    localStorage.setItem(likeKey + '_liked', '1');
-                } else {
-                    await db.runTransaction(async (transaction) => {
-                        const docSnap = await transaction.get(likeDoc);
-                        const current = docSnap.exists && docSnap.data().count ? docSnap.data().count : 0;
-                        transaction.set(likeDoc, { count: Math.max(0, current - 1) }, { merge: true });
-                    });
-                    liked = false;
-                    localStorage.setItem(likeKey + '_liked', '0');
-                }
-                // Like sayısı Firestore'dan gerçek zamanlı güncellenecek
-            });
-            episodeListDiv.appendChild(epDiv);
-        });
+            
+            renderEpisodes(allEpisodes, tvId);
+        } else {
+            // Load specific season
+            const res = await fetch(`https://api.themoviedb.org/3/tv/${tvId}/season/${seasonNumber}?api_key=${TMDB_API_KEY}&language=en-US`);
+            if (!res.ok) throw new Error('Could not load episodes');
+            const data = await res.json();
+            renderEpisodes(data.episodes, tvId);
+        }
     } catch (error) {
         episodeListDiv.innerHTML = '<div class="error">Could not load episodes.</div>';
     }
+}
+
+function renderEpisodes(episodes, tvId) {
+    const episodeListDiv = document.getElementById('episode-list');
+    episodeListDiv.innerHTML = '';
+    
+    episodes.forEach(ep => {
+        const likeKey = `tv_${tvId}_s${ep.season_number}_e${ep.episode_number}`;
+        const db = firebase.firestore();
+        const likeDoc = db.collection('likes').doc(likeKey);
+        let likeCount = 0;
+        let liked = false;
+        
+        // Firestore'dan like sayısını çek
+        likeDoc.get().then(doc => {
+            if (doc.exists && doc.data().count) {
+                likeCount = doc.data().count;
+            }
+            updateLikeUI();
+        });
+        
+        // Kullanıcıya özel like durumu
+        liked = localStorage.getItem(likeKey + '_liked') === '1';
+        
+        const epDiv = document.createElement('div');
+        epDiv.className = 'episode-card';
+        epDiv.innerHTML = `
+            <div class="episode-thumb">
+                <img src="${ep.still_path ? 'https://image.tmdb.org/t/p/w300' + ep.still_path : '/images/no-poster.png'}" alt="${ep.name}" />
+                <div class="episode-code">S${String(ep.season_number).padStart(2, '0')} E${String(ep.episode_number).padStart(2, '0')}</div>
+            </div>
+            <div class="episode-info">
+                <h3 class="episode-title">${ep.name}</h3>
+                <div class="episode-meta">
+                    <span class="episode-number">${ep.season_number === 0 ? 'Special' : 'Season ' + ep.season_number} - Episode ${ep.episode_number}</span>
+                    <span class="episode-date">${ep.air_date || ''}</span>
+                </div>
+                <div class="episode-like-area">
+                    <button class="episode-like-btn${liked ? ' liked' : ''}" title="Like this episode">
+                        <span class="like-icon">${liked ? '❤️' : '🤍'}</span>
+                    </button>
+                    <span class="episode-like-count">${likeCount}</span>
+                </div>
+                <p class="episode-overview">${ep.overview || ''}</p>
+                <button class="episode-watch-btn" onclick="window.location.href='watch.html?tv=${tvId}&season=${ep.season_number}&episode=${ep.episode_number}'">Watch</button>
+            </div>
+        `;
+        
+        const likeBtn = epDiv.querySelector('.episode-like-btn');
+        const likeIcon = likeBtn.querySelector('.like-icon');
+        const likeCountSpan = epDiv.querySelector('.episode-like-count');
+        
+        function updateLikeUI() {
+            likeCountSpan.textContent = likeCount;
+            likeBtn.classList.toggle('liked', liked);
+            likeIcon.textContent = liked ? '❤️' : '🤍';
+        }
+        
+        // Firestore'dan gerçek zamanlı güncelleme
+        likeDoc.onSnapshot(doc => {
+            if (doc.exists && doc.data().count !== undefined) {
+                likeCount = doc.data().count;
+                updateLikeUI();
+            }
+        });
+        
+        likeBtn.addEventListener('click', async function() {
+            if (!liked) {
+                await db.runTransaction(async (transaction) => {
+                    const docSnap = await transaction.get(likeDoc);
+                    const current = docSnap.exists && docSnap.data().count ? docSnap.data().count : 0;
+                    transaction.set(likeDoc, { count: current + 1 }, { merge: true });
+                });
+                liked = true;
+                localStorage.setItem(likeKey + '_liked', '1');
+            } else {
+                await db.runTransaction(async (transaction) => {
+                    const docSnap = await transaction.get(likeDoc);
+                    const current = docSnap.exists && docSnap.data().count ? docSnap.data().count : 0;
+                    transaction.set(likeDoc, { count: Math.max(0, current - 1) }, { merge: true });
+                });
+                liked = false;
+                localStorage.setItem(likeKey + '_liked', '0');
+            }
+        });
+        
+        episodeListDiv.appendChild(epDiv);
+    });
 }
 
 // --- Like Button Firestore Logic ---
