@@ -346,17 +346,19 @@
                 const userDoc = await userRef.get();
 
                 if (!userDoc.exists) {
-                    // Create new user document
+                    // Create new user document with username
+                    const username = user.displayName || user.email.split('@')[0];
                     await userRef.set({
                         uid: user.uid,
                         email: user.email,
-                        displayName: user.displayName || user.email.split('@')[0],
+                        displayName: username,
+                        username: username.toLowerCase(), // Add username field for searching
                         photoURL: user.photoURL || '/default-avatar.png',
                         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                         online: true,
                         lastSeen: firebase.firestore.FieldValue.serverTimestamp()
                     });
-                    console.log('New user document created');
+                    console.log('New user document created with username:', username);
                 } else {
                     // Update existing user document
                     await userRef.update({
@@ -453,6 +455,7 @@
 
             try {
                 console.log('Searching for:', query);
+                const searchQuery = query.toLowerCase();
                 
                 // Get users collection
                 const usersRef = db.collection('users');
@@ -466,12 +469,20 @@
 
                 console.log('Total users in database:', allUsersSnapshot.size);
 
-                // Filter users client-side
+                // Filter users client-side with improved search
                 const filteredUsers = allUsersSnapshot.docs.filter(doc => {
                     const userData = doc.data();
                     console.log('Checking user:', userData);
-                    const searchableText = `${userData.displayName || ''} ${userData.email || ''}`.toLowerCase();
-                    return searchableText.includes(query.toLowerCase());
+                    
+                    // Search in multiple fields
+                    const searchableFields = [
+                        userData.username || '',
+                        userData.displayName || '',
+                        userData.email || ''
+                    ].map(field => field.toLowerCase());
+
+                    // Check if any field contains the search query
+                    return searchableFields.some(field => field.includes(searchQuery));
                 });
 
                 console.log('Filtered users:', filteredUsers.length);
@@ -528,6 +539,7 @@
                             <div class="search-result-info">
                                 <h3 class="search-result-name">${userData.displayName || 'No Name'}</h3>
                                 <p class="search-result-email">${userData.email || 'No Email'}</p>
+                                ${userData.username ? `<p class="search-result-username">@${userData.username}</p>` : ''}
                             </div>
                             ${buttonHtml}
                         `;
