@@ -305,17 +305,17 @@
     <div class="friends-container">
         <div class="friends-header">
             <h1 class="friends-title">Friends</h1>
-            <button class="add-friend-btn">
+            <button class="add-friend-btn" id="addFriendBtn">
                 <i class="fa-solid fa-user-plus"></i> Add Friend
             </button>
         </div>
         <div class="friends-tabs">
-            <button class="friends-tab active">All Friends</button>
-            <button class="friends-tab">Friend Requests</button>
-            <button class="friends-tab">Online</button>
-            <button class="friends-tab">Recently Active</button>
+            <button class="friends-tab active" data-tab="all">All Friends</button>
+            <button class="friends-tab" data-tab="requests">Friend Requests</button>
+            <button class="friends-tab" data-tab="online">Online</button>
+            <button class="friends-tab" data-tab="recent">Recently Active</button>
         </div>
-        <div class="friends-grid">
+        <div class="friends-grid" id="friendsGrid">
             <!-- Friend cards will be dynamically added here -->
         </div>
     </div>
@@ -363,7 +363,7 @@
 
         // Modal handling
         const modal = document.getElementById('addFriendModal');
-        const addFriendBtn = document.querySelector('.add-friend-btn');
+        const addFriendBtn = document.getElementById('addFriendBtn');
         const closeModal = document.getElementById('closeModal');
         const searchInput = document.getElementById('friendSearchInput');
 
@@ -451,7 +451,7 @@
         }
 
         async function loadFriends() {
-            const friendsGrid = document.querySelector('.friends-grid');
+            const friendsGrid = document.getElementById('friendsGrid');
             friendsGrid.innerHTML = '<div class="loading">Loading friends...</div>';
 
             try {
@@ -512,7 +512,7 @@
         }
 
         function filterFriends(tabType) {
-            const friendsGrid = document.querySelector('.friends-grid');
+            const friendsGrid = document.getElementById('friendsGrid');
             const friendCards = friendsGrid.querySelectorAll('.friend-card');
 
             friendCards.forEach(card => {
