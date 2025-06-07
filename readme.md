@@ -46,5 +46,5 @@ SwipeShort is a modern movie and video discovery platform inspired by TikTok/You
 
 ---
 
-![wakatime](https://github.com/user-attachments/assets/3253ebf9-9725-45e0-8e28-a174bc03a146)
+
 
