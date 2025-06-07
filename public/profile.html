@@ -118,17 +118,18 @@
 </head>
 <body>
     <div class="profile-container">
-        <a href="dashboard.html" class="back-btn">
-            <i class="fas fa-arrow-left"></i> Back to Dashboard
-        </a>
-                <div class="profile-header">
-            <img src="/default-avatar.png" alt="Profile Picture" class="profile-picture" id="userProfilePicture">
-            <div class="profile-info">
-                <h1 class="profile-name" id="userProfileName">Loading...</h1>
-                <p class="profile-email" id="userProfileEmail">Loading...</p>
-                        </div>
-                    </div>
-                        <div class="profile-stats">
+        <div class="profile-header">
+            <a href="friends.html" class="go-back-btn">
+                <i class="fa-solid fa-arrow-left"></i> Go Back
+            </a>
+            <h1 class="profile-title">Profile</h1>
+        </div>
+        <img src="/default-avatar.png" alt="Profile Picture" class="profile-picture" id="userProfilePicture">
+        <div class="profile-info">
+            <h1 class="profile-name" id="userProfileName">Loading...</h1>
+            <p class="profile-email" id="userProfileEmail">Loading...</p>
+        </div>
+        <div class="profile-stats">
             <div class="stat-card">
                 <h2 class="stat-value" id="likedCount">0</h2>
                 <p class="stat-label">Liked Movies</p>
@@ -136,17 +137,17 @@
             <div class="stat-card">
                 <h2 class="stat-value" id="watchedCount">0</h2>
                 <p class="stat-label">Watched Movies</p>
-                            </div>
+            </div>
             <div class="stat-card">
                 <h2 class="stat-value" id="commentCount">0</h2>
                 <p class="stat-label">Comments</p>
-                            </div>
-                        </div>
+            </div>
+        </div>
         <div class="profile-section-card">
             <h2>Liked Movies & TV Shows</h2>
             <div id="liked-movies-grid" class="liked-movies-grid"></div>
-                    </div>
-                </div>
+        </div>
+    </div>
 
     <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
@@ -154,61 +155,83 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     <script src="firebase-config.js"></script>
     <script>
+        // Get user ID from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const profileUserId = urlParams.get('id');
+
         // Check if user is logged in
-        firebase.auth().onAuthStateChanged(function(user) {
+        firebase.auth().onAuthStateChanged(async function(user) {
             if (!user) {
                 window.location.href = 'auth.html?tab=login';
-            } else {
-                // Update profile information
-                const profilePicture = document.getElementById('userProfilePicture');
-                const profileName = document.getElementById('userProfileName');
-                const profileEmail = document.getElementById('userProfileEmail');
-                
-                if (profilePicture && profileName && profileEmail) {
-                    // Set profile picture
-                    if (user.photoURL) {
-                        profilePicture.src = user.photoURL;
-                    } else {
-                        // Use first letter of email/name as avatar
-                        const initial = (user.displayName || user.email || '?')[0].toUpperCase();
-                        profilePicture.src = `https://ui-avatars.com/api/?name=${initial}&background=random&color=fff`;
-                    }
-                    
-                    // Set profile name and email
-                    profileName.textContent = user.displayName || user.email.split('@')[0] || 'User';
-                    profileEmail.textContent = user.email;
+                return;
+            }
 
-                    // Get user stats
-                    const db = firebase.firestore();
-                    
-                    // Get liked movies and TV shows count
-                    Promise.all([
-                        // Get liked movies
-                        db.collectionGroup('userLikes')
-                            .where('liked', '==', true)
-                            .where('userId', '==', user.uid)
-                            .get()
-                            .then(snapshot => snapshot.size)
-                    ]).then(([totalLikes]) => {
-                        document.getElementById('likedCount').textContent = totalLikes;
+            const db = firebase.firestore();
+            let targetUser = user;
+
+            // If profileUserId is provided and different from current user, fetch that user's data
+            if (profileUserId && profileUserId !== user.uid) {
+                try {
+                    const userDoc = await db.collection('users').doc(profileUserId).get();
+                    if (userDoc.exists) {
+                        targetUser = {
+                            ...user,
+                            ...userDoc.data(),
+                            uid: profileUserId
+                        };
+                    }
+                } catch (error) {
+                    console.error('Error fetching user data:', error);
+                }
+            }
+
+            // Update profile information
+            const profilePicture = document.getElementById('userProfilePicture');
+            const profileName = document.getElementById('userProfileName');
+            const profileEmail = document.getElementById('userProfileEmail');
+            
+            if (profilePicture && profileName && profileEmail) {
+                // Set profile picture
+                if (targetUser.photoURL) {
+                    profilePicture.src = targetUser.photoURL;
+                } else {
+                    // Use first letter of email/name as avatar
+                    const initial = (targetUser.displayName || targetUser.email || '?')[0].toUpperCase();
+                    profilePicture.src = `https://ui-avatars.com/api/?name=${initial}&background=random&color=fff`;
+                }
+                
+                // Set profile name and email
+                profileName.textContent = targetUser.displayName || targetUser.email.split('@')[0] || 'User';
+                profileEmail.textContent = targetUser.email;
+
+                // Get user stats
+                // Get liked movies and TV shows count
+                Promise.all([
+                    // Get liked movies
+                    db.collectionGroup('userLikes')
+                        .where('liked', '==', true)
+                        .where('userId', '==', targetUser.uid)
+                        .get()
+                        .then(snapshot => snapshot.size)
+                ]).then(([totalLikes]) => {
+                    document.getElementById('likedCount').textContent = totalLikes;
+                });
+
+                // Get watched movies count
+                db.collectionGroup('userWatched')
+                    .where('userId', '==', targetUser.uid)
+                    .get()
+                    .then(snapshot => {
+                        document.getElementById('watchedCount').textContent = snapshot.size;
                     });
 
-                    // Get watched movies count
-                    db.collectionGroup('userWatched')
-                        .where('userId', '==', user.uid)
-                        .get()
-                        .then(snapshot => {
-                            document.getElementById('watchedCount').textContent = snapshot.size;
-                        });
-
-                    // Get comments count
-                    db.collectionGroup('userComments')
-                        .where('uid', '==', user.uid)
-                        .get()
-                        .then(snapshot => {
-                            document.getElementById('commentCount').textContent = snapshot.size;
-                        });
-                }
+                // Get comments count
+                db.collectionGroup('userComments')
+                    .where('uid', '==', targetUser.uid)
+                    .get()
+                    .then(snapshot => {
+                        document.getElementById('commentCount').textContent = snapshot.size;
+                    });
             }
         });
 
@@ -218,11 +241,15 @@
             const db = firebase.firestore();
             const grid = document.getElementById('liked-movies-grid');
             grid.innerHTML = '<div style="color:#fff;opacity:0.7;padding:24px;">Loading...</div>';
+
+            // Use profileUserId if available, otherwise use current user's ID
+            const targetUserId = profileUserId || user.uid;
+
             try {
                 // Get all userLikes for this user
                 const snapshot = await db.collectionGroup('userLikes')
                     .where('liked', '==', true)
-                    .where('userId', '==', user.uid)
+                    .where('userId', '==', targetUserId)
                     .get();
                 if (snapshot.empty) {
                     grid.innerHTML = '<div style="color:#fff;opacity:0.7;padding:24px;">No liked movies or TV shows yet.</div>';

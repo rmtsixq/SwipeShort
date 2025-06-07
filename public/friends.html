@@ -100,10 +100,14 @@
             align-items: center;
             gap: 16px;
             transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
         }
         .friend-card:hover {
             transform: translateY(-4px);
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+            background: rgba(255, 255, 255, 0.08);
         }
         .friend-avatar {
             width: 64px;
@@ -726,6 +730,14 @@
 
                     const friendCard = document.createElement('div');
                     friendCard.className = 'friend-card';
+                    friendCard.onclick = (e) => {
+                        // Prevent click if clicking on action buttons
+                        if (e.target.closest('.friend-action-btn')) {
+                            return;
+                        }
+                        // Navigate to friend's profile using their UID
+                        window.location.href = `profile.html?id=${friendData.uid}`;
+                    };
                     friendCard.innerHTML = `
                         <img src="${friendData.photoURL || '/default-avatar.png'}" alt="${friendData.displayName}" class="friend-avatar">
                         <div class="friend-info">
@@ -736,10 +748,10 @@
                             </p>
                         </div>
                         <div class="friend-actions">
-                            <button class="friend-action-btn" onclick="startChat('${friendId}')">
+                            <button class="friend-action-btn" onclick="startChat('${friendData.uid}')">
                                 <i class="fa-solid fa-message"></i>
                             </button>
-                            <button class="friend-action-btn" onclick="showFriendOptions('${friendId}')">
+                            <button class="friend-action-btn" onclick="showFriendOptions('${friendData.uid}')">
                                 <i class="fa-solid fa-ellipsis"></i>
                             </button>
                         </div>
