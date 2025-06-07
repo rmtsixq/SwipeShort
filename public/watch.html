@@ -352,7 +352,35 @@
                 border-radius: 12px;
             }
         }
-       
+        .share-btn-wrapper {
+            display: flex;
+            justify-content: center;
+            margin-top: 18px;
+            margin-bottom: 8px;
+        }
+        .share-btn {
+            padding: 10px 28px;
+            background: #23232b;
+            color: #fff;
+            border: none;
+            border-radius: 24px;
+            font-weight: 600;
+            font-size: 1.05rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+            transition: background 0.18s, box-shadow 0.18s, transform 0.18s;
+        }
+        .share-btn:hover {
+            background: #353545;
+            transform: translateY(-2px) scale(1.03);
+            box-shadow: 0 6px 18px rgba(0,0,0,0.13);
+        }
+        .share-btn i {
+            font-size: 1.15rem;
+        }
     </style>
 </head>
 <body>
@@ -367,6 +395,9 @@
             <div class="watch-content">
                 <div id="video-frame" class="video-frame">
                     <div class="spinner" id="spinner"></div>
+                </div>
+                <div class="share-btn-wrapper">
+                    <button id="share-btn" class="share-btn"><i class="fa-solid fa-share-nodes"></i> Paylaş</button>
                 </div>
                 <div id="episodeNavBtns" style="display:none;justify-content:center;gap:16px;margin:18px 0 0 0;">
                     <button id="prevEpisodeBtn" class="episode-nav-btn">Previous Episode</button>
