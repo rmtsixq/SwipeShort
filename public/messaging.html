@@ -212,5 +212,235 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
     <script src="firebase-config.js"></script>
+    <script>
+        // Firebase initialization
+        let currentUser = null;
+        const db = firebase.firestore();
+
+        // Check authentication state
+        firebase.auth().onAuthStateChanged(function(user) {
+            if (!user) {
+                window.location.href = 'auth.html?tab=login';
+                return;
+            }
+            currentUser = user;
+            initializeMessaging();
+        });
+
+        // Initialize messaging functionality
+        async function initializeMessaging() {
+            try {
+                // Get URL parameters
+                const urlParams = new URLSearchParams(window.location.search);
+                const chatUserId = urlParams.get('id');
+
+                if (chatUserId) {
+                    // Load specific chat
+                    await loadChat(chatUserId);
+                } else {
+                    // Load all chats
+                    await loadChats();
+                }
+            } catch (error) {
+                console.error('Error initializing messaging:', error);
+            }
+        }
+
+        // Load all chats for current user
+        async function loadChats() {
+            try {
+                // Get all chats where current user is a participant
+                const chatsSnapshot = await db.collection('chats')
+                    .where('participants', 'array-contains', currentUser.uid)
+                    .orderBy('lastMessageTime', 'desc')
+                    .get();
+
+                if (chatsSnapshot.empty) {
+                    console.log('No chats found');
+                    return;
+                }
+
+                // Process each chat
+                for (const chatDoc of chatsSnapshot.docs) {
+                    const chatData = chatDoc.data();
+                    const otherUserId = chatData.participants.find(id => id !== currentUser.uid);
+                    
+                    // Get other user's data
+                    const userDoc = await db.collection('users').doc(otherUserId).get();
+                    if (userDoc.exists) {
+                        const userData = userDoc.data();
+                        addChatToList(chatDoc.id, userData, chatData.lastMessage);
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading chats:', error);
+            }
+        }
+
+        // Load specific chat
+        async function loadChat(userId) {
+            try {
+                // Get or create chat document
+                const chatId = await getOrCreateChat(userId);
+                
+                // Get user data
+                const userDoc = await db.collection('users').doc(userId).get();
+                if (userDoc.exists) {
+                    const userData = userDoc.data();
+                    updateChatHeader(userData);
+                    loadMessages(chatId);
+                }
+            } catch (error) {
+                console.error('Error loading chat:', error);
+            }
+        }
+
+        // Get or create chat document
+        async function getOrCreateChat(userId) {
+            try {
+                // Check if chat already exists
+                const existingChat = await db.collection('chats')
+                    .where('participants', 'array-contains', currentUser.uid)
+                    .get();
+
+                for (const chatDoc of existingChat.docs) {
+                    const chatData = chatDoc.data();
+                    if (chatData.participants.includes(userId)) {
+                        return chatDoc.id;
+                    }
+                }
+
+                // Create new chat if none exists
+                const chatRef = await db.collection('chats').add({
+                    participants: [currentUser.uid, userId],
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    lastMessage: '',
+                    lastMessageTime: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                return chatRef.id;
+            } catch (error) {
+                console.error('Error getting/creating chat:', error);
+                throw error;
+            }
+        }
+
+        // Add chat to sidebar list
+        function addChatToList(chatId, userData, lastMessage) {
+            const sidebar = document.querySelector('.sidebar');
+            const chatElement = document.createElement('div');
+            chatElement.className = 'chat-list-item';
+            chatElement.innerHTML = `
+                <img src="${userData.photoURL || '/default-avatar.png'}" alt="${userData.displayName}" class="chat-list-avatar">
+                <div class="chat-list-info">
+                    <div class="chat-list-name">${userData.displayName}</div>
+                    <div class="chat-list-message">${lastMessage || 'No messages yet'}</div>
+                </div>
+            `;
+            chatElement.onclick = () => window.location.href = `messaging.html?id=${userData.uid}`;
+            sidebar.appendChild(chatElement);
+        }
+
+        // Update chat header with user info
+        function updateChatHeader(userData) {
+            const header = document.querySelector('.chat-header');
+            header.innerHTML = `
+                <img src="${userData.photoURL || '/default-avatar.png'}" alt="${userData.displayName}" class="chat-user-avatar">
+                <div class="chat-user-info">
+                    <div class="chat-user-name">${userData.displayName}</div>
+                    <div class="chat-user-status">
+                        <span class="${userData.online ? 'online-indicator' : 'offline-indicator'}"></span>
+                        ${userData.online ? 'Online' : 'Offline'}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Load messages for a chat
+        async function loadMessages(chatId) {
+            try {
+                const messagesRef = db.collection('chats').doc(chatId).collection('messages')
+                    .orderBy('timestamp', 'desc')
+                    .limit(50);
+
+                messagesRef.onSnapshot(snapshot => {
+                    const messagesDiv = document.querySelector('.chat-messages');
+                    messagesDiv.innerHTML = '';
+
+                    snapshot.docs.reverse().forEach(doc => {
+                        const message = doc.data();
+                        addMessageToChat(message);
+                    });
+                });
+            } catch (error) {
+                console.error('Error loading messages:', error);
+            }
+        }
+
+        // Add message to chat
+        function addMessageToChat(message) {
+            const messagesDiv = document.querySelector('.chat-messages');
+            const messageElement = document.createElement('div');
+            messageElement.className = `message ${message.senderId === currentUser.uid ? 'sent' : 'received'}`;
+            messageElement.innerHTML = `
+                <div class="message-content">${message.text}</div>
+                <div class="message-time">${new Date(message.timestamp.toDate()).toLocaleTimeString()}</div>
+            `;
+            messagesDiv.appendChild(messageElement);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        // Send message
+        async function sendMessage(chatId, text) {
+            try {
+                if (!text.trim()) return;
+
+                const message = {
+                    text: text.trim(),
+                    senderId: currentUser.uid,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                };
+
+                await db.collection('chats').doc(chatId).collection('messages').add(message);
+                
+                // Update last message in chat document
+                await db.collection('chats').doc(chatId).update({
+                    lastMessage: text.trim(),
+                    lastMessageTime: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                // Clear input
+                document.querySelector('.message-input').value = '';
+            } catch (error) {
+                console.error('Error sending message:', error);
+            }
+        }
+
+        // Event listeners
+        document.querySelector('.send-button').addEventListener('click', async () => {
+            const input = document.querySelector('.message-input');
+            const text = input.value;
+            const urlParams = new URLSearchParams(window.location.search);
+            const chatUserId = urlParams.get('id');
+
+            if (chatUserId) {
+                const chatId = await getOrCreateChat(chatUserId);
+                await sendMessage(chatId, text);
+            }
+        });
+
+        document.querySelector('.message-input').addEventListener('keypress', async (e) => {
+            if (e.key === 'Enter') {
+                const text = e.target.value;
+                const urlParams = new URLSearchParams(window.location.search);
+                const chatUserId = urlParams.get('id');
+
+                if (chatUserId) {
+                    const chatId = await getOrCreateChat(chatUserId);
+                    await sendMessage(chatId, text);
+                }
+            }
+        });
+    </script>
 </body>
 </html> 
