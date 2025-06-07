@@ -879,8 +879,8 @@
         }
 
         function startChat(friendId) {
-            // Implement chat functionality
-            console.log('Starting chat with:', friendId);
+            // Navigate to messaging page with friend's ID
+            window.location.href = `messaging.html?id=${friendId}`;
         }
 
         function showFriendOptions(friendId) {
