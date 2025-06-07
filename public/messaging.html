@@ -411,37 +411,84 @@
             color: rgba(255, 255, 255, 0.5);
             margin-left: 4px;
         }
+
+        .chat-list-meta {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 4px;
+        }
+
+        .chat-list-time {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .online-status {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-top: 4px;
+        }
+
+        .online-status.online {
+            background: #4CAF50;
+        }
+
+        .online-status.offline {
+            background: #666;
+        }
+
+        .unread-badge {
+            background: #38cfff;
+            color: #fff;
+            font-size: 0.8rem;
+            padding: 2px 6px;
+            border-radius: 10px;
+            min-width: 20px;
+            text-align: center;
+        }
+
+        .loading {
+            padding: 16px;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .no-chats {
+            padding: 16px;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .error {
+            padding: 16px;
+            text-align: center;
+            color: #ff4d4d;
+        }
     </style>
 </head>
 <body>
     <div class="messaging-container">
-        <!-- Sidebar -->
         <div class="sidebar">
             <div class="sidebar-header">
-                <h1 class="sidebar-title">Messages</h1>
-                <button class="go-back-btn" onclick="window.location.href='friends.html'">
-                    <i class="fa-solid fa-arrow-left"></i> Go Back
-                </button>
+                <h2 class="sidebar-title">Messages</h2>
             </div>
-            <!-- User list will be added here -->
+            <div class="chat-list">
+                <!-- Friends will be loaded here -->
+            </div>
         </div>
-
-        <!-- Chat Area -->
         <div class="chat-area">
             <div class="chat-header">
-                <img src="/default-avatar.png" alt="User Avatar" class="chat-user-avatar">
-                <div class="chat-user-info">
-                    <div class="chat-user-name">Select a chat</div>
-                    <div class="chat-user-status">Choose a conversation to start messaging</div>
-                </div>
+                <!-- Chat header will be updated when a chat is selected -->
             </div>
             <div class="chat-messages">
-                <!-- Messages will be added here -->
+                <!-- Messages will be loaded here -->
             </div>
-            <div class="message-input-container">
-                <input type="text" class="message-input" placeholder="Type a message...">
+            <div class="chat-input-area">
+                <textarea class="message-input" placeholder="Type a message..."></textarea>
                 <button class="send-button">
-                    <i class="fa-solid fa-paper-plane"></i>
+                    <i class="fas fa-paper-plane"></i>
                 </button>
             </div>
         </div>
@@ -459,14 +506,56 @@
         let currentChatId = null;
         let messageListener = null;
 
-        // Check authentication state
-        firebase.auth().onAuthStateChanged(function(user) {
-            if (!user) {
-                window.location.href = 'auth.html?tab=login';
-                return;
-            }
+        // Auth state observer
+        firebase.auth().onAuthStateChanged(async function(user) {
             currentUser = user;
-            initializeMessaging();
+            if (user) {
+                console.log('User logged in:', user.uid);
+                
+                // Ensure user document exists
+                const userRef = db.collection('users').doc(user.uid);
+                const userDoc = await userRef.get();
+                
+                if (!userDoc.exists) {
+                    // Create new user document
+                    await userRef.set({
+                        uid: user.uid,
+                        email: user.email,
+                        displayName: user.displayName || user.email.split('@')[0],
+                        username: (user.displayName || user.email.split('@')[0]).toLowerCase(),
+                        photoURL: user.photoURL || '/default-avatar.png',
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        online: true,
+                        lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    console.log('New user document created');
+                } else {
+                    // Update existing user document
+                    await userRef.update({
+                        online: true,
+                        lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
+                        email: user.email, // Update email in case it changed
+                        displayName: user.displayName || userDoc.data().displayName,
+                        photoURL: user.photoURL || userDoc.data().photoURL
+                    });
+                    console.log('User document updated');
+                }
+
+                // Load chats when user is authenticated
+                console.log('Loading chats...');
+                await loadChats();
+                
+                // Get friend ID from URL if present
+                const urlParams = new URLSearchParams(window.location.search);
+                const friendId = urlParams.get('id');
+                if (friendId) {
+                    console.log('Loading chat with friend:', friendId);
+                    loadChat(friendId);
+                }
+            } else {
+                console.log('No user logged in');
+                window.location.href = 'index.html';
+            }
         });
 
         // Initialize messaging functionality
@@ -491,31 +580,71 @@
         // Load all chats for current user
         async function loadChats() {
             try {
-                // Get all chats where current user is a participant
-                const chatsSnapshot = await db.collection('chats')
-                    .where('participants', 'array-contains', currentUser.uid)
-                    .orderBy('lastMessageTime', 'desc')
+                console.log('Starting to load chats...');
+                const chatList = document.querySelector('.chat-list');
+                chatList.innerHTML = '<div class="loading">Loading chats...</div>';
+
+                // Get all friends
+                console.log('Fetching friends...');
+                const friendsSnapshot = await db.collection('friends')
+                    .where('users', 'array-contains', currentUser.uid)
                     .get();
 
-                if (chatsSnapshot.empty) {
-                    console.log('No chats found');
+                console.log('Friends found:', friendsSnapshot.size);
+
+                if (friendsSnapshot.empty) {
+                    console.log('No friends found');
+                    chatList.innerHTML = '<div class="no-chats">No friends yet</div>';
                     return;
                 }
 
-                // Process each chat
-                for (const chatDoc of chatsSnapshot.docs) {
-                    const chatData = chatDoc.data();
-                    const otherUserId = chatData.participants.find(id => id !== currentUser.uid);
+                chatList.innerHTML = '';
+                
+                // Process each friendship
+                for (const doc of friendsSnapshot.docs) {
+                    const friendId = doc.data().users.find(id => id !== currentUser.uid);
+                    console.log('Processing friend:', friendId);
                     
-                    // Get other user's data
-                    const userDoc = await db.collection('users').doc(otherUserId).get();
-                    if (userDoc.exists) {
-                        const userData = userDoc.data();
-                        addChatToList(chatDoc.id, userData, chatData.lastMessage, chatData.unreadCount);
+                    // Get friend's data
+                    const friendDoc = await db.collection('users').doc(friendId).get();
+                    if (friendDoc.exists) {
+                        const friendData = friendDoc.data();
+                        console.log('Friend data:', friendData);
+                        
+                        // Get last message from chat using a compound query
+                        const chatQuery = await db.collection('chats')
+                            .where('participants', 'array-contains', currentUser.uid)
+                            .get();
+
+                        let lastMessage = '';
+                        let unreadCount = 0;
+                        let lastMessageTime = null;
+                        let chatId = null;
+
+                        // Filter chats client-side to find the one with both participants
+                        const chatDocs = chatQuery.docs.filter(doc => {
+                            const chatData = doc.data();
+                            return chatData.participants.includes(friendId);
+                        });
+
+                        if (chatDocs.length > 0) {
+                            const chatData = chatDocs[0].data();
+                            chatId = chatDocs[0].id;
+                            lastMessage = chatData.lastMessage || '';
+                            unreadCount = chatData.unreadCount || 0;
+                            lastMessageTime = chatData.lastMessageTime;
+                            console.log('Chat data found:', chatData);
+                        }
+
+                        addChatToList(chatId, friendData, lastMessage, unreadCount, lastMessageTime);
                     }
                 }
+
+                // Set up real-time updates for online status
+                setupOnlineStatusListener();
             } catch (error) {
                 console.error('Error loading chats:', error);
+                document.querySelector('.chat-list').innerHTML = '<div class="error">Error loading chats</div>';
             }
         }
 
@@ -606,19 +735,36 @@
         }
 
         // Add chat to sidebar list
-        function addChatToList(chatId, userData, lastMessage, unreadCount = 0) {
+        function addChatToList(chatId, userData, lastMessage, unreadCount = 0, lastMessageTime = null) {
+            console.log('Adding chat to list:', { chatId, userData, lastMessage, unreadCount, lastMessageTime });
             const sidebar = document.querySelector('.chat-list');
             const chatElement = document.createElement('div');
             chatElement.className = 'chat-list-item';
-            chatElement.dataset.chatId = chatId;
+            if (chatId) {
+                chatElement.dataset.chatId = chatId;
+            }
+            chatElement.dataset.userId = userData.uid;
+            
+            const timeString = lastMessageTime ? 
+                new Date(lastMessageTime.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 
+                '';
+
+            // Default avatar as data URL
+            const defaultAvatar = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTAiLz48cGF0aCBkPSJNMTIgMTZ2LTQiLz48cGF0aCBkPSJNMTUgMTJjMC0xLjY1Ny0xLjM0My0zLTMtM3MtMyAxLjM0My0zIDMiLz48L3N2Zz4=';
+
             chatElement.innerHTML = `
-                <img src="${userData.photoURL || '/default-avatar.png'}" alt="${userData.displayName}" class="chat-list-avatar">
+                <img src="${userData.photoURL || defaultAvatar}" alt="${userData.displayName}" class="chat-list-avatar">
                 <div class="chat-list-info">
                     <div class="chat-list-name">${userData.displayName}</div>
-                    <div class="chat-list-message">${lastMessage || 'No messages yet'}</div>
+                    <div class="chat-list-message">${lastMessage || 'Start a conversation'}</div>
                 </div>
-                ${unreadCount > 0 ? `<div class="unread-badge">${unreadCount}</div>` : ''}
+                <div class="chat-list-meta">
+                    ${timeString ? `<div class="chat-list-time">${timeString}</div>` : ''}
+                    ${unreadCount > 0 ? `<div class="unread-badge">${unreadCount}</div>` : ''}
+                    <div class="online-status ${userData.online ? 'online' : 'offline'}"></div>
+                </div>
             `;
+            
             chatElement.onclick = () => window.location.href = `messaging.html?id=${userData.uid}`;
             sidebar.appendChild(chatElement);
         }
@@ -902,6 +1048,23 @@
                 messageListener();
             }
         });
+
+        // Setup real-time online status updates
+        function setupOnlineStatusListener() {
+            const friendsSnapshot = db.collection('users')
+                .where('friends', 'array-contains', currentUser.uid)
+                .onSnapshot(snapshot => {
+                    snapshot.docChanges().forEach(change => {
+                        if (change.type === 'modified') {
+                            const userData = change.doc.data();
+                            const statusIndicator = document.querySelector(`[data-user-id="${change.doc.id}"] .online-status`);
+                            if (statusIndicator) {
+                                statusIndicator.className = `online-status ${userData.online ? 'online' : 'offline'}`;
+                            }
+                        }
+                    });
+                });
+        }
     </script>
 </body>
 </html> 
