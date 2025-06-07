@@ -381,6 +381,97 @@
         .share-btn i {
             font-size: 1.15rem;
         }
+        .share-modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0,0,0,0.65);
+            align-items: center;
+            justify-content: center;
+        }
+        .share-modal.active {
+            display: flex;
+        }
+        .share-modal-content {
+            background: #23232b;
+            border-radius: 20px;
+            padding: 32px 24px 24px 24px;
+            min-width: 320px;
+            max-width: 95vw;
+            width: 400px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+        .share-modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        .share-modal-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+        .close-share-modal {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 2rem;
+            cursor: pointer;
+            padding: 0 8px;
+            line-height: 1;
+            transition: color 0.2s;
+        }
+        .close-share-modal:hover {
+            color: #ff66c4;
+        }
+        .share-friends-list {
+            max-height: 320px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .share-friend-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 8px;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.04);
+            cursor: pointer;
+            transition: background 0.18s;
+        }
+        .share-friend-item:hover {
+            background: rgba(81,112,255,0.10);
+        }
+        .share-friend-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid rgba(255,255,255,0.10);
+        }
+        .share-friend-name {
+            font-weight: 500;
+            font-size: 1rem;
+        }
+        .share-friend-status {
+            font-size: 0.85rem;
+            color: #38cfff;
+        }
+        .loading {
+            text-align: center;
+            color: #aaa;
+            padding: 18px 0;
+        }
     </style>
 </head>
 <body>
@@ -397,7 +488,7 @@
                     <div class="spinner" id="spinner"></div>
                 </div>
                 <div class="share-btn-wrapper">
-                    <button id="share-btn" class="share-btn"><i class="fa-solid fa-share-nodes"></i> Paylaş</button>
+                    <button id="share-btn" class="share-btn"><i class="fa-solid fa-share-nodes"></i>Share</button>
                 </div>
                 <div id="episodeNavBtns" style="display:none;justify-content:center;gap:16px;margin:18px 0 0 0;">
                     <button id="prevEpisodeBtn" class="episode-nav-btn">Previous Episode</button>
@@ -423,6 +514,18 @@
                     <button id="prevSeasonBtn" class="season-nav-btn">Previous Season</button>
                     <button id="nextSeasonBtn" class="season-nav-btn">Next Season</button>
                 </div>
+            </div>
+        </div>
+    </div>
+    <!-- Share Modal -->
+    <div id="shareModal" class="share-modal">
+        <div class="share-modal-content">
+            <div class="share-modal-header">
+                <span class="share-modal-title">Send to a Friend</span>
+                <button class="close-share-modal" id="closeShareModal">&times;</button>
+            </div>
+            <div class="share-friends-list" id="shareFriendsList">
+                <div class="loading">Loading...</div>
             </div>
         </div>
     </div>
@@ -678,6 +781,62 @@
             if (navBtns) navBtns.style.display = 'none';
         }
     })();
+    // Share Modal Logic
+    const shareBtn = document.getElementById('share-btn');
+    const shareModal = document.getElementById('shareModal');
+    const closeShareModal = document.getElementById('closeShareModal');
+    const shareFriendsList = document.getElementById('shareFriendsList');
+
+    shareBtn.addEventListener('click', () => {
+        shareModal.classList.add('active');
+        loadFriendsForShare();
+    });
+    closeShareModal.addEventListener('click', () => {
+        shareModal.classList.remove('active');
+    });
+    window.addEventListener('click', (e) => {
+        if (e.target === shareModal) {
+            shareModal.classList.remove('active');
+        }
+    });
+
+    // Arkadaşları yükle ve modalda göster
+    async function loadFriendsForShare() {
+        shareFriendsList.innerHTML = '<div class="loading">Loading...</div>';
+        if (!firebase.auth().currentUser) {
+            shareFriendsList.innerHTML = '<div class="loading">You must be logged in.</div>';
+            return;
+        }
+        const db = firebase.firestore();
+        const currentUser = firebase.auth().currentUser;
+        try {
+            const friendsSnapshot = await db.collection('friends')
+                .where('users', 'array-contains', currentUser.uid)
+                .get();
+            if (friendsSnapshot.empty) {
+                shareFriendsList.innerHTML = '<div class="loading">You have no friends.</div>';
+                return;
+            }
+            shareFriendsList.innerHTML = '';
+            for (const doc of friendsSnapshot.docs) {
+                const friendId = doc.data().users.find(id => id !== currentUser.uid);
+                const friendDoc = await db.collection('users').doc(friendId).get();
+                if (friendDoc.exists) {
+                    const friendData = friendDoc.data();
+                    const item = document.createElement('div');
+                    item.className = 'share-friend-item';
+                    item.innerHTML = `
+                        <img src="${friendData.photoURL || 'https://ui-avatars.com/api/?name=' + (friendData.displayName || 'A')[0]}" class="share-friend-avatar" alt="${friendData.displayName}">
+                        <span class="share-friend-name">${friendData.displayName}</span>
+                        <span class="share-friend-status">${friendData.online ? 'Online' : ''}</span>
+                    `;
+                    shareFriendsList.appendChild(item);
+                }
+            }
+        } catch (e) {
+            shareFriendsList.innerHTML = '<div class="loading">Could not load friends.</div>';
+        }
+    }
     </script>
 </body>
 </html> 
