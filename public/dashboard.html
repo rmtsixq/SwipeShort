@@ -68,6 +68,46 @@
                 background-size: 72px 72px;
             }
         }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .nav-btn, .chat-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 18px;
+            background: #23232b;
+            color: #fff;
+            border: none;
+            border-radius: 16px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .nav-btn:hover, .chat-btn:hover {
+            background: linear-gradient(79deg, rgba(81, 112, 255, 0.18) 6%, rgba(255, 102, 196, 0.18) 87%);
+            transform: translateY(-2px);
+        }
+        .chat-btn i {
+            font-size: 1.1rem;
+        }
+        .chat-btn span {
+            font-size: 1rem;
+        }
+        @media (max-width: 768px) {
+            .chat-btn span {
+                display: none;
+            }
+            .chat-btn {
+                padding: 8px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -96,6 +136,12 @@
                     <img src="/default-avatar.png" alt="Profile" class="profile-picture" id="userProfilePicture">
                     <span class="profile-name" id="userProfileName">Loading...</span>
                 </a>
+            </div>
+            <div class="header-right">
+                <button class="chat-btn nav-btn" onclick="window.location.href='messaging.html'">
+                    <i class="fa-regular fa-message"></i>
+                    <span>Messages</span>
+                </button>
             </div>
         </div>
         <div class="search-modal" id="searchModal" style="display:none;">

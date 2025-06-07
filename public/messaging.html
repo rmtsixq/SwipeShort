@@ -38,14 +38,36 @@
         }
 
         .sidebar-header {
-            padding: 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
 
+        .go-back-btn {
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            border-radius: 8px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .go-back-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateX(-2px);
+        }
+
         .sidebar-title {
+            margin: 0;
             font-size: 1.5rem;
             font-weight: 600;
-            margin: 0;
             color: #fff;
         }
 
@@ -472,6 +494,9 @@
     <div class="messaging-container">
         <div class="sidebar">
             <div class="sidebar-header">
+                <button class="go-back-btn" onclick="window.history.back()">
+                    <i class="fa-solid fa-arrow-left"></i> Go Back
+                </button>
                 <h2 class="sidebar-title">Messages</h2>
             </div>
             <div class="chat-list">
