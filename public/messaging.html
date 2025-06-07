@@ -337,6 +337,8 @@
         // Firebase initialization
         let currentUser = null;
         const db = firebase.firestore();
+        let currentChatId = null;
+        let messageListener = null;
 
         // Check authentication state
         firebase.auth().onAuthStateChanged(function(user) {
@@ -390,7 +392,7 @@
                     const userDoc = await db.collection('users').doc(otherUserId).get();
                     if (userDoc.exists) {
                         const userData = userDoc.data();
-                        addChatToList(chatDoc.id, userData, chatData.lastMessage);
+                        addChatToList(chatDoc.id, userData, chatData.lastMessage, chatData.unreadCount);
                     }
                 }
             } catch (error) {
@@ -403,13 +405,15 @@
             try {
                 // Get or create chat document
                 const chatId = await getOrCreateChat(userId);
+                currentChatId = chatId;
                 
                 // Get user data
                 const userDoc = await db.collection('users').doc(userId).get();
                 if (userDoc.exists) {
                     const userData = userDoc.data();
                     updateChatHeader(userData);
-                    loadMessages(chatId);
+                    setupMessageListener(chatId);
+                    markMessagesAsRead(chatId);
                 }
             } catch (error) {
                 console.error('Error loading chat:', error);
@@ -446,17 +450,55 @@
             }
         }
 
+        // Setup real-time message listener
+        function setupMessageListener(chatId) {
+            // Remove existing listener if any
+            if (messageListener) {
+                messageListener();
+            }
+
+            const messagesRef = db.collection('chats').doc(chatId).collection('messages')
+                .orderBy('timestamp', 'desc')
+                .limit(50);
+
+            messageListener = messagesRef.onSnapshot(snapshot => {
+                const messagesDiv = document.querySelector('.chat-messages');
+                
+                // Clear messages only on first load
+                if (!messagesDiv.hasChildNodes()) {
+                    messagesDiv.innerHTML = '';
+                }
+
+                snapshot.docChanges().forEach(change => {
+                    if (change.type === 'added') {
+                        const message = change.doc.data();
+                        addMessageToChat(message, change.doc.id);
+                    } else if (change.type === 'modified') {
+                        const message = change.doc.data();
+                        updateMessageInChat(message, change.doc.id);
+                    } else if (change.type === 'removed') {
+                        removeMessageFromChat(change.doc.id);
+                    }
+                });
+
+                // Scroll to bottom after messages are loaded
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            });
+        }
+
         // Add chat to sidebar list
-        function addChatToList(chatId, userData, lastMessage) {
-            const sidebar = document.querySelector('.sidebar');
+        function addChatToList(chatId, userData, lastMessage, unreadCount = 0) {
+            const sidebar = document.querySelector('.chat-list');
             const chatElement = document.createElement('div');
             chatElement.className = 'chat-list-item';
+            chatElement.dataset.chatId = chatId;
             chatElement.innerHTML = `
                 <img src="${userData.photoURL || '/default-avatar.png'}" alt="${userData.displayName}" class="chat-list-avatar">
                 <div class="chat-list-info">
                     <div class="chat-list-name">${userData.displayName}</div>
                     <div class="chat-list-message">${lastMessage || 'No messages yet'}</div>
                 </div>
+                ${unreadCount > 0 ? `<div class="unread-badge">${unreadCount}</div>` : ''}
             `;
             chatElement.onclick = () => window.location.href = `messaging.html?id=${userData.uid}`;
             sidebar.appendChild(chatElement);
@@ -477,38 +519,58 @@
             `;
         }
 
-        // Load messages for a chat
-        async function loadMessages(chatId) {
-            try {
-                const messagesRef = db.collection('chats').doc(chatId).collection('messages')
-                    .orderBy('timestamp', 'desc')
-                    .limit(50);
-
-                messagesRef.onSnapshot(snapshot => {
-                    const messagesDiv = document.querySelector('.chat-messages');
-                    messagesDiv.innerHTML = '';
-
-                    snapshot.docs.reverse().forEach(doc => {
-                        const message = doc.data();
-                        addMessageToChat(message);
-                    });
-                });
-            } catch (error) {
-                console.error('Error loading messages:', error);
-            }
-        }
-
         // Add message to chat
-        function addMessageToChat(message) {
+        function addMessageToChat(message, messageId) {
             const messagesDiv = document.querySelector('.chat-messages');
             const messageElement = document.createElement('div');
             messageElement.className = `message ${message.senderId === currentUser.uid ? 'sent' : 'received'}`;
+            messageElement.dataset.messageId = messageId;
+            
+            const timestamp = message.timestamp ? new Date(message.timestamp.toDate()) : new Date();
+            const timeString = timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
             messageElement.innerHTML = `
                 <div class="message-content">${message.text}</div>
-                <div class="message-time">${new Date(message.timestamp.toDate()).toLocaleTimeString()}</div>
+                <div class="message-footer">
+                    <div class="message-time">${timeString}</div>
+                    ${message.senderId === currentUser.uid ? `
+                        <div class="message-status">
+                            ${message.readBy ? 
+                                '<i class="fas fa-check-double" title="Read"></i>' : 
+                                '<i class="fas fa-check" title="Sent"></i>'}
+                        </div>
+                    ` : ''}
+                </div>
             `;
             messagesDiv.appendChild(messageElement);
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        // Update message in chat
+        function updateMessageInChat(message, messageId) {
+            const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
+            if (messageElement) {
+                const contentElement = messageElement.querySelector('.message-content');
+                const statusElement = messageElement.querySelector('.message-status');
+                
+                if (contentElement) {
+                    contentElement.textContent = message.text;
+                }
+                
+                if (statusElement && message.senderId === currentUser.uid) {
+                    statusElement.innerHTML = message.readBy ? 
+                        '<i class="fas fa-check-double" title="Read"></i>' : 
+                        '<i class="fas fa-check" title="Sent"></i>';
+                }
+            }
+        }
+
+        // Remove message from chat
+        function removeMessageFromChat(messageId) {
+            const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
+            if (messageElement) {
+                messageElement.remove();
+            }
         }
 
         // Send message
@@ -519,7 +581,9 @@
                 const message = {
                     text: text.trim(),
                     senderId: currentUser.uid,
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    readBy: [],
+                    edited: false
                 };
 
                 await db.collection('chats').doc(chatId).collection('messages').add(message);
@@ -527,13 +591,41 @@
                 // Update last message in chat document
                 await db.collection('chats').doc(chatId).update({
                     lastMessage: text.trim(),
-                    lastMessageTime: firebase.firestore.FieldValue.serverTimestamp()
+                    lastMessageTime: firebase.firestore.FieldValue.serverTimestamp(),
+                    unreadCount: firebase.firestore.FieldValue.increment(1)
                 });
 
                 // Clear input
                 document.querySelector('.message-input').value = '';
             } catch (error) {
                 console.error('Error sending message:', error);
+            }
+        }
+
+        // Mark messages as read
+        async function markMessagesAsRead(chatId) {
+            try {
+                const messagesRef = db.collection('chats').doc(chatId).collection('messages');
+                const unreadMessages = await messagesRef
+                    .where('senderId', '!=', currentUser.uid)
+                    .where('readBy', 'array-contains', currentUser.uid)
+                    .get();
+
+                const batch = db.batch();
+                unreadMessages.forEach(doc => {
+                    batch.update(doc.ref, {
+                        readBy: firebase.firestore.FieldValue.arrayUnion(currentUser.uid)
+                    });
+                });
+
+                await batch.commit();
+
+                // Reset unread count
+                await db.collection('chats').doc(chatId).update({
+                    unreadCount: 0
+                });
+            } catch (error) {
+                console.error('Error marking messages as read:', error);
             }
         }
 
@@ -544,22 +636,28 @@
             const urlParams = new URLSearchParams(window.location.search);
             const chatUserId = urlParams.get('id');
 
-            if (chatUserId) {
-                const chatId = await getOrCreateChat(chatUserId);
-                await sendMessage(chatId, text);
+            if (chatUserId && currentChatId) {
+                await sendMessage(currentChatId, text);
             }
         });
 
         document.querySelector('.message-input').addEventListener('keypress', async (e) => {
-            if (e.key === 'Enter') {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
                 const text = e.target.value;
                 const urlParams = new URLSearchParams(window.location.search);
                 const chatUserId = urlParams.get('id');
 
-                if (chatUserId) {
-                    const chatId = await getOrCreateChat(chatUserId);
-                    await sendMessage(chatId, text);
+                if (chatUserId && currentChatId) {
+                    await sendMessage(currentChatId, text);
                 }
+            }
+        });
+
+        // Handle window unload
+        window.addEventListener('beforeunload', () => {
+            if (messageListener) {
+                messageListener();
             }
         });
     </script>
