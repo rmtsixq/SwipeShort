@@ -297,21 +297,66 @@
                 width: 100%;
                 height: 100vh;
                 position: fixed;
-                left: -100%;
-                transition: left 0.3s ease;
+                left: 0;
                 z-index: 1000;
+                transition: transform 0.3s ease;
             }
 
-            .sidebar.active {
-                left: 0;
+            .sidebar.hidden {
+                transform: translateX(-100%);
             }
 
             .chat-area {
                 width: 100%;
+                position: fixed;
+                top: 0;
+                left: 0;
+                height: 100vh;
+                transform: translateX(100%);
+                transition: transform 0.3s ease;
+            }
+
+            .chat-area.active {
+                transform: translateX(0);
             }
 
             .message {
                 max-width: 85%;
+            }
+
+            /* Mobile Navigation */
+            .mobile-nav {
+                display: flex;
+                align-items: center;
+                padding: 12px 16px;
+                background: #1e1e24;
+                border-bottom: 1px solid rgba(255,255,255,0.1);
+            }
+
+            .mobile-back-btn {
+                background: none;
+                border: none;
+                color: #fff;
+                font-size: 1.2rem;
+                padding: 8px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+
+            .mobile-title {
+                font-size: 1.1rem;
+                font-weight: 600;
+                margin: 0;
+                flex: 1;
+                text-align: center;
+            }
+        }
+
+        @media (min-width: 769px) {
+            .mobile-nav {
+                display: none;
             }
         }
 
@@ -547,6 +592,12 @@
             </div>
         </div>
         <div class="chat-area">
+            <div class="mobile-nav">
+                <button class="mobile-back-btn" onclick="showChatList()">
+                    <i class="fa-solid fa-arrow-left"></i>
+                </button>
+                <h2 class="mobile-title">Chat</h2>
+            </div>
             <div class="chat-header">
                 <!-- Chat header will be updated when a chat is selected -->
             </div>
@@ -620,6 +671,9 @@
                     console.log('Loading chat with friend:', friendId);
                     loadChat(friendId);
                 }
+
+                // Initialize mobile view
+                initializeMobileView();
             } else {
                 console.log('No user logged in');
                 window.location.href = 'index.html';
@@ -719,17 +773,26 @@
         // Load specific chat
         async function loadChat(userId) {
             try {
-                // Get or create chat document
                 const chatId = await getOrCreateChat(userId);
                 currentChatId = chatId;
-                
+
                 // Get user data
                 const userDoc = await db.collection('users').doc(userId).get();
                 if (userDoc.exists) {
                     const userData = userDoc.data();
                     updateChatHeader(userData);
-                    setupMessageListener(chatId);
-                    markMessagesAsRead(chatId);
+                }
+
+                // Setup message listener
+                setupMessageListener(chatId);
+
+                // Mark messages as read
+                markMessagesAsRead(chatId);
+
+                // Update mobile title
+                const mobileTitle = document.querySelector('.mobile-title');
+                if (mobileTitle && userDoc.exists) {
+                    mobileTitle.textContent = userDoc.data().displayName;
                 }
             } catch (error) {
                 console.error('Error loading chat:', error);
@@ -833,7 +896,15 @@
                 </div>
             `;
             
-            chatElement.onclick = () => window.location.href = `messaging.html?id=${userData.uid}`;
+            // Update click handler for mobile
+            chatElement.onclick = () => {
+                if (window.innerWidth <= 768) {
+                    showChat(userData.uid);
+                } else {
+                    window.location.href = `messaging.html?id=${userData.uid}`;
+                }
+            };
+            
             sidebar.appendChild(chatElement);
         }
 
@@ -1157,6 +1228,42 @@
                     });
                 });
         }
+
+        // Mobile navigation functions
+        function showChatList() {
+            document.querySelector('.sidebar').classList.remove('hidden');
+            document.querySelector('.chat-area').classList.remove('active');
+        }
+
+        function showChat(userId) {
+            document.querySelector('.sidebar').classList.add('hidden');
+            document.querySelector('.chat-area').classList.add('active');
+            loadChat(userId);
+        }
+
+        // Initialize mobile view
+        function initializeMobileView() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const chatUserId = urlParams.get('id');
+            
+            if (window.innerWidth <= 768) {
+                if (chatUserId) {
+                    showChat(chatUserId);
+                } else {
+                    showChatList();
+                }
+            }
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            if (window.innerWidth > 768) {
+                document.querySelector('.sidebar').classList.remove('hidden');
+                document.querySelector('.chat-area').classList.remove('active');
+            } else {
+                initializeMobileView();
+            }
+        });
     </script>
 </body>
 </html> 
