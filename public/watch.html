@@ -852,6 +852,13 @@
     async function sendShareMessage(friendId) {
         const db = firebase.firestore();
         const currentUser = firebase.auth().currentUser;
+        
+        // Kullanıcı giriş yapmamışsa hata ver
+        if (!currentUser) {
+            alert('You must be logged in to share content.');
+            return;
+        }
+
         const params = new URLSearchParams(window.location.search);
         const movieId = params.get('id');
         const tvId = params.get('tv');
@@ -861,29 +868,65 @@
         let image = '';
         let shareUrl = window.location.href;
         let extra = '';
+
         try {
+            // Arkadaşlık kontrolü - yeni yaklaşım
+            const friendshipRef = db.collection('friends')
+                .where('users', 'array-contains', currentUser.uid);
+            
+            const friendshipSnapshot = await friendshipRef.get();
+            let isFriend = false;
+            
+            for (const doc of friendshipSnapshot.docs) {
+                const users = doc.data().users;
+                if (users.includes(friendId)) {
+                    isFriend = true;
+                    break;
+                }
+            }
+
+            if (!isFriend) {
+                alert('You can only share with your friends.');
+                return;
+            }
+
             if (movieId) {
                 // Movie
                 const apiKey = 'fda9bed2dd52a349ecb7cfe38b050ca5';
                 const res = await fetch(`https://api.themoviedb.org/3/movie/${movieId}?api_key=${apiKey}&language=en-US`);
+                if (!res.ok) throw new Error('Failed to fetch movie data');
                 const data = await res.json();
                 title = data.title || 'Movie';
                 image = data.poster_path ? `https://image.tmdb.org/t/p/w500${data.poster_path}` : '';
+                console.log('Movie data:', { title, image }); // Debug log
             } else if (tvId && season && episode) {
                 // TV Show
                 const apiKey = 'fda9bed2dd52a349ecb7cfe38b050ca5';
                 const res = await fetch(`https://api.themoviedb.org/3/tv/${tvId}/season/${season}/episode/${episode}?api_key=${apiKey}&language=en-US`);
+                if (!res.ok) throw new Error('Failed to fetch TV show data');
                 const data = await res.json();
                 title = data.name || data.show_name || 'TV Show';
                 image = data.still_path ? `https://image.tmdb.org/t/p/w500${data.still_path}` : '';
                 extra = `Season ${season}, Episode ${episode}`;
+                console.log('TV Show data:', { title, image, extra }); // Debug log
+            } else {
+                throw new Error('Invalid content ID');
             }
+
+            if (!image) {
+                console.error('No image found for:', { movieId, tvId, season, episode });
+                alert('Error: Could not get image for the content');
+                return;
+            }
+
             // Chat id: iki kullanıcının uid'sini sıralı şekilde birleştir
             const chatParticipants = [currentUser.uid, friendId].sort();
             const chatId = chatParticipants.join('_');
+            
             // Chat var mı kontrol et
             const chatRef = db.collection('chats').doc(chatId);
             const chatDoc = await chatRef.get();
+            
             if (!chatDoc.exists) {
                 await chatRef.set({
                     participants: chatParticipants,
@@ -892,8 +935,8 @@
                     lastMessageTime: null
                 });
             }
-            // Mesajı ekle
-            await chatRef.collection('messages').add({
+
+            const messageData = {
                 from: currentUser.uid,
                 to: friendId,
                 senderId: currentUser.uid,
@@ -903,17 +946,26 @@
                 image,
                 extra,
                 url: shareUrl,
+                text: movieId ? `Shared a movie: ${title}` : `Shared an episode: ${title} ${extra}`,
                 sentAt: firebase.firestore.FieldValue.serverTimestamp(),
                 timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                text: movieId ? `Shared a movie: ${title}` : `Shared an episode: ${title} ${extra}`
-            });
+                readBy: []
+            };
+
+            console.log('Sending message data:', messageData); // Debug log
+
+            // Mesajı ekle
+            await chatRef.collection('messages').add(messageData);
+            
             // Chat meta güncelle
             await chatRef.update({
-                lastMessage: movieId ? `Shared a movie: ${title}` : `Shared an episode: ${title} ${extra}`,
+                lastMessage: messageData.text,
                 lastMessageTime: firebase.firestore.FieldValue.serverTimestamp()
             });
+            
             alert('Shared successfully!');
         } catch (e) {
+            console.error('Error sharing:', e); // Debug log
             alert('Error sharing: ' + e.message);
         }
     }

@@ -537,6 +537,7 @@
         /* Shared Content Styles */
         .shared-content {
             transition: transform 0.2s ease, background 0.2s ease;
+            cursor: pointer;
         }
 
         .shared-content:hover {
@@ -546,6 +547,10 @@
 
         .shared-content img {
             transition: transform 0.2s ease;
+            width: 100%;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
         }
 
         .shared-content:hover img {
@@ -555,6 +560,26 @@
         .shared-content a {
             text-decoration: none;
             color: inherit;
+            display: block;
+        }
+
+        .shared-content .title {
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: #fff;
+        }
+
+        .shared-content .extra {
+            font-size: 0.9em;
+            color: rgba(255,255,255,0.7);
+        }
+
+        .message.sent .shared-content {
+            background: rgba(81, 112, 255, 0.1);
+        }
+
+        .message.received .shared-content {
+            background: rgba(255,255,255,0.05);
         }
 
         .message-text {
@@ -851,9 +876,18 @@
                 snapshot.docChanges().forEach(change => {
                     if (change.type === 'added') {
                         const message = change.doc.data();
+                        // Ensure message has all required fields
+                        message.senderId = message.senderId || message.from;
+                        message.senderName = message.senderName || 'User';
+                        message.text = message.text || '';
+                        message.type = message.type || 'text';
                         addMessageToChat(message, change.doc.id);
                     } else if (change.type === 'modified') {
                         const message = change.doc.data();
+                        message.senderId = message.senderId || message.from;
+                        message.senderName = message.senderName || 'User';
+                        message.text = message.text || '';
+                        message.type = message.type || 'text';
                         updateMessageInChat(message, change.doc.id);
                     } else if (change.type === 'removed') {
                         removeMessageFromChat(change.doc.id);
@@ -862,6 +896,8 @@
 
                 // Scroll to bottom after messages are loaded
                 messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            }, error => {
+                console.error('Error in message listener:', error);
             });
         }
 
@@ -938,11 +974,11 @@
             // Handle shared content
             if (message.type === 'share') {
                 messageContent = `
-                    <div class="shared-content" style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 12px; margin-bottom: 8px;">
-                        <a href="${message.url}" style="text-decoration: none; color: inherit; display: block;">
-                            ${message.image ? `<img src="${message.image}" alt="${message.title}" style="width: 100%; border-radius: 8px; margin-bottom: 8px;">` : ''}
-                            <div style="font-weight: 600; margin-bottom: 4px;">${message.title}</div>
-                            ${message.extra ? `<div style="font-size: 0.9em; color: rgba(255,255,255,0.7);">${message.extra}</div>` : ''}
+                    <div class="shared-content">
+                        <a href="${message.url}">
+                            ${message.image ? `<img src="${message.image}" alt="${message.title}">` : ''}
+                            <div class="title">${message.title}</div>
+                            ${message.extra ? `<div class="extra">${message.extra}</div>` : ''}
                         </a>
                     </div>
                     <div class="message-text">${message.text}</div>
