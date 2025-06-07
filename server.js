@@ -1,4 +1,3 @@
-
 const express = require('express');
 const multer = require('multer');
 const ffmpeg = require('fluent-ffmpeg');
@@ -39,18 +38,20 @@ async function getAIResponse(message, userId) {
         // System prompt to train AI for movie recommendations (ENGLISH)
         const systemPrompt = {
             role: "system",
-            content: `You are a movie recommendation assistant. Your job is to help users find movies. Please follow these rules:
+            content: `You are a movie and TV show recommendation assistant. Your job is to help users find movies and TV shows. Please follow these rules:
             1. Try to understand the user's tastes and preferences
             2. Provide information about genres, actors, directors, and years
-            3. Suggest similar movies
+            3. Suggest similar movies and TV shows
             4. Share IMDB ratings and summaries
             5. Always respond in English
             6. Ask questions to make better recommendations
-            7. Include popular and recent movies in your suggestions
-            8. Suggest age-appropriate movies
-            9. Inform where the movies can be watched
-            10. Suggest movies suitable for the user's mood.
-            11. Always include IMDB IDs (tt format) for movies you mention.`
+            7. Include popular and recent movies and TV shows in your suggestions
+            8. Suggest age-appropriate content
+            9. Inform where the content can be watched
+            10. Suggest content suitable for the user's mood.
+            11. For movies, include IMDB IDs (tt format)
+            12. For TV shows, include TMDB IDs in this format: [TMDB:ID] (e.g., [TMDB:1396] for Breaking Bad)
+            13. Always mention if it's a movie or TV show in your response.`
         };
 
         // Format messages in the required format
@@ -564,12 +565,18 @@ app.get('/api/search-tv', async (req, res) => {
     }
 });
 
-// Function to extract IMDB IDs from AI response
-function extractIMDBIds(text) {
-    // Regular expression to match IMDB IDs (tt followed by 7-8 digits)
+// Function to extract IMDB IDs and TMDB IDs from AI response
+function extractIds(text) {
     const imdbRegex = /tt\d{7,8}/g;
-    const matches = text.match(imdbRegex);
-    return matches ? [...new Set(matches)] : []; // Remove duplicates
+    const tmdbRegex = /\[TMDB:(\d+)\]/g;
+    
+    const imdbMatches = text.match(imdbRegex) || [];
+    const tmdbMatches = Array.from(text.matchAll(tmdbRegex)).map(match => match[1]);
+    
+    return {
+        imdbIds: [...new Set(imdbMatches)],
+        tmdbIds: [...new Set(tmdbMatches)]
+    };
 }
 
 // Chat endpoint
@@ -587,60 +594,64 @@ app.post('/api/chat', async (req, res) => {
         // Get AI response
         const response = await getAIResponse(message, userId);
 
-        // Extract IMDB IDs from the response
-        const imdbIds = extractIMDBIds(response);
-        console.log('Extracted IMDB IDs:', imdbIds); // Debug log
+        // Extract IDs from the response
+        const { imdbIds, tmdbIds } = extractIds(response);
+        console.log('Extracted IDs:', { imdbIds, tmdbIds }); // Debug log
 
-        // Fetch movie details from TMDB for each IMDB ID
+        // Fetch movie details from TMDB for each ID
         const apiKey = process.env.TMDB_API_KEY || 'fda9bed2dd52a349ecb7cfe38b050ca5';
-        const movieDetails = await Promise.all(
-            imdbIds.map(async (imdbId) => {
+        const movieDetails = await Promise.all([
+            // Process IMDB IDs (for movies)
+            ...imdbIds.map(async (imdbId) => {
                 try {
-                    console.log(`Fetching details for IMDB ID: ${imdbId}`); // Debug log
-                    // First, find the TMDB ID using the IMDB ID
                     const findUrl = `https://api.themoviedb.org/3/find/${imdbId}?api_key=${apiKey}&language=en-US&external_source=imdb_id`;
                     const findResponse = await fetch(findUrl);
                     const findData = await findResponse.json();
 
-                    // Check if it's a movie or TV show
-                    let mediaType = 'movie';
-                    let tmdbId = null;
-                    let detailsData = null;
-
                     if (findData.movie_results && findData.movie_results.length > 0) {
-                        tmdbId = findData.movie_results[0].id;
-                        mediaType = 'movie';
-                        console.log(`Found movie with TMDB ID: ${tmdbId}`); // Debug log
-                    } else if (findData.tv_results && findData.tv_results.length > 0) {
-                        tmdbId = findData.tv_results[0].id;
-                        mediaType = 'tv';
-                        console.log(`Found TV show with TMDB ID: ${tmdbId}`); // Debug log
-                    }
-
-                    if (tmdbId) {
-                        // Get the details based on media type
-                        const detailsUrl = `https://api.themoviedb.org/3/${mediaType}/${tmdbId}?api_key=${apiKey}&language=en-US`;
+                        const tmdbId = findData.movie_results[0].id;
+                        const detailsUrl = `https://api.themoviedb.org/3/movie/${tmdbId}?api_key=${apiKey}&language=en-US`;
                         const detailsResponse = await fetch(detailsUrl);
-                        detailsData = await detailsResponse.json();
+                        const detailsData = await detailsResponse.json();
 
-                        const result = {
+                        return {
                             imdbId,
-                            title: detailsData.title || detailsData.name,
+                            tmdbId,
+                            title: detailsData.title,
                             posterPath: detailsData.poster_path,
                             overview: detailsData.overview,
-                            releaseDate: detailsData.release_date || detailsData.first_air_date,
-                            mediaType: mediaType
+                            releaseDate: detailsData.release_date,
+                            mediaType: 'movie'
                         };
-                        console.log('Returning details:', result); // Debug log
-                        return result;
                     }
                     return null;
                 } catch (error) {
                     console.error(`Error fetching details for IMDB ID ${imdbId}:`, error);
                     return null;
                 }
+            }),
+            // Process TMDB IDs (for TV shows)
+            ...tmdbIds.map(async (tmdbId) => {
+                try {
+                    const detailsUrl = `https://api.themoviedb.org/3/tv/${tmdbId}?api_key=${apiKey}&language=en-US`;
+                    const detailsResponse = await fetch(detailsUrl);
+                    const detailsData = await detailsResponse.json();
+
+                    return {
+                        imdbId: null,
+                        tmdbId,
+                        title: detailsData.name,
+                        posterPath: detailsData.poster_path,
+                        overview: detailsData.overview,
+                        releaseDate: detailsData.first_air_date,
+                        mediaType: 'tv'
+                    };
+                } catch (error) {
+                    console.error(`Error fetching details for TMDB ID ${tmdbId}:`, error);
+                    return null;
+                }
             })
-        );
+        ]);
 
         // Filter out any null results
         const validMovieDetails = movieDetails.filter(details => details !== null);
@@ -649,6 +660,7 @@ app.post('/api/chat', async (req, res) => {
         res.json({
             response,
             imdbIds,
+            tmdbIds,
             movieDetails: validMovieDetails
         });
     } catch (error) {

@@ -118,7 +118,7 @@ class ChatBot {
                     
                     // Create a link element instead of a div
                     const linkElement = document.createElement('a');
-                    linkElement.href = `/movie?id=${movie.imdbId}`;
+                    linkElement.href = movie.mediaType === 'tv' ? `/tv.html?id=${movie.tmdbId}` : `/movie.html?id=${movie.imdbId}`;
                     linkElement.style.textDecoration = 'none';
                     linkElement.style.color = 'inherit';
                     linkElement.style.display = 'block';
@@ -132,8 +132,8 @@ class ChatBot {
                     
                     linkElement.addEventListener('click', (e) => {
                         e.preventDefault(); // Prevent default link behavior
-                        console.log('Link clicked for movie:', movie.title); // Debug log
-                        window.location.href = `/movie?id=${movie.imdbId}`;
+                        console.log('Link clicked for:', movie.title, 'Type:', movie.mediaType); // Debug log
+                        window.location.href = movie.mediaType === 'tv' ? `/tv.html?id=${movie.tmdbId}` : `/movie.html?id=${movie.imdbId}`;
                     });
                     
                     linkElement.addEventListener('mouseover', () => {
