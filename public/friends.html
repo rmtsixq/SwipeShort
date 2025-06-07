@@ -38,6 +38,25 @@
             justify-content: space-between;
             margin-bottom: 32px;
         }
+        .go-back-btn {
+            padding: 12px 24px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: transform 0.3s ease;
+            text-decoration: none;
+        }
+        .go-back-btn:hover {
+            transform: translateY(-2px);
+            background: rgba(255, 255, 255, 0.15);
+        }
         .friends-title {
             font-size: 2rem;
             font-weight: 600;
@@ -339,7 +358,12 @@
 <body>
     <div class="friends-container">
         <div class="friends-header">
-            <h1 class="friends-title">Friends</h1>
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <a href="dashboard.html" class="go-back-btn">
+                    <i class="fa-solid fa-arrow-left"></i> Go Back
+                </a>
+                <h1 class="friends-title">Friends</h1>
+            </div>
             <button class="add-friend-btn" id="addFriendBtn">
                 <i class="fa-solid fa-user-plus"></i> Add Friend
             </button>
@@ -745,23 +769,30 @@
             const friendsGrid = document.getElementById('friendsGrid');
             const friendCards = friendsGrid.querySelectorAll('.friend-card');
 
+            // Clear the grid first
+            friendsGrid.innerHTML = '';
+
             if (tabType === 'requests') {
                 displayFriendRequests();
                 return;
             }
 
-            friendCards.forEach(card => {
-                switch (tabType) {
-                    case 'online':
-                        card.style.display = card.querySelector('.online-indicator') ? 'flex' : 'none';
-                        break;
-                    case 'recent':
-                        // Implement recent activity filtering
-                        card.style.display = 'flex';
-                        break;
-                    default:
-                        card.style.display = 'flex';
-                }
+            // Reload friends for other tabs
+            loadFriends().then(() => {
+                const updatedFriendCards = friendsGrid.querySelectorAll('.friend-card');
+                updatedFriendCards.forEach(card => {
+                    switch (tabType) {
+                        case 'online':
+                            card.style.display = card.querySelector('.online-indicator') ? 'flex' : 'none';
+                            break;
+                        case 'recent':
+                            // Implement recent activity filtering
+                            card.style.display = 'flex';
+                            break;
+                        default:
+                            card.style.display = 'flex';
+                    }
+                });
             });
         }
 
