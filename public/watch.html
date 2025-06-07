@@ -830,11 +830,91 @@
                         <span class="share-friend-name">${friendData.displayName}</span>
                         <span class="share-friend-status">${friendData.online ? 'Online' : ''}</span>
                     `;
+                    item.addEventListener('click', async () => {
+                        item.style.opacity = '0.6';
+                        item.style.pointerEvents = 'none';
+                        await sendShareMessage(friendId);
+                        shareModal.classList.remove('active');
+                        setTimeout(() => {
+                            item.style.opacity = '';
+                            item.style.pointerEvents = '';
+                        }, 1000);
+                    });
                     shareFriendsList.appendChild(item);
                 }
             }
         } catch (e) {
             shareFriendsList.innerHTML = '<div class="loading">Could not load friends.</div>';
+        }
+    }
+
+    // Mesajı gönder
+    async function sendShareMessage(friendId) {
+        const db = firebase.firestore();
+        const currentUser = firebase.auth().currentUser;
+        const params = new URLSearchParams(window.location.search);
+        const movieId = params.get('id');
+        const tvId = params.get('tv');
+        const season = params.get('season');
+        const episode = params.get('episode');
+        let title = '';
+        let image = '';
+        let shareUrl = window.location.href;
+        let extra = '';
+        try {
+            if (movieId) {
+                // Movie
+                const apiKey = 'fda9bed2dd52a349ecb7cfe38b050ca5';
+                const res = await fetch(`https://api.themoviedb.org/3/movie/${movieId}?api_key=${apiKey}&language=en-US`);
+                const data = await res.json();
+                title = data.title || 'Movie';
+                image = data.poster_path ? `https://image.tmdb.org/t/p/w500${data.poster_path}` : '';
+            } else if (tvId && season && episode) {
+                // TV Show
+                const apiKey = 'fda9bed2dd52a349ecb7cfe38b050ca5';
+                const res = await fetch(`https://api.themoviedb.org/3/tv/${tvId}/season/${season}/episode/${episode}?api_key=${apiKey}&language=en-US`);
+                const data = await res.json();
+                title = data.name || data.show_name || 'TV Show';
+                image = data.still_path ? `https://image.tmdb.org/t/p/w500${data.still_path}` : '';
+                extra = `Season ${season}, Episode ${episode}`;
+            }
+            // Chat id: iki kullanıcının uid'sini sıralı şekilde birleştir
+            const chatParticipants = [currentUser.uid, friendId].sort();
+            const chatId = chatParticipants.join('_');
+            // Chat var mı kontrol et
+            const chatRef = db.collection('chats').doc(chatId);
+            const chatDoc = await chatRef.get();
+            if (!chatDoc.exists) {
+                await chatRef.set({
+                    participants: chatParticipants,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    lastMessage: '',
+                    lastMessageTime: null
+                });
+            }
+            // Mesajı ekle
+            await chatRef.collection('messages').add({
+                from: currentUser.uid,
+                to: friendId,
+                senderId: currentUser.uid,
+                senderName: currentUser.displayName || currentUser.email.split('@')[0],
+                type: 'share',
+                title,
+                image,
+                extra,
+                url: shareUrl,
+                sentAt: firebase.firestore.FieldValue.serverTimestamp(),
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                text: movieId ? `Shared a movie: ${title}` : `Shared an episode: ${title} ${extra}`
+            });
+            // Chat meta güncelle
+            await chatRef.update({
+                lastMessage: movieId ? `Shared a movie: ${title}` : `Shared an episode: ${title} ${extra}`,
+                lastMessageTime: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            alert('Shared successfully!');
+        } catch (e) {
+            alert('Error sharing: ' + e.message);
         }
     }
     </script>

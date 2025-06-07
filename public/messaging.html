@@ -488,6 +488,49 @@
             text-align: center;
             color: #ff4d4d;
         }
+
+        /* Shared Content Styles */
+        .shared-content {
+            transition: transform 0.2s ease, background 0.2s ease;
+        }
+
+        .shared-content:hover {
+            transform: translateY(-2px);
+            background: rgba(255,255,255,0.08);
+        }
+
+        .shared-content img {
+            transition: transform 0.2s ease;
+        }
+
+        .shared-content:hover img {
+            transform: scale(1.02);
+        }
+
+        .shared-content a {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .message-text {
+            margin-top: 8px;
+            color: rgba(255,255,255,0.9);
+        }
+
+        .message-sender-info {
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.7);
+            margin-bottom: 4px;
+            font-weight: 500;
+        }
+
+        .message.sent .message-sender-info {
+            display: none;
+        }
+
+        .message.received .message-sender-info {
+            color: #38cfff;
+        }
     </style>
 </head>
 <body>
@@ -609,64 +652,64 @@
                 const chatList = document.querySelector('.chat-list');
                 chatList.innerHTML = '<div class="loading">Loading chats...</div>';
 
-                // Get all friends
-                console.log('Fetching friends...');
-                const friendsSnapshot = await db.collection('friends')
-                    .where('users', 'array-contains', currentUser.uid)
+                // 1. Tüm chatleri (hem eski hem yeni id'li) çek
+                const chatsSnapshot = await db.collection('chats')
+                    .where('participants', 'array-contains', currentUser.uid)
+                    .orderBy('lastMessageTime', 'desc')
                     .get();
 
-                console.log('Friends found:', friendsSnapshot.size);
-
-                if (friendsSnapshot.empty) {
-                    console.log('No friends found');
-                    chatList.innerHTML = '<div class="no-chats">No friends yet</div>';
+                if (chatsSnapshot.empty) {
+                    chatList.innerHTML = '<div class="no-chats">No chats yet</div>';
                     return;
                 }
 
-                chatList.innerHTML = '';
-                
-                // Process each friendship
-                for (const doc of friendsSnapshot.docs) {
-                    const friendId = doc.data().users.find(id => id !== currentUser.uid);
-                    console.log('Processing friend:', friendId);
-                    
-                    // Get friend's data
-                    const friendDoc = await db.collection('users').doc(friendId).get();
-                    if (friendDoc.exists) {
-                        const friendData = friendDoc.data();
-                        console.log('Friend data:', friendData);
-                        
-                        // Get last message from chat using a compound query
-                        const chatQuery = await db.collection('chats')
-                            .where('participants', 'array-contains', currentUser.uid)
-                            .get();
-
-                        let lastMessage = '';
-                        let unreadCount = 0;
-                        let lastMessageTime = null;
-                        let chatId = null;
-
-                        // Filter chats client-side to find the one with both participants
-                        const chatDocs = chatQuery.docs.filter(doc => {
-                            const chatData = doc.data();
-                            return chatData.participants.includes(friendId);
+                // 2. Tüm arkadaş id'lerini topla
+                const friendIds = new Set();
+                const chatDataList = [];
+                chatsSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    const friendId = data.participants.find(id => id !== currentUser.uid);
+                    if (friendId) {
+                        friendIds.add(friendId);
+                        chatDataList.push({
+                            chatId: doc.id,
+                            friendId,
+                            lastMessage: data.lastMessage || '',
+                            unreadCount: data.unreadCount || 0,
+                            lastMessageTime: data.lastMessageTime || null
                         });
-
-                        if (chatDocs.length > 0) {
-                            const chatData = chatDocs[0].data();
-                            chatId = chatDocs[0].id;
-                            lastMessage = chatData.lastMessage || '';
-                            unreadCount = chatData.unreadCount || 0;
-                            lastMessageTime = chatData.lastMessageTime;
-                            console.log('Chat data found:', chatData);
-                        }
-
-                        addChatToList(chatId, friendData, lastMessage, unreadCount, lastMessageTime);
                     }
+                });
+
+                if (friendIds.size === 0) {
+                    chatList.innerHTML = '<div class="no-chats">No chats yet</div>';
+                    return;
                 }
 
-                // Set up real-time updates for online status
-                setupOnlineStatusListener();
+                // 3. Arkadaşların bilgilerini topluca çek
+                const usersRef = db.collection('users');
+                const friendDocs = await Promise.all(
+                    Array.from(friendIds).map(id => usersRef.doc(id).get())
+                );
+                const friendMap = {};
+                friendDocs.forEach(doc => {
+                    if (doc.exists) friendMap[doc.id] = doc.data();
+                });
+
+                // 4. Chatleri hızlıca listele
+                chatList.innerHTML = '';
+                chatDataList.forEach(chat => {
+                    const userData = friendMap[chat.friendId];
+                    if (userData) {
+                        addChatToList(
+                            chat.chatId,
+                            userData,
+                            chat.lastMessage,
+                            chat.unreadCount,
+                            chat.lastMessageTime
+                        );
+                    }
+                });
             } catch (error) {
                 console.error('Error loading chats:', error);
                 document.querySelector('.chat-list').innerHTML = '<div class="error">Error loading chats</div>';
@@ -731,7 +774,7 @@
             }
 
             const messagesRef = db.collection('chats').doc(chatId).collection('messages')
-                .orderBy('timestamp', 'desc')
+                .orderBy('timestamp', 'asc')
                 .limit(50);
 
             messageListener = messagesRef.onSnapshot(snapshot => {
@@ -819,8 +862,31 @@
             const timestamp = message.timestamp ? new Date(message.timestamp.toDate()) : new Date();
             const timeString = timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             
+            let messageContent = '';
+            
+            // Handle shared content
+            if (message.type === 'share') {
+                messageContent = `
+                    <div class="shared-content" style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 12px; margin-bottom: 8px;">
+                        <a href="${message.url}" style="text-decoration: none; color: inherit; display: block;">
+                            ${message.image ? `<img src="${message.image}" alt="${message.title}" style="width: 100%; border-radius: 8px; margin-bottom: 8px;">` : ''}
+                            <div style="font-weight: 600; margin-bottom: 4px;">${message.title}</div>
+                            ${message.extra ? `<div style="font-size: 0.9em; color: rgba(255,255,255,0.7);">${message.extra}</div>` : ''}
+                        </a>
+                    </div>
+                    <div class="message-text">${message.text}</div>
+                `;
+            } else {
+                messageContent = `<div class="message-content">${message.text}</div>`;
+            }
+
+            // Add sender info for received messages
+            const senderInfo = message.senderId !== currentUser.uid ? 
+                `<div class="message-sender-info">${message.senderName || 'User'}</div>` : '';
+            
             messageElement.innerHTML = `
-                <div class="message-content">${message.text}</div>
+                ${senderInfo}
+                ${messageContent}
                 <div class="message-footer">
                     <div class="message-time">
                         ${timeString}
@@ -994,6 +1060,7 @@
                 const message = {
                     text: text.trim(),
                     senderId: currentUser.uid,
+                    senderName: currentUser.displayName || currentUser.email.split('@')[0],
                     timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                     readBy: [],
                     edited: false
