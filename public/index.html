@@ -1,329 +1,203 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ShortSwipe!</title>
-    <link rel="stylesheet" href="style.css" />
-
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShortSwipe - Premium Movie Streaming</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
-
-    <script src="https://code.jquery.com/jquery-2.1.1.js"></script>
-    <script src="scripts/scripts.js" defer></script>
 </head>
 <body>
-    <header class="main-header">
-      <div class="main-header__left">
-        
-        <span class="main-header__brand">ShortSwipe</span>
-      </div>
-      <nav class="main-header__nav">
-        <a href="dashboard.html" class="main-header__auth-btn continue">Continue without account</a>
-        <span class="main-header__divider">|</span>
-        <a href="auth.html?tab=login" class="main-header__auth-btn login">Login</a>
-        <a href="auth.html?tab=signup" class="main-header__auth-btn signup">Sign Up</a>
-      </nav>
-    </header>
-    <header class="big-pic">
-      <div class="gradient-pic">
-        <h1>
-            ShortS<span class="glitch-w">w</span>ipe
-        </h1>
-        <h3>
-            Discover the best scenes from movies and TV shows
-        </h3>
-        <div class="button-row">
-
-            <button id="discoverBtn" class="button2" onclick="scrollToDiscover()">
-                Start Exploring!
-            </button>
+    <!-- Navigation Header -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-container">
+            <div class="nav-left">
+                <div class="logo">
+                    <h1>ShortSwipe</h1>
+                </div>
+                <ul class="nav-menu">
+                    <li><a href="#home" class="nav-link active">Home</a></li>
+                    <li><a href="#movies" class="nav-link">Movies</a></li>
+                    <li><a href="#series" class="nav-link">TV Shows</a></li>
+                    <li><a href="#discover" class="nav-link">Discover</a></li>
+                </ul>
+            </div>
+            <div class="nav-right">
+                <div class="search-container">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" class="search-input" placeholder="Search movies, shows...">
+                </div>
+                <div class="user-menu">
+                    <a href="auth.html?tab=login" class="login-btn">Sign In</a>
+                    <a href="auth.html?tab=signup" class="signup-btn">Sign Up</a>
+                </div>
+            </div>
         </div>
-      </div>
+    </nav>
 
-        <section class="syf2">
-            <h3>
-              Swipe to Discover 
-              <span class="slottt-machine-recipe">
-                <span class="slottt-machine-recipe__mask" id="wordbox">
-                  <span class="slottt-machine-recipe__items_container recipe_if">
-                    <span class="slottt-machine-recipe__item">Movies</span>
-                    <span class="slottt-machine-recipe__item">TV Shows</span>
-                    <span class="slottt-machine-recipe__item">Series</span>
-                    <span class="slottt-machine-recipe__item">Films</span>
-                    <span class="slottt-machine-recipe__item">Cinema</span>
-                  </span>
-                </span>
-              </span>
-            </h3>
-            <p>
-                Swipe through trailers and find your next watch.  
-                Just a quick preview — then dive into the full experience.  
-                No endless scrolling. Just pick and play.
-            </p>
+    <!-- Hero Section -->
+    <section class="hero" id="hero">
+        <div class="hero-background">
+            <div class="hero-overlay"></div>
+        </div>
+        <div class="hero-content">
+            <div class="hero-info">
+                <h1 class="hero-title"></h1>
+                <p class="hero-description"></p>
+                <div class="hero-buttons">
+                    <button class="btn btn-primary">
+                        <i class="fas fa-play"></i>
+                        Watch Now
+                    </button>
+                    <button class="btn btn-secondary">
+                        <i class="fas fa-info-circle"></i>
+                        More Info
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="hero-fade"></div>
+    </section>
+
+    <!-- Content Sections -->
+    <main class="main-content">
+        <!-- Featured Section -->
+        <section class="content-section">
+            <h2 class="section-title">Featured Today</h2>
+            <div class="movie-row" id="featured-row">
+                <div class="movie-grid featured-grid" id="featured-content">
+                    <!-- Featured content will be loaded here -->
+                </div>
+            </div>
         </section>
-        <div class="features-grid">
-            <div class="feature-card">
-                <i class="fas fa-brain"></i>
-                <h3>All-in-One Streaming</h3>
-                <p>Thousands of movies and shows in one place. No subscriptions, no limits — just hit play.</p>
-                </div>
-            <div class="feature-card">
-                <i class="fas fa-bolt"></i>
-                <h3>Watch With Friends</h3>
-                <p>Create rooms, watch together in sync, and chat while watching. Movie nights just got smarter.</p>
-                </div>
-            <div class="feature-card">
-                <i class="fas fa-share-alt"></i>
-                <h3>Connect & Share</h3>
-                <p>Like clips, comment, share your favorites with friends. Cinema is not just watching, it's sharing.</p>
-                </div>
-        </div>
-    </header>
-    <div>
 
-    </div>
+        <!-- Popular Movies -->
+        <section class="content-section">
+            <h2 class="section-title">Popular Movies</h2>
+            <div class="movie-row" id="popular-movies-row">
+                <button class="row-nav row-nav-left" id="popular-movies-prev">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <div class="movie-grid scrollable" id="popular-movies">
+                    <!-- Popular movies will be loaded here -->
+                </div>
+                <button class="row-nav row-nav-right" id="popular-movies-next">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </section>
 
-    <main class="discover-section" id="discover">
-      <h2 class="section-title">Keşfet</h2>
-      <div class="category-grid">
-        <div class="category-card" onclick="window.location.href='feed.html?type=movie&category=new'">
-          <h3>Yeni Filmler</h3>
-          <p>En yeni film sahneleri</p>
-        </div>
-        <div class="category-card" onclick="window.location.href='feed.html?type=tv&category=new'">
-          <h3>Yeni Diziler</h3>
-          <p>En yeni dizi sahneleri</p>
-        </div>
-        <div class="category-card" onclick="window.location.href='feed.html?type=movie&category=trending'">
-          <h3>Trend Filmler</h3>
-          <p>Popüler film sahneleri</p>
-        </div>
-        <div class="category-card" onclick="window.location.href='feed.html?type=tv&category=trending'">
-          <h3>Trend Diziler</h3>
-          <p>Popüler dizi sahneleri</p>
-        </div>
-                  </div>
+        <!-- Trending Now -->
+        <section class="content-section">
+            <h2 class="section-title">Trending Now</h2>
+            <div class="movie-row" id="trending-row">
+                <button class="row-nav row-nav-left" id="trending-prev">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <div class="movie-grid scrollable" id="trending-content">
+                    <!-- Trending content will be loaded here -->
+                </div>
+                <button class="row-nav row-nav-right" id="trending-next">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- Top Rated -->
+        <section class="content-section">
+            <h2 class="section-title">Top Rated</h2>
+            <div class="movie-row" id="top-rated-row">
+                <button class="row-nav row-nav-left" id="top-rated-prev">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <div class="movie-grid scrollable" id="top-rated-content">
+                    <!-- Top rated content will be loaded here -->
+                </div>
+                <button class="row-nav row-nav-right" id="top-rated-next">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- Popular TV Shows -->
+        <section class="content-section">
+            <h2 class="section-title">Popular TV Shows</h2>
+            <div class="movie-row" id="popular-tv-row">
+                <button class="row-nav row-nav-left" id="popular-tv-prev">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <div class="movie-grid scrollable" id="popular-tv">
+                    <!-- Popular TV shows will be loaded here -->
+                </div>
+                <button class="row-nav row-nav-right" id="popular-tv-next">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- Action Movies -->
+        <section class="content-section">
+            <h2 class="section-title">Action Movies</h2>
+            <div class="movie-row" id="action-movies-row">
+                <button class="row-nav row-nav-left" id="action-movies-prev">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <div class="movie-grid scrollable" id="action-movies">
+                    <!-- Action movies will be loaded here -->
+                </div>
+                <button class="row-nav row-nav-right" id="action-movies-next">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </section>
     </main>
 
-    <div class="movie-slider">
-        <div class="movie-slider__track">
-            <div class="movie-slider__slide">
-                <img src="images/movie1.jpg" alt="Movie 1">
-            </div>
-            <div class="movie-slider__slide">
-                <img src="images/movie2.jpg" alt="Movie 2">
-            </div>
-            <div class="movie-slider__slide">
-                <img src="images/movie3.jpg" alt="Movie 3">
-            </div>
-            <div class="movie-slider__slide">
-                <img src="images/movie4.jpg" alt="Movie 4">
-            </div>
-            <div class="movie-slider__slide">
-                <img src="images/movie5.jpg" alt="Movie 5">
-            </div>
-            <div class="movie-slider__slide">
-                <img src="images/movie6.jpg" alt="Movie 6">
-            </div>
-            <div class="movie-slider__slide">
-                <img src="images/movie7.jpg" alt="Movie 7">
-            </div>
-            <div class="movie-slider__slide">
-                <img src="images/movie8.jpg" alt="Movie 8">
-              </div>
-            <div class="movie-slider__slide">
-                <img src="images/movie9.jpg" alt="Movie 9">
-            </div>
-            <div class="movie-slider__slide">
-                <img src="images/movie10.jpg" alt="Movie 10">
-          </div>
-            <!-- Duplicate slides for infinite loop -->
-            <div class="movie-slider__slide">
-                <img src="images/movie1.jpg" alt="Movie 1">
-              </div>
-            <div class="movie-slider__slide">
-                <img src="images/movie2.jpg" alt="Movie 2">
-            </div>
-            <div class="movie-slider__slide">
-                <img src="images/movie3.jpg" alt="Movie 3">
-          </div>
-            <div class="movie-slider__slide">
-                <img src="images/movie4.jpg" alt="Movie 4">
-              </div>
-            <div class="movie-slider__slide">
-                <img src="images/movie5.jpg" alt="Movie 5">
-            </div>
-            <div class="movie-slider__slide">
-                <img src="images/movie6.jpg" alt="Movie 6">
-          </div>
-            <div class="movie-slider__slide">
-                <img src="images/movie7.jpg" alt="Movie 7">
-              </div>
-            <div class="movie-slider__slide">
-                <img src="images/movie8.jpg" alt="Movie 8">
-            </div>
-            <div class="movie-slider__slide">
-                <img src="images/movie9.jpg" alt="Movie 9">
-          </div>
-            <div class="movie-slider__slide">
-                <img src="images/movie10.jpg" alt="Movie 10">
-          </div>
-        </div>
-      </div>
-
-    <div class="watch-clever-section">
-        <h2>Watch Clever</h2>
-        <p>Discover the best moments from your favorite movies and TV shows. Let us guide you through the most impactful scenes.</p>
-        <div class="button-row">
-            <button class="button2" onclick="scrollToDiscover()">Start Watching</button>
-        </div>
-    </div>
-
-    <div class="movie-slider movie-slider--reverse">
-        <div class="movie-slider__track">
-            <div class="movie-slider__slide">
-                <img src="images/movie11.jpg" alt="Movie 11">
-            </div>
-            <div class="movie-slider__slide">
-                <img src="images/movie12.jpg" alt="Movie 12">
-            </div>
-            <div class="movie-slider__slide">
-                <img src="images/movie13.jpg" alt="Movie 13">
-            </div>
-            <div class="movie-slider__slide">
-                <img src="images/movie14.jpg" alt="Movie 14">
-            </div>
-            <div class="movie-slider__slide">
-                <img src="images/movie15.jpg" alt="Movie 15">
-            </div>
-            <div class="movie-slider__slide">
-                <img src="images/movie16.jpg" alt="Movie 16">
-            </div>
-            <div class="movie-slider__slide">
-                <img src="images/movie17.jpg" alt="Movie 17">
-            </div>
-            <div class="movie-slider__slide">
-                <img src="images/movie18.jpg" alt="Movie 18">
-              </div>
-            <div class="movie-slider__slide">
-                <img src="images/movie19.jpg" alt="Movie 19">
-            </div>
-            <div class="movie-slider__slide">
-                <img src="images/movie20.jpg" alt="Movie 20">
-          </div>
-            <!-- Duplicate slides for infinite loop -->
-            <div class="movie-slider__slide">
-                <img src="images/movie11.jpg" alt="Movie 11">
-              </div>
-            <div class="movie-slider__slide">
-                <img src="images/movie12.jpg" alt="Movie 12">
-            </div>
-            <div class="movie-slider__slide">
-                <img src="images/movie13.jpg" alt="Movie 13">
-          </div>
-            <div class="movie-slider__slide">
-                <img src="images/movie14.jpg" alt="Movie 14">
-              </div>
-            <div class="movie-slider__slide">
-                <img src="images/movie15.jpg" alt="Movie 15">
-            </div>
-            <div class="movie-slider__slide">
-                <img src="images/movie16.jpg" alt="Movie 16">
-          </div>
-            <div class="movie-slider__slide">
-                <img src="images/movie17.jpg" alt="Movie 17">
-              </div>
-            <div class="movie-slider__slide">
-                <img src="images/movie18.jpg" alt="Movie 18">
-            </div>
-            <div class="movie-slider__slide">
-                <img src="images/movie19.jpg" alt="Movie 19">
-          </div>
-            <div class="movie-slider__slide">
-                <img src="images/movie20.jpg" alt="Movie 20">
-          </div>
-        </div>
-      </div>
-
-    <!-- Movie20 Popup Modal -->
-    <div id="movie20Modal" class="movie20-modal" style="display: none;">
-        <div class="movie20-modal-content">
-            <div class="movie20-modal-header">
-                <h2> Secret</h2>
-                <button class="movie20-modal-close">&times;</button>
-            </div>
-            <div class="movie20-modal-body">
-                <p>Go to dashboard and search for "MAJIK" to discover a hidden secret!</p>
-                <div class="movie20-modal-buttons">
-                    <button class="movie20-modal-btn movie20-modal-close">Close</button>
+    <!-- Movie Detail Modal -->
+    <div class="modal" id="movie-modal">
+        <div class="modal-content">
+            <button class="modal-close" id="modal-close">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="modal-hero">
+                <div class="modal-backdrop"></div>
+                <div class="modal-info">
+                    <h2 class="modal-title"></h2>
+                    <div class="modal-meta">
+                        <span class="modal-year"></span>
+                        <span class="modal-runtime"></span>
+                        <span class="modal-rating"></span>
+                    </div>
+                    <p class="modal-overview"></p>
+                    <div class="modal-buttons">
+                        <button class="btn btn-primary modal-play">
+                            <i class="fas fa-play"></i>
+                            Watch Now
+                        </button>
+                        <button class="btn btn-secondary modal-wishlist">
+                            <i class="fas fa-plus"></i>
+                            My List
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Processing Overlay -->
-    <div class="processing-overlay" style="display: none;">
-        <div class="processing-modal">
-            <div class="processing-spinner"></div>
-            <h2>Processing...</h2>
-            <p>Please wait, the screen will be blurred while processing.</p>
+    <!-- Loading Spinner -->
+    <div class="loading-screen" id="loading">
+        <div class="spinner">
+            <div class="spinner-ring"></div>
+            <div class="spinner-ring"></div>
+            <div class="spinner-ring"></div>
         </div>
+        <p>Loading amazing content...</p>
     </div>
 
-    <!-- Clip Duration Modal -->
-    <div class="clip-duration-modal" style="display: none;">
-        <div class="modal-content">
-            <h2>Select the duration of the clip</h2>
-            <div class="slider-container">
-                <input type="range" class="duration-slider" min="10" max="40" value="25" step="1">
-                <div class="slider-value">25 seconds</div>
-            </div>
-            <button class="confirm-button">Confirm and Start Processing</button>
-        </div>
-        <div class="pre-uploaded-video-container">
-            
-        </div>
-        <script>
-    function scrollToDiscover() {
-      const section = document.getElementById('discover');
-      if(section) {
-        section.scrollIntoView({ behavior: 'smooth' });
-      }
-    }
-
-    // Movie20 Popup Functionality
-    document.addEventListener('DOMContentLoaded', function() {
-        const modal = document.getElementById('movie20Modal');
-        const closeButtons = document.querySelectorAll('.movie20-modal-close');
-        
-        // Find movie20 slide and add click event
-        const movie20Slides = document.querySelectorAll('.movie-slider__slide img[alt="Movie 20"]');
-        movie20Slides.forEach(slide => {
-            slide.parentElement.addEventListener('click', function() {
-                modal.style.display = 'flex';
-                setTimeout(() => modal.classList.add('show'), 10);
-            });
-        });
-
-        // Close modal when clicking close buttons
-        closeButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                modal.classList.remove('show');
-                setTimeout(() => modal.style.display = 'none', 300);
-            });
-        });
-
-        // Close modal when clicking outside
-        modal.addEventListener('click', function(e) {
-            if (e.target === modal) {
-                modal.classList.remove('show');
-                setTimeout(() => modal.style.display = 'none', 300);
-            }
-        });
-    });
-    </script>
+    <!-- Scripts -->
+    <script src="script.js"></script>
 </body>
 </html>
