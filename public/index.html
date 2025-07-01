@@ -5,18 +5,293 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ShortSwipe - Premium Movie Streaming</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="dashboard.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Mono&display=swap" rel="stylesheet">
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <style>
+        /* Robot Character Styles */
+        #robot-container {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 96px;
+            height: 96px;
+            z-index: 1000;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        #robot-character {
+            width: 96px;
+            height: 96px;
+            background-size: 96px 96px;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+
+        .robot-idle-right { background-image: url('images/idle right.png'); }
+        .robot-idle-left { background-image: url('images/idle left.png'); }
+        .robot-walk-right { background-image: url('images/right.png'); }
+        .robot-walk-left { background-image: url('images/left.png'); }
+        .robot-loading { background-image: url('images/loading.gif'); animation: loading 1s linear infinite; }
+
+        @keyframes loading {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            #robot-container {
+                width: 72px;
+                height: 72px;
+                bottom: 20px;
+                right: 20px;
+            }
+            
+            #robot-character {
+                width: 72px;
+                height: 72px;
+                background-size: 72px 72px;
+            }
+        }
+
+        /* Dashboard Integration Styles */
+        .dashboard-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .content-type-selector {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            justify-content: center;
+        }
+
+        .content-type-btn {
+            padding: 1rem 2rem;
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            border: none;
+            border-radius: 25px;
+            font-size: 1.4rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .content-type-btn.active {
+            background: #e50914;
+            transform: scale(1.05);
+        }
+
+        .film-tabs-header {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .film-tab {
+            padding: 0.8rem 1.5rem;
+            background: transparent;
+            color: #b3b3b3;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .film-tab.active {
+            background: #e50914;
+            color: #ffffff;
+            border-color: #e50914;
+        }
+
+        .filter-panel {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .filter-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .filter-header h3 {
+            color: #ffffff;
+            font-size: 1.8rem;
+            margin: 0;
+        }
+
+        .filter-toggle {
+            background: #e50914;
+            color: #ffffff;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .filter-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .filter-group label {
+            color: #e5e5e5;
+            font-weight: 500;
+        }
+
+        .filter-group select {
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 0.8rem;
+            font-size: 1rem;
+        }
+
+        .filter-btn {
+            background: #e50914;
+            color: #ffffff;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            margin-top: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .filter-btn:hover {
+            background: #b8070f;
+            transform: translateY(-2px);
+        }
+
+        .film-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 3rem;
+        }
+
+        .pagination button {
+            padding: 0.8rem 1.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .pagination button.active {
+            background: #e50914;
+        }
+
+        /* Search Modal Styles */
+        .search-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(10px);
+            z-index: 2000;
+            display: none;
+            flex-direction: column;
+        }
+
+        .search-modal.show {
+            display: flex;
+        }
+
+        .search-modal-bar {
+            display: flex;
+            align-items: center;
+            padding: 2rem;
+            gap: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .search-modal-bar input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: #ffffff;
+            font-size: 2rem;
+            outline: none;
+        }
+
+        .search-modal-bar input::placeholder {
+            color: #666;
+        }
+
+        .search-modal-close {
+            background: none;
+            border: none;
+            color: #ffffff;
+            font-size: 2rem;
+            cursor: pointer;
+            padding: 1rem;
+        }
+
+        .search-modal-content {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+        }
+
+        .search-modal-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 2rem;
+        }
+    </style>
 </head>
 <body>
+    <!-- Robot Character -->
+    <div id="robot-container">
+        <div id="robot-character" class="robot-idle-right"></div>
+        <div class="robot-speech-bubble" id="robotSpeechBubble"></div>
+    </div>
+
     <!-- Navigation Header -->
     <nav class="navbar" id="navbar">
         <div class="nav-container">
             <div class="nav-left">
                 <div class="logo">
+                    <img src="/images/logo.png" alt="ShortSwipe Logo" style="width: 40px; height: 40px; margin-right: 1rem;">
                     <h1>ShortSwipe</h1>
                 </div>
                 <ul class="nav-menu">
@@ -24,16 +299,23 @@
                     <li><a href="#movies" class="nav-link">Movies</a></li>
                     <li><a href="#series" class="nav-link">TV Shows</a></li>
                     <li><a href="#discover" class="nav-link">Discover</a></li>
+                    <li><a href="friends.html" class="nav-link">Friends</a></li>
                 </ul>
             </div>
             <div class="nav-right">
                 <div class="search-container">
-                    <i class="fas fa-search search-icon"></i>
-                    <input type="text" class="search-input" placeholder="Search movies, shows...">
+                    <i class="fas fa-search search-icon" id="searchIcon"></i>
+                    <input type="text" class="search-input" placeholder="Search movies, shows..." id="mainSearchInput">
                 </div>
                 <div class="user-menu">
-                    <a href="auth.html?tab=login" class="login-btn">Sign In</a>
-                    <a href="auth.html?tab=signup" class="signup-btn">Sign Up</a>
+                    <a href="messaging.html" class="login-btn">
+                        <i class="fa-regular fa-message"></i>
+                        Messages
+                    </a>
+                    <a href="profile.html" class="signup-btn">
+                        <img src="/default-avatar.png" alt="Profile" id="userProfilePicture" style="width: 24px; height: 24px; border-radius: 50%; margin-right: 0.5rem;">
+                        <span id="userProfileName">Profile</span>
+                    </a>
                 </div>
             </div>
         </div>
@@ -63,8 +345,67 @@
         <div class="hero-fade"></div>
     </section>
 
-    <!-- Content Sections -->
+    <!-- Main Content -->
     <main class="main-content">
+        <!-- Dashboard Integration -->
+        <div class="dashboard-content">
+            <!-- Content Type Selector -->
+            <div class="content-type-selector">
+                <button class="content-type-btn active" data-type="movie">Movies</button>
+                <button class="content-type-btn" data-type="tv">TV Shows</button>
+            </div>
+
+            <!-- Movie Tabs -->
+            <div class="film-tabs-header" data-type="movie">
+                <button class="film-tab active" data-category="new">New Releases</button>
+                <button class="film-tab" data-category="recommended">Recommended</button>
+                <button class="film-tab" data-category="imdb">IMDB 7+ Films</button>
+                <button class="film-tab" data-category="commented">Most Commented</button>
+                <button class="film-tab" data-category="liked">Most Liked</button>
+            </div>
+
+            <!-- TV Show Tabs -->
+            <div class="film-tabs-header" data-type="tv" style="display: none;">
+                <button class="film-tab active" data-category="new">New Episodes</button>
+                <button class="film-tab" data-category="popular">Popular Shows</button>
+                <button class="film-tab" data-category="top">Top Rated</button>
+                <button class="film-tab" data-category="trending">Trending</button>
+                <button class="film-tab" data-category="airing">On The Air</button>
+            </div>
+
+            <!-- Filter Panel -->
+            <div class="filter-panel">
+                <div class="filter-header">
+                    <h3>Filters</h3>
+                    <button class="filter-toggle" id="filterToggle">Filter</button>
+                </div>
+                <div class="filter-content">
+                    <div class="filter-group">
+                        <label>Genre</label>
+                        <select name="genre" id="genreSelect">
+                            <option value="">All Genres</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Year</label>
+                        <select name="year" id="yearSelect">
+                            <option value="">All Years</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Rating</label>
+                        <select name="rating" id="ratingSelect">
+                            <option value="">All Ratings</option>
+                            <option value="8">8+ Stars</option>
+                            <option value="7">7+ Stars</option>
+                            <option value="6">6+ Stars</option>
+                        </select>
+                    </div>
+                    <button class="filter-btn" id="applyFilters">Apply Filters</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Featured Section -->
         <section class="content-section">
             <h2 class="section-title">Featured Today</h2>
@@ -89,6 +430,13 @@
                     <i class="fas fa-chevron-right"></i>
                 </button>
             </div>
+        </section>
+
+        <!-- Main Film Grid (Dashboard Integration) -->
+        <section class="content-section">
+            <h2 class="section-title" id="mainGridTitle">All Movies</h2>
+            <div id="film-grid" class="film-grid"></div>
+            <div id="pagination" class="pagination"></div>
         </section>
 
         <!-- Trending Now -->
@@ -154,7 +502,32 @@
                 </button>
             </div>
         </section>
+
+        <!-- Search Results -->
+        <div id="searchResults" class="search-results" style="display: none;">
+            <div class="search-header">
+                <h2>Search Results</h2>
+                <span id="searchCount">0 results</span>
+            </div>
+            <div id="searchResultsGrid" class="search-results-grid"></div>
+        </div>
     </main>
+
+    <!-- Enhanced Search Modal -->
+    <div class="search-modal" id="searchModal">
+        <div class="search-modal-bar">
+            <i class="fa fa-search"></i>
+            <input type="text" placeholder="Search..." id="modalSearchInput" autofocus>
+            <button class="search-modal-close" id="searchModalClose">
+                <i class="fa fa-times"></i>
+            </button>
+        </div>
+        <div class="search-modal-content">
+            <div class="search-modal-grid" id="searchModalGrid">
+                <!-- Search results will be displayed here -->
+            </div>
+        </div>
+    </div>
 
     <!-- Movie Detail Modal -->
     <div class="modal" id="movie-modal">
@@ -187,6 +560,24 @@
         </div>
     </div>
 
+    <!-- Majik Modal -->
+    <div id="majik-modal" class="majik-modal">
+        <div id="majik-terminal-content" class="majik-terminal-content"></div>
+        <div id="majik-game-root" class="majik-game-root"></div>
+    </div>
+
+    <!-- Linux Terminal Modal -->
+    <div id="linux-modal" class="linux-modal">
+        <div class="screen">
+            <div id="terminal-content" class="terminal-content"></div>
+            <form id="terminal-form" class="terminal-form">
+                <span class="prompt">$</span>
+                <input type="text" id="terminal-input" class="terminal-input" autocomplete="off">
+            </form>
+            <button id="tip-btn" class="tip-btn">💡</button>
+        </div>
+    </div>
+
     <!-- Loading Spinner -->
     <div class="loading-screen" id="loading">
         <div class="spinner">
@@ -197,7 +588,12 @@
         <p>Loading amazing content...</p>
     </div>
 
-    <!-- Scripts -->
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="dashboard.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

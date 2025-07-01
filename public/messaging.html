@@ -57,6 +57,7 @@
             align-items: center;
             gap: 8px;
             transition: all 0.3s ease;
+            text-decoration: none;
         }
 
         .go-back-btn:hover {
@@ -607,9 +608,9 @@
     <div class="messaging-container">
         <div class="sidebar">
             <div class="sidebar-header">
-                <button class="go-back-btn" onclick="window.history.back()">
-                    <i class="fa-solid fa-arrow-left"></i> Go Back
-                </button>
+                <a href="index.html" class="go-back-btn">
+                    <i class="fa-solid fa-arrow-left"></i> Back to Home
+                </a>
                 <h2 class="sidebar-title">Messages</h2>
             </div>
             <div class="chat-list">
