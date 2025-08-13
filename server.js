@@ -120,6 +120,398 @@ app.use((req, res, next) => {
 // CORS middleware
 app.use(cors());
 
+// Video stream proxy - Cloudnestra videolarını doğrudan stream et
+app.get('/api/video-stream', async (req, res) => {
+    const { url } = req.query;
+    
+    if (!url) {
+        return res.status(400).json({ error: 'URL parameter is required' });
+    }
+    
+    try {
+        console.log('Streaming video from:', url);
+        
+        // Range request desteği için
+        const range = req.headers.range;
+        
+        const response = await fetch(url, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                'Accept': '*/*',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'Connection': 'keep-alive',
+                'Referer': 'https://cloudnestra.com/',
+                'Origin': 'https://cloudnestra.com',
+                'Range': range || undefined
+            },
+            timeout: 30000
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        // Video content type'ını al
+        const contentType = response.headers.get('content-type') || 'video/mp4';
+        const contentLength = response.headers.get('content-length');
+        const acceptRanges = response.headers.get('accept-ranges');
+        
+        // CORS ve video headers ekle
+        res.set({
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+            'Access-Control-Allow-Headers': 'Range, Origin, X-Requested-With, Content-Type, Accept, Authorization',
+            'Content-Type': contentType,
+            'Accept-Ranges': acceptRanges || 'bytes',
+            'Cache-Control': 'public, max-age=3600',
+            'X-Content-Type-Options': 'nosniff'
+        });
+        
+        // Range request varsa content-length ekle
+        if (range && contentLength) {
+            res.set('Content-Length', contentLength);
+        }
+        
+        // Video stream'i pipe et
+        response.body.pipe(res);
+        
+    } catch (error) {
+        console.error('Video stream error:', error);
+        res.status(500).json({ 
+            error: 'Video stream error', 
+            details: error.message 
+        });
+    }
+});
+
+// Video iframe proxy - HTML iframe içeriğini proxy olarak döndür (fallback için)
+app.get('/api/iframe-proxy', async (req, res) => {
+    const { url } = req.query;
+    
+    if (!url) {
+        return res.status(400).json({ error: 'URL parameter is required' });
+    }
+    
+            try {
+            console.log('Proxying iframe URL:', url);
+            
+            const response = await fetch(url, {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+                    'Accept-Language': 'en-US,en;q=0.9',
+                    'Accept-Encoding': 'gzip, deflate, br',
+                    'Connection': 'keep-alive',
+                    'Referer': 'https://cloudnestra.com/',
+                    'Origin': 'https://cloudnestra.com',
+                    'Cache-Control': 'no-cache',
+                    'Pragma': 'no-cache'
+                },
+                timeout: 15000
+            });
+        
+        if (!response.ok) {
+            console.log(`HTTP Error: ${response.status} - ${response.statusText}`);
+            
+            if (response.status === 404) {
+                throw new Error('Cloudnestra embed URL expired (404). This usually means the URL has expired and needs to be refreshed.');
+            } else if (response.status === 403) {
+                throw new Error('Cloudnestra access denied (403). The embed URL may have expired or been blocked.');
+            } else {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+        }
+        
+        let html = await response.text();
+        console.log(`Received HTML length: ${html.length} characters`);
+        
+        // Relative URL'leri absolute yap ve localhost referanslarını düzelt
+        if (html.includes('src="//')) {
+            html = html.replace(/src="\/\//g, 'src="https://');
+            console.log('Fixed relative URLs');
+        }
+        
+        // Cloudnestra'nın localhost referanslarını tamamen düzelt
+        const localhostMatches = html.match(/localhost:\d+/g);
+        if (localhostMatches) {
+            console.log(`Found ${localhostMatches.length} localhost references, fixing...`);
+            html = html.replace(/http:\/\/localhost:\d+/g, 'https://cloudnestra.com');
+            html = html.replace(/localhost:\d+/g, 'cloudnestra.com');
+        }
+        
+        // Daha kapsamlı localhost referans düzeltmesi
+        html = html.replace(/['"]http:\/\/localhost:\d+['"]/g, '"https://cloudnestra.com"');
+        html = html.replace(/['"]localhost:\d+['"]/g, '"cloudnestra.com"');
+        
+        // CSS ve JS dosya yollarını düzelt
+        html = html.replace(/href=["']http:\/\/localhost:\d+\//g, 'href="https://cloudnestra.com/');
+        html = html.replace(/src=["']http:\/\/localhost:\d+\//g, 'src="https://cloudnestra.com/');
+        
+        // Relative path'leri de düzelt
+        html = html.replace(/href=["']\//g, 'href="https://cloudnestra.com/');
+        html = html.replace(/src=["']\//g, 'src="https://cloudnestra.com/');
+        
+        // Tüm localhost referanslarını yakala ve düzelt
+        const allLocalhostRefs = html.match(/localhost[^"'\s>]*/g);
+        if (allLocalhostRefs) {
+            console.log(`Found additional localhost references:`, allLocalhostRefs);
+            html = html.replace(/localhost[^"'\s>]*/g, 'cloudnestra.com');
+        }
+        
+        // CSS ve JS dosya yollarını özel olarak düzelt
+        html = html.replace(/style_rcp-[^"']*\.css/g, 'style_rcp.css');
+        html = html.replace(/base64\.js/g, 'base64.js');
+        html = html.replace(/sbx\.js/g, 'sbx.js');
+        
+        // FontAwesome ve diğer CDN referanslarını düzelt
+        html = html.replace(/https:\/\/cloudnestra\.com\/\/cdnjs\.cloudflare\.com/g, 'https://cdnjs.cloudflare.com');
+        html = html.replace(/https:\/\/cloudnestra\.com\/\/fonts\.googleapis\.com/g, 'https://fonts.googleapis.com');
+        html = html.replace(/https:\/\/cloudnestra\.com\/\/fonts\.gstatic\.com/g, 'https://fonts.gstatic.com');
+        
+        // Çift slash'ları düzelt
+        html = html.replace(/https:\/\/cloudnestra\.com\/\//g, 'https://cloudnestra.com/');
+        
+        // Localhost referanslarını tamamen temizle
+        html = html.replace(/http:\/\/localhost:\d+/g, 'https://cloudnestra.com');
+        html = html.replace(/localhost:\d+/g, 'cloudnestra.com');
+        
+        // Cloudnestra'nın kendi dosyalarını düzgün yolla
+        html = html.replace(/src=["']\/rcp\//g, 'src="https://cloudnestra.com/rcp/');
+        html = html.replace(/href=["']\/rcp\//g, 'href="https://cloudnestra.com/rcp/');
+        
+        // Relative path'leri absolute yap
+        html = html.replace(/src=["']\/(?!https?:\/\/)/g, 'src="https://cloudnestra.com/');
+        html = html.replace(/href=["']\/(?!https?:\/\/)/g, 'href="https://cloudnestra.com/');
+        
+        // CSS ve JS dosyalarını düzgün yolla
+        html = html.replace(/src=["']([^"']*\.(css|js))["']/g, (match, filename) => {
+            if (filename.startsWith('http')) return match;
+            if (filename.startsWith('//')) return `src="https:${filename}"`;
+            if (filename.startsWith('/')) return `src="https://cloudnestra.com${filename}"`;
+            return `src="https://cloudnestra.com/${filename}"`;
+        });
+        
+        html = html.replace(/href=["']([^"']*\.(css|js))["']/g, (match, filename) => {
+            if (filename.startsWith('http')) return match;
+            if (filename.startsWith('//')) return `href="https:${filename}"`;
+            if (filename.startsWith('/')) return `href="https://cloudnestra.com${filename}"`;
+            return `href="https://cloudnestra.com/${filename}"`;
+        });
+        
+        // Cloudnestra asset and AJAX calls should go through our proxy to avoid CORS
+        // Attribute references to cloudnestra.com -> backend proxy
+        html = html.replace(/(src|href)=["']https:\/\/cloudnestra\.com\/([^"']+)["']/g,
+            (m, attr, path) => `${attr}="/api/cn-proxy?url=https://cloudnestra.com/${path}"`);
+        
+        // Attribute references with relative paths -> backend proxy
+        html = html.replace(/(src|href)=["']\/(rcp|prorcp|assets|static|player|cdn)\/([^"']+)["']/g,
+            (m, attr, seg, rest) => `${attr}="/api/cn-proxy?url=https://cloudnestra.com/${seg}/${rest}"`);
+        
+        // JS string usages like '/prorcp/...' -> backend proxy
+        html = html.replace(/(["'])\/(rcp|prorcp)\/([^"']+)\1/g,
+            (m, q, seg, rest) => `${q}/api/cn-proxy?url=https://cloudnestra.com/${seg}/${rest}${q}`);
+        
+        // Also handle any remaining absolute cloudnestra.com references
+        html = html.replace(/(["'])https:\/\/cloudnestra\.com\/([^"']+)\1/g,
+            (m, q, path) => `${q}/api/cn-proxy?url=https://cloudnestra.com/${path}${q}`);
+        
+        console.log('HTML cleanup completed');
+        
+        // CORS headers ekle
+        res.set({
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization, Range',
+            'Content-Type': 'text/html',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+        });
+        
+        console.log('Sending proxied HTML response');
+        res.send(html);
+        
+    } catch (error) {
+        console.error('Iframe proxy error:', error);
+        res.status(500).json({ 
+            error: 'Iframe proxy error', 
+            details: error.message 
+        });
+    }
+});
+
+// Add Cloudnestra asset proxy to avoid CORS and wrong origins for secondary requests
+app.get('/api/cn-proxy', async (req, res) => {
+  try {
+    const { url } = req.query;
+    if (!url || !/^https?:\/\/cloudnestra\.com\//.test(url)) {
+      return res.status(400).json({ error: 'Valid url query required to cloudnestra.com' });
+    }
+
+    // Forward headers to mimic browser and correct referer/origin
+    const upstreamHeaders = {
+      'User-Agent': req.headers['user-agent'] || 'Mozilla/5.0',
+      'Accept': req.headers['accept'] || '*/*',
+      'Accept-Language': req.headers['accept-language'] || 'en-US,en;q=0.9',
+      'Referer': 'https://cloudnestra.com/',
+      'Origin': 'https://cloudnestra.com',
+      'Connection': 'keep-alive',
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache'
+    };
+
+    // Range support
+    if (req.headers['range']) {
+      upstreamHeaders['Range'] = req.headers['range'];
+    }
+
+    const upstream = await fetch(url, { headers: upstreamHeaders });
+
+    // Pass through status for range requests
+    res.status(upstream.status);
+
+    // Copy headers of interest
+    const passHeaders = [
+      'content-type','content-length','accept-ranges','content-range','cache-control','pragma','expires'
+    ];
+    passHeaders.forEach(h => {
+      const v = upstream.headers.get(h);
+      if (v) res.setHeader(h, v);
+    });
+
+    // Ensure JavaScript files have correct MIME type
+    if (url.includes('.js') && (!upstream.headers.get('content-type') || upstream.headers.get('content-type').includes('text/html'))) {
+      res.setHeader('Content-Type', 'application/javascript');
+    }
+
+    // CORS for our frontend
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Range');
+
+    // Stream body
+    if (upstream.body) {
+      upstream.body.pipe(res);
+    } else {
+      const text = await upstream.text();
+      res.send(text);
+    }
+  } catch (err) {
+    console.error('cn-proxy error:', err);
+    res.status(500).json({ error: 'cn-proxy failed', details: err.message });
+  }
+});
+
+// Add smart embed URL refresh endpoint that handles expired URLs
+app.get('/api/smart-embed', async (req, res) => {
+  try {
+    const { movieId, retryCount = 0 } = req.query;
+    if (!movieId) {
+      return res.status(400).json({ error: 'Movie ID required' });
+    }
+
+    console.log(`=== Smart Embed Fetching Started (Attempt ${retryCount + 1}) ===`);
+    console.log(`Movie ID: ${movieId}`);
+
+    // Try to get embed URL
+    const embedUrl = await getCloudnestraEmbedUrl(movieId);
+    
+    if (!embedUrl) {
+      throw new Error('Failed to get embed URL from vidsrc');
+    }
+
+    // Test if the URL is actually working
+    try {
+      const testResponse = await fetch(embedUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Referer': 'https://cloudnestra.com/',
+          'Origin': 'https://cloudnestra.com'
+        },
+        timeout: 10000
+      });
+
+      if (testResponse.ok) {
+        console.log('✅ Embed URL is working, returning to client');
+        return res.json({
+          cloudnestraEmbedUrl: embedUrl,
+          source: 'cloudnestra',
+          status: 'fresh',
+          retryCount: retryCount
+        });
+      } else {
+        console.log(`❌ Embed URL returned ${testResponse.status}, trying to refresh...`);
+        
+        // If we've tried too many times, return error
+        if (retryCount >= 2) {
+          throw new Error(`Embed URL expired after ${retryCount + 1} attempts. Cloudnestra URLs have very short lifespan.`);
+        }
+
+        // Try alternative movie IDs (sometimes different IDs work better)
+        const alternativeIds = [
+          parseInt(movieId) + 1,
+          parseInt(movieId) - 1,
+          parseInt(movieId) + 100,
+          parseInt(movieId) - 100
+        ].filter(id => id > 0);
+
+        for (const altId of alternativeIds) {
+          console.log(`Trying alternative movie ID: ${altId}`);
+          try {
+            const altEmbedUrl = await getCloudnestraEmbedUrl(altId.toString());
+            if (altEmbedUrl) {
+              const altTestResponse = await fetch(altEmbedUrl, {
+                headers: {
+                  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                  'Referer': 'https://cloudnestra.com/',
+                  'Origin': 'https://cloudnestra.com'
+                },
+                timeout: 10000
+              });
+
+              if (altTestResponse.ok) {
+                console.log(`✅ Alternative movie ID ${altId} worked!`);
+                return res.json({
+                  cloudnestraEmbedUrl: altEmbedUrl,
+                  source: 'cloudnestra',
+                  status: 'alternative',
+                  originalMovieId: movieId,
+                  workingMovieId: altId,
+                  retryCount: retryCount
+                });
+              }
+            }
+          } catch (altErr) {
+            console.log(`Alternative ID ${altId} failed:`, altErr.message);
+          }
+        }
+
+        // If alternatives didn't work, try the original again with retry
+        console.log('Trying original movie ID again...');
+        return res.redirect(`/api/smart-embed?movieId=${movieId}&retryCount=${retryCount + 1}`);
+      }
+    } catch (testErr) {
+      console.error('Error testing embed URL:', testErr);
+      
+      if (retryCount >= 2) {
+        throw new Error(`Failed to get working embed URL after ${retryCount + 1} attempts: ${testErr.message}`);
+      }
+
+      // Retry with exponential backoff
+      return res.redirect(`/api/smart-embed?movieId=${movieId}&retryCount=${retryCount + 1}`);
+    }
+
+  } catch (error) {
+    console.error('Smart embed error:', error);
+    res.status(500).json({
+      error: 'Smart embed failed',
+      details: error.message,
+      suggestion: 'Try refreshing the page or try a different movie'
+    });
+  }
+});
+
 // Start server
 app.listen(PORT, () => {
     console.log(`Web server running on http://localhost:${PORT}`);
@@ -486,9 +878,9 @@ app.get('/api/get-cloudnestra-embed', async (req, res) => {
             }
         }
         if (!embedUrl) {
-            const cloudnestraMatch = html.match(/https:\/\/[^"']*cloudnestra[^"']*/);
-            const vidplayMatch = html.match(/https:\/\/[^"']*vidplay[^"']*/);
-            const upcloudMatch = html.match(/https:\/\/[^"']*upcloud[^"']*/);
+            const cloudnestraMatch = html.match(/(?:https?:)?\/\/[^"']*cloudnestra[^"']*/);
+            const vidplayMatch = html.match(/(?:https?:)?\/\/[^"']*vidplay[^"']*/);
+            const upcloudMatch = html.match(/(?:https?:)?\/\/[^"']*upcloud[^"']*/);
             if (cloudnestraMatch) {
                 embedUrl = cloudnestraMatch[0];
                 source = 'cloudnestra';
@@ -501,7 +893,13 @@ app.get('/api/get-cloudnestra-embed', async (req, res) => {
             }
         }
         if (embedUrl) {
+            // Ensure URL has protocol
+            if (embedUrl.startsWith('//')) {
+                embedUrl = 'https:' + embedUrl;
+            }
             console.log('Found embed URL:', embedUrl);
+            
+            // URL'yi doğrudan döndür, frontend'de proxy ile test edilecek
             res.json({
                 cloudnestraEmbedUrl: embedUrl,
                 source: source
