@@ -376,8 +376,8 @@ app.get('/api/iframe-proxy', async (req, res) => {
             (m, seg, rest) => `src="https://cloudnestra.com/${seg}/${rest}"`);
         
         // JS string kullanımlarını direkt Cloudnestra'dan yönlendir
-        html = html.replace(/(["'])\/(rcp|prorcp)\/([^"']+)\1/g,
-            (m, q, seg, rest) => `${q}https://cloudnestra.com/${seg}/${rest}${q}`);
+        html = html.replace(/(["'])https:\/\/cloudnestra\.com\/([^"']+)\1/g,
+            (m, q, path) => `${q}https://cloudnestra.com/${path}${q}`);
         
         // Kalan Cloudnestra referanslarını direkt yönlendir
         html = html.replace(/(["'])https:\/\/cloudnestra\.com\/([^"']+)\1/g,
@@ -651,28 +651,48 @@ async function getCloudnestraEmbedUrl(movieId) {
     try {
         console.log('Getting Cloudnestra embed URL for movie ID:', movieId);
         
+        // User-Agent rotasyonu için array - Cloudflare bypass için
+        const userAgents = [
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0'
+        ];
+        
+        // Rastgele User-Agent seç
+        const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
+        
         // Önce vidsrc'den Cloudnestra URL'ini al
-        const vidsrcApiUrl = `https://vidsrc.to/embed/movie/${movieId}`;
+        const vidsrcApiUrl = `https://vidsrc.icu/embed/movie/${movieId}`;
         console.log('Fetching from vidsrc API:', vidsrcApiUrl);
+        console.log('Using User-Agent:', randomUserAgent);
+
+        // Rate limiting - Cloudflare bypass için
+        await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 3000));
 
         const response = await fetch(vidsrcApiUrl, {
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                'User-Agent': randomUserAgent,
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.9',
+                'Accept-Language': 'en-US,en;q=0.9,tr-TR;q=0.8,tr;q=0.7',
                 'Accept-Encoding': 'gzip, deflate, br',
                 'Connection': 'keep-alive',
-                'Referer': 'https://vidsrc.to/',
-                'Origin': 'https://vidsrc.to',
+                'Referer': 'https://vidsrc.icu/',
+                'Origin': 'https://vidsrc.icu',
                 'Sec-Fetch-Dest': 'document',
                 'Sec-Fetch-Mode': 'navigate',
                 'Sec-Fetch-Site': 'same-origin',
                 'Sec-Fetch-User': '?1',
                 'Upgrade-Insecure-Requests': '1',
                 'Cache-Control': 'no-cache',
-                'Pragma': 'no-cache'
+                'Pragma': 'no-cache',
+                'DNT': '1',
+                'Sec-Ch-Ua': '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
+                'Sec-Ch-Ua-Mobile': '?0',
+                'Sec-Ch-Ua-Platform': '"Windows"'
             },
-            timeout: 10000
+            timeout: 15000
         });
 
         if (response.status === 403) {
@@ -692,7 +712,7 @@ async function getCloudnestraEmbedUrl(movieId) {
             throw new Error('Cloudflare verification page detected');
         }
 
-        // Look for Cloudnestra iframe
+        // Look for vidsrc.icu player iframe (not just Cloudnestra)
         const iframeMatches = html.match(/<iframe[^>]*src="([^"]*)"[^>]*>/g);
         console.log('Found iframes:', iframeMatches);
 
@@ -703,7 +723,8 @@ async function getCloudnestraEmbedUrl(movieId) {
                 if (srcMatch) {
                     const src = srcMatch[1];
                     console.log('Found iframe src:', src);
-                    if (src.includes('cloudnestra')) {
+                    // Accept vidsrc.icu player URLs (not just Cloudnestra)
+                    if (src.includes('vidsrc.icu') || src.includes('cloudnestra')) {
                         embedUrl = src;
                         break;
                     }
@@ -711,10 +732,13 @@ async function getCloudnestraEmbedUrl(movieId) {
             }
         }
 
-        // Fallback: look for Cloudnestra URLs in HTML
+        // Fallback: look for vidsrc.icu or Cloudnestra URLs in HTML
         if (!embedUrl) {
+            const vidsrcMatch = html.match(/(?:https?:)?\/\/[^"']*vidsrc[^"']*/);
             const cloudnestraMatch = html.match(/(?:https?:)?\/\/[^"']*cloudnestra[^"']*/);
-            if (cloudnestraMatch) {
+            if (vidsrcMatch) {
+                embedUrl = vidsrcMatch[0];
+            } else if (cloudnestraMatch) {
                 embedUrl = cloudnestraMatch[0];
             }
         }
@@ -725,7 +749,54 @@ async function getCloudnestraEmbedUrl(movieId) {
                 embedUrl = 'https:' + embedUrl;
             }
             console.log('Found embed URL:', embedUrl);
-            return embedUrl;
+            
+            // If it's a vidsrcme.vidsrc.icu player, fetch and clean it
+            if (embedUrl.includes('vidsrcme.vidsrc.icu')) {
+                console.log('🔧 Fetching and cleaning vidsrcme player...');
+                try {
+                    const playerResponse = await fetch(embedUrl, {
+                        headers: {
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                            'Accept-Language': 'en-US,en;q=0.9',
+                            'Referer': 'https://vidsrc.icu/',
+                            'Origin': 'https://vidsrc.icu'
+                        },
+                        timeout: 10000
+                    });
+                    
+                    if (playerResponse.ok) {
+                        let playerHtml = await playerResponse.text();
+                        console.log('Player HTML received, length:', playerHtml.length);
+                        
+                        // Clean reklam script'lerini
+                        const cleanHtml = playerHtml
+                            .replace(/g\.json\?sid=[^"']*/g, '') // Google tracking
+                            .replace(/pixels\?src=[^"']*/g, '') // Pixel tracking
+                            .replace(/reporting\.js[^"']*/g, '') // Reporting
+                            .replace(/cast_sender\.js[^"']*/g, '') // Chrome Cast
+                            .replace(/<script[^>]*g\.json[^>]*><\/script>/g, '') // Google script tags
+                            .replace(/<script[^>]*pixels[^>]*><\/script>/g, ''); // Pixel script tags
+                        
+                        console.log('Player cleaned, new length:', cleanHtml.length);
+                        
+                        // Return cleaned HTML instead of URL
+                        return {
+                            type: 'html',
+                            content: cleanHtml,
+                            originalUrl: embedUrl
+                        };
+                    }
+                } catch (playerError) {
+                    console.log('Failed to fetch/clean player, returning original URL:', playerError.message);
+                }
+            }
+            
+            // Return original URL if cleaning failed or not needed
+            return {
+                type: 'url',
+                content: embedUrl
+            };
         } else {
             console.log('No embed URL found');
             return null;
@@ -741,28 +812,48 @@ async function getTvCloudnestraEmbedUrl(tvId, season, episode) {
     try {
         console.log('Getting Cloudnestra embed URL for TV series:', { tvId, season, episode });
         
+        // User-Agent rotasyonu için array - Cloudflare bypass için
+        const userAgents = [
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0'
+        ];
+        
+        // Rastgele User-Agent seç
+        const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
+        
         // Get TV series embed URL from vidsrc
-        const vidsrcApiUrl = `https://vidsrc.to/embed/tv/${tvId}/${season}/${episode}`;
+        const vidsrcApiUrl = `https://vidsrc.icu/embed/tv/${tvId}/${season}/${episode}`;
         console.log('Fetching from vidsrc API:', vidsrcApiUrl);
+        console.log('Using User-Agent:', randomUserAgent);
+
+        // Rate limiting - Cloudflare bypass için
+        await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 3000));
 
         const response = await fetch(vidsrcApiUrl, {
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                'User-Agent': randomUserAgent,
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.9',
+                'Accept-Language': 'en-US,en;q=0.9,tr-TR;q=0.8,tr;q=0.7',
                 'Accept-Encoding': 'gzip, deflate, br',
                 'Connection': 'keep-alive',
-                'Referer': 'https://vidsrc.to/',
-                'Origin': 'https://vidsrc.to',
+                'Referer': 'https://vidsrc.icu/',
+                'Origin': 'https://vidsrc.icu',
                 'Sec-Fetch-Dest': 'document',
                 'Sec-Fetch-Mode': 'navigate',
                 'Sec-Fetch-Site': 'same-origin',
                 'Sec-Fetch-User': '?1',
                 'Upgrade-Insecure-Requests': '1',
                 'Cache-Control': 'no-cache',
-                'Pragma': 'no-cache'
+                'Pragma': 'no-cache',
+                'DNT': '1',
+                'Sec-Ch-Ua': '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
+                'Sec-Ch-Ua-Mobile': '?0',
+                'Sec-Ch-Ua-Platform': '"Windows"'
             },
-            timeout: 10000
+            timeout: 15000
         });
 
         if (response.status === 403) {
@@ -782,7 +873,7 @@ async function getTvCloudnestraEmbedUrl(tvId, season, episode) {
             throw new Error('Cloudflare verification page detected');
         }
 
-        // Look for Cloudnestra iframe
+        // Look for vidsrc.icu player iframe (not just Cloudnestra)
         const iframeMatches = html.match(/<iframe[^>]*src="([^"]*)"[^>]*>/g);
         console.log('Found TV iframes:', iframeMatches);
 
@@ -793,7 +884,8 @@ async function getTvCloudnestraEmbedUrl(tvId, season, episode) {
                 if (srcMatch) {
                     const src = srcMatch[1];
                     console.log('Found TV iframe src:', src);
-                    if (src.includes('cloudnestra')) {
+                    // Accept vidsrc.icu player URLs (not just Cloudnestra)
+                    if (src.includes('vidsrc.icu') || src.includes('cloudnestra')) {
                         embedUrl = src;
                         break;
                     }
@@ -801,10 +893,13 @@ async function getTvCloudnestraEmbedUrl(tvId, season, episode) {
             }
         }
 
-        // Fallback: look for Cloudnestra URLs in HTML
+        // Fallback: look for vidsrc.icu or Cloudnestra URLs in HTML
         if (!embedUrl) {
+            const vidsrcMatch = html.match(/(?:https?:)?\/\/[^"']*vidsrc[^"']*/);
             const cloudnestraMatch = html.match(/(?:https?:)?\/\/[^"']*cloudnestra[^"']*/);
-            if (cloudnestraMatch) {
+            if (vidsrcMatch) {
+                embedUrl = vidsrcMatch[0];
+            } else if (cloudnestraMatch) {
                 embedUrl = cloudnestraMatch[0];
             }
         }
@@ -815,7 +910,54 @@ async function getTvCloudnestraEmbedUrl(tvId, season, episode) {
                 embedUrl = 'https:' + embedUrl;
             }
             console.log('Found TV embed URL:', embedUrl);
-            return embedUrl;
+            
+            // If it's a vidsrcme.vidsrc.icu player, fetch and clean it
+            if (embedUrl.includes('vidsrcme.vidsrc.icu')) {
+                console.log('🔧 Fetching and cleaning vidsrcme player...');
+                try {
+                    const playerResponse = await fetch(embedUrl, {
+                        headers: {
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                            'Accept-Language': 'en-US,en;q=0.9',
+                            'Referer': 'https://vidsrc.icu/',
+                            'Origin': 'https://vidsrc.icu'
+                        },
+                        timeout: 10000
+                    });
+                    
+                    if (playerResponse.ok) {
+                        let playerHtml = await playerResponse.text();
+                        console.log('Player HTML received, length:', playerHtml.length);
+                        
+                        // Clean reklam script'lerini
+                        const cleanHtml = playerHtml
+                            .replace(/g\.json\?sid=[^"']*/g, '') // Google tracking
+                            .replace(/pixels\?src=[^"']*/g, '') // Pixel tracking
+                            .replace(/reporting\.js[^"']*/g, '') // Reporting
+                            .replace(/cast_sender\.js[^"']*/g, '') // Chrome Cast
+                            .replace(/<script[^>]*g\.json[^>]*><\/script>/g, '') // Google script tags
+                            .replace(/<script[^>]*pixels[^>]*><\/script>/g, ''); // Pixel script tags
+                        
+                        console.log('Player cleaned, new length:', cleanHtml.length);
+                        
+                        // Return cleaned HTML instead of URL
+                        return {
+                            type: 'html',
+                            content: cleanHtml,
+                            originalUrl: embedUrl
+                        };
+                    }
+                } catch (playerError) {
+                    console.log('Failed to fetch/clean player, returning original URL:', playerError.message);
+                }
+            }
+            
+            // Return original URL if cleaning failed or not needed
+            return {
+                type: 'url',
+                content: embedUrl
+            };
         } else {
             console.log('No TV embed URL found');
             return null;
@@ -879,13 +1021,31 @@ app.get('/api/smart-embed', async (req, res) => {
       throw new Error('Failed to get embed URL from vidsrc');
     }
 
+    // Handle new response format (object with type and content)
+    let finalEmbedUrl = embedUrl;
+    if (typeof embedUrl === 'object' && embedUrl.type) {
+      if (embedUrl.type === 'html') {
+        // Direct HTML content - return immediately
+        console.log('✅ Cleaned HTML player returned to client');
+        return res.json({
+          cloudnestraEmbedUrl: embedUrl,
+          source: 'vidsrc',
+          status: 'fresh',
+          retryCount: retryCount
+        });
+      } else if (embedUrl.type === 'url') {
+        // URL content - use for testing
+        finalEmbedUrl = embedUrl.content;
+      }
+    }
+
     // Test if the URL is actually working
     try {
-      const testResponse = await fetch(embedUrl, {
+      const testResponse = await fetch(finalEmbedUrl, {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          'Referer': 'https://cloudnestra.com/',
-          'Origin': 'https://cloudnestra.com'
+          'Referer': 'https://vidsrc.icu/',
+          'Origin': 'https://vidsrc.icu'
         },
         timeout: 10000
       });
@@ -893,8 +1053,8 @@ app.get('/api/smart-embed', async (req, res) => {
       if (testResponse.ok) {
         console.log('✅ Embed URL is working, returning to client');
         return res.json({
-          cloudnestraEmbedUrl: embedUrl,
-          source: 'cloudnestra',
+          cloudnestraEmbedUrl: embedUrl, // Return original object/URL
+          source: 'vidsrc',
           status: 'fresh',
           retryCount: retryCount
         });
@@ -903,7 +1063,7 @@ app.get('/api/smart-embed', async (req, res) => {
         
         // If we've tried too many times, return error
         if (retryCount >= 2) {
-          throw new Error(`Embed URL expired after ${retryCount + 1} attempts. Cloudnestra URLs have very short lifespan.`);
+          throw new Error(`Embed URL expired after ${retryCount + 1} attempts. Vidsrc URLs have very short lifespan.`);
         }
 
         // Try alternative movie IDs (sometimes different IDs work better)
@@ -919,11 +1079,17 @@ app.get('/api/smart-embed', async (req, res) => {
           try {
             const altEmbedUrl = await getCloudnestraEmbedUrl(altId.toString());
             if (altEmbedUrl) {
-              const altTestResponse = await fetch(altEmbedUrl, {
+              // Handle alternative URL format
+              let altFinalUrl = altEmbedUrl;
+              if (typeof altEmbedUrl === 'object' && altEmbedUrl.type === 'url') {
+                altFinalUrl = altEmbedUrl.content;
+              }
+              
+              const altTestResponse = await fetch(altFinalUrl, {
                 headers: {
                   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                  'Referer': 'https://cloudnestra.com/',
-                  'Origin': 'https://cloudnestra.com'
+                  'Referer': 'https://vidsrc.icu/',
+                  'Origin': 'https://vidsrc.icu'
                 },
                 timeout: 10000
               });
@@ -932,7 +1098,7 @@ app.get('/api/smart-embed', async (req, res) => {
                 console.log(`✅ Alternative movie ID ${altId} worked!`);
                 return res.json({
                   cloudnestraEmbedUrl: altEmbedUrl,
-                  source: 'cloudnestra',
+                  source: 'vidsrc',
                   status: 'alternative',
                   originalMovieId: movieId,
                   workingMovieId: altId,
@@ -1105,7 +1271,7 @@ app.get('/api/clips/:id/download', (req,res) => {
 // Film listesi proxy endpointi
 app.get('/api/movies', async (req, res) => {
   try {
-    const response = await fetch('https://vidsrc.to/vapi/movie/new');
+    const response = await fetch('https://vidsrc.icu/vapi/movie/new');
     const data = await response.json();
     res.json(data);
   } catch (e) {
@@ -1331,30 +1497,50 @@ app.get('/api/get-cloudnestra-embed', async (req, res) => {
     try {
         let vidsrcApiUrl;
         if (movieId) {
-            vidsrcApiUrl = `https://vidsrc.to/embed/movie/${movieId}`;
+            vidsrcApiUrl = `https://vidsrc.icu/embed/movie/${movieId}`;
         } else {
-            vidsrcApiUrl = `https://vidsrc.to/embed/tv/${tvId}/${season}/${episode}`;
+            vidsrcApiUrl = `https://vidsrc.icu/embed/tv/${tvId}/${season}/${episode}`;
         }
         console.log('Fetching from vidsrc API:', vidsrcApiUrl);
 
+        // User-Agent rotasyonu için array - Cloudflare bypass için
+        const userAgents = [
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0'
+        ];
+        
+        // Rastgele User-Agent seç
+        const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
+        console.log('Using User-Agent:', randomUserAgent);
+
+        // Rate limiting - Cloudflare bypass için
+        await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 3000));
+
         const response = await fetch(vidsrcApiUrl, {
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                'User-Agent': randomUserAgent,
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.9',
+                'Accept-Language': 'en-US,en;q=0.9,tr-TR;q=0.8,tr;q=0.7',
                 'Accept-Encoding': 'gzip, deflate, br',
                 'Connection': 'keep-alive',
-                'Referer': 'https://vidsrc.to/',
-                'Origin': 'https://vidsrc.to',
+                'Referer': 'https://vidsrc.icu/',
+                'Origin': 'https://vidsrc.icu',
                 'Sec-Fetch-Dest': 'document',
                 'Sec-Fetch-Mode': 'navigate',
                 'Sec-Fetch-Site': 'same-origin',
                 'Sec-Fetch-User': '?1',
                 'Upgrade-Insecure-Requests': '1',
                 'Cache-Control': 'no-cache',
-                'Pragma': 'no-cache'
+                'Pragma': 'no-cache',
+                'DNT': '1',
+                'Sec-Ch-Ua': '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
+                'Sec-Ch-Ua-Mobile': '?0',
+                'Sec-Ch-Ua-Platform': '"Windows"'
             },
-            timeout: 10000
+            timeout: 15000
         });
 
         if (response.status === 403) {
@@ -1386,7 +1572,11 @@ app.get('/api/get-cloudnestra-embed', async (req, res) => {
                 if (srcMatch) {
                     const src = srcMatch[1];
                     console.log('Found iframe src:', src);
-                    if (src.includes('cloudnestra')) {
+                    if (src.includes('vidsrc.icu')) {
+                        embedUrl = src;
+                        source = 'vidsrc';
+                        break;
+                    } else if (src.includes('cloudnestra')) {
                         embedUrl = src;
                         source = 'cloudnestra';
                         break;
@@ -1401,10 +1591,14 @@ app.get('/api/get-cloudnestra-embed', async (req, res) => {
             }
         }
         if (!embedUrl) {
+            const vidsrcMatch = html.match(/(?:https?:)?\/\/[^"']*vidsrc[^"']*/);
             const cloudnestraMatch = html.match(/(?:https?:)?\/\/[^"']*cloudnestra[^"']*/);
             const vidplayMatch = html.match(/(?:https?:)?\/\/[^"']*vidplay[^"']*/);
             const upcloudMatch = html.match(/(?:https?:)?\/\/[^"']*upcloud[^"']*/);
-            if (cloudnestraMatch) {
+            if (vidsrcMatch) {
+                embedUrl = vidsrcMatch[0];
+                source = 'vidsrc';
+            } else if (cloudnestraMatch) {
                 embedUrl = cloudnestraMatch[0];
                 source = 'cloudnestra';
             } else if (vidplayMatch) {

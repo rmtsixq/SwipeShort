@@ -1,6 +1,97 @@
 // Firebase initialization requires config file and CDN!
 // This file should be called at the bottom of dashboard.html
 
+// Check if user came from index page and show educational modal
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const fromIndex = urlParams.get('fromIndex');
+    
+    // Check if user has already seen the modal today
+    const lastSeen = localStorage.getItem('educationalModalLastSeen');
+    const today = new Date().toDateString();
+    
+    if (fromIndex === 'true' && lastSeen !== today) {
+        showEducationalModal();
+        localStorage.setItem('educationalModalLastSeen', today);
+    }
+    
+    // Add event listeners for educational modal
+    setupEducationalModal();
+});
+
+// Educational Modal Functions
+function showEducationalModal() {
+    const modal = document.getElementById('educational-modal');
+    if (modal) {
+        modal.style.display = 'block';
+        document.body.style.overflow = 'hidden'; // Prevent background scrolling
+    }
+}
+
+function hideEducationalModal() {
+    const modal = document.getElementById('educational-modal');
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = 'auto'; // Restore scrolling
+    }
+}
+
+function setupEducationalModal() {
+    const modal = document.getElementById('educational-modal');
+    const closeBtn = document.getElementById('close-educational-modal');
+    const understandBtn = document.getElementById('understand-btn');
+    
+    if (closeBtn) {
+        closeBtn.addEventListener('click', hideEducationalModal);
+    }
+    
+    if (understandBtn) {
+        understandBtn.addEventListener('click', hideEducationalModal);
+    }
+    
+    // Close modal when clicking outside
+    if (modal) {
+        modal.addEventListener('click', function(event) {
+            if (event.target === modal) {
+                hideEducationalModal();
+            }
+        });
+    }
+    
+    // Close modal with Escape key
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            hideEducationalModal();
+        }
+    });
+    
+    // Also check referrer to detect if user came from index page
+    const lastSeen = localStorage.getItem('educationalModalLastSeen');
+    const today = new Date().toDateString();
+    
+    if ((!document.referrer.includes(window.location.origin) || 
+        document.referrer.includes('index.html') || 
+        document.referrer.includes('index.html?')) && 
+        lastSeen !== today) {
+        // User came from index page or external source
+        setTimeout(() => {
+            showEducationalModal();
+            localStorage.setItem('educationalModalLastSeen', today);
+        }, 1000); // Show after 1 second delay
+    }
+}
+
+// Function to manually show educational modal (for testing or admin use)
+function showEducationalModalManually() {
+    showEducationalModal();
+}
+
+// Function to reset educational modal seen status
+function resetEducationalModalStatus() {
+    localStorage.removeItem('educationalModalLastSeen');
+    console.log('Educational modal status reset. Modal will show again on next visit.');
+}
+
 // Robot Character Class
 class RobotCharacter {
     constructor() {

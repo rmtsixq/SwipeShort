@@ -64,7 +64,7 @@
             flex-direction: row;
             align-items: flex-start;
             width: 100%;
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             gap: 32px;
             justify-content: center;
@@ -75,7 +75,7 @@
         }
         .video-frame {
             width: 100%;
-            max-width: 1000px;
+            max-width: 1200px;
             aspect-ratio: 16/9;
             background: #000;
             border-radius: 18px;
@@ -85,13 +85,27 @@
             align-items: center;
             justify-content: center;
             position: relative;
+            min-height: 500px;
+            max-height: 70vh;
+            overflow: hidden;
         }
         iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-            border-radius: 18px;
-            background: #000;
+            width: 100% !important;
+            height: 100% !important;
+            border: none !important;
+            border-radius: 18px !important;
+            background: #000 !important;
+            aspect-ratio: 16/9 !important;
+            min-width: 100% !important;
+            min-height: 100% !important;
+            max-width: none !important;
+            max-height: none !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            object-fit: cover !important;
         }
         .spinner {
             border: 6px solid #333;
@@ -149,6 +163,11 @@
             display: flex;
             gap: 12px;
             margin-bottom: 18px;
+        }
+        .the_frame {
+            width: 100%;
+            height: 100%;
+            aspect-ratio: 16/9;
         }
         .comment-input {
             flex: 1;
@@ -212,9 +231,12 @@
             .video-frame {
                 margin-top: 12px;
                 border-radius: 8px;
-                max-width: 100vw;
-                width: 100vw;
+                max-width: 95vw;
+                width: 95vw;
                 min-width: 0;
+                min-height: 400px;
+                max-height: 60vh;
+                aspect-ratio: 16/9;
             }
         }
         @media (max-width: 600px) {
@@ -230,9 +252,12 @@
             .video-frame {
                 margin-top: 8px;
                 border-radius: 6px;
-                max-width: 100vw;
-                width: 100vw;
+                max-width: 92vw;
+                width: 92vw;
                 min-width: 0;
+                min-height: 350px;
+                max-height: 55vh;
+                aspect-ratio: 16/9;
             }
             .comments-section {
                 padding: 12px 6px 10px 6px;
@@ -685,17 +710,33 @@
         const data = await res.json();
         return data.name || '';
     }
-    // Video player için Cloudnestra embed'i direkt yükle
+    // Video player için Cloudnestra embed'i hybrid yükle
     async function createVideoPlayer(embedUrl, frame) {
         try {
             console.log('🎬 createVideoPlayer called with:', embedUrl);
             console.log('🎯 Frame element:', frame);
             
-            // Cloudnestra URL'ini direkt iframe'de kullan
-            // URL'de //cloudnestra.com varsa https:// yap
+            // Check if embedUrl is an object with type and content
             let finalUrl = embedUrl;
-            if (embedUrl.startsWith('//')) {
-                finalUrl = 'https:' + embedUrl;
+            let isHtmlContent = false;
+            
+            if (typeof embedUrl === 'object' && embedUrl.type) {
+                if (embedUrl.type === 'html') {
+                    // Direct HTML content - no iframe needed
+                    console.log('📺 Using cleaned HTML content directly');
+                    frame.innerHTML = embedUrl.content;
+                    console.log('✅ HTML content added to frame element');
+                    return true;
+                } else if (embedUrl.type === 'url') {
+                    // URL content - use iframe
+                    finalUrl = embedUrl.content;
+                    console.log('🔗 Using URL content:', finalUrl);
+                }
+            }
+            
+            // Ensure URL has protocol
+            if (finalUrl.startsWith('//')) {
+                finalUrl = 'https:' + finalUrl;
             }
             
             console.log('🎯 Final iframe URL:', finalUrl);

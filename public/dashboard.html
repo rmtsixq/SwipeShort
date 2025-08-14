@@ -98,6 +98,198 @@
             font-size: 1.1rem;
         }
         .chat-btn span {
+        }
+
+        /* Educational Modal Styles */
+        .educational-modal {
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
+        }
+
+        .educational-modal-content {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            margin: 5% auto;
+            padding: 0;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 600px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            border: 2px solid #38cfff;
+            animation: modalSlideIn 0.3s ease-out;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .educational-modal-content::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #38cfff 0%, #ff66c4 100%);
+            border-radius: 20px 20px 0 0;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px) scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .educational-modal-header {
+            background: linear-gradient(90deg, #38cfff 0%, #ff66c4 100%);
+            color: #111;
+            padding: 20px 25px;
+            border-radius: 18px 18px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .educational-modal-header h2 {
+            margin: 0;
+            font-size: 1.4rem;
+            font-weight: 700;
+        }
+
+        .close-modal-btn {
+            background: none;
+            border: none;
+            color: #111;
+            font-size: 2rem;
+            cursor: pointer;
+            padding: 0;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+        }
+
+        .close-modal-btn:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .educational-modal-body {
+            padding: 25px;
+            color: #fff;
+            line-height: 1.6;
+        }
+
+        .educational-modal-body p {
+            margin: 0 0 15px 0;
+            font-size: 1rem;
+        }
+
+        .educational-modal-body ul {
+            margin: 15px 0;
+            padding-left: 25px;
+        }
+
+        .educational-modal-body li {
+            margin: 8px 0;
+            color: #e0e0e0;
+        }
+
+        .educational-modal-body strong {
+            color: #38cfff;
+        }
+
+        .educational-modal-footer {
+            padding: 20px 25px 25px 25px;
+            text-align: center;
+        }
+
+        .understand-btn {
+            background: linear-gradient(90deg, #38cfff 0%, #ff66c4 100%);
+            color: #111;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(56, 207, 255, 0.3);
+        }
+
+        .understand-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(56, 207, 255, 0.4);
+        }
+
+        .understand-btn:active {
+            transform: translateY(0);
+        }
+
+        @media (max-width: 768px) {
+            .educational-modal-content {
+                margin: 10% auto;
+                width: 95%;
+                max-width: none;
+            }
+            
+            .educational-modal-header h2 {
+                font-size: 1.2rem;
+            }
+            
+            .educational-modal-body {
+                padding: 20px;
+            }
+            
+            .educational-modal-footer {
+                padding: 15px 20px 20px 20px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .educational-modal-content {
+                margin: 5% auto;
+                width: 98%;
+                border-radius: 15px;
+            }
+            
+            .educational-modal-header {
+                padding: 15px 20px;
+            }
+            
+            .educational-modal-header h2 {
+                font-size: 1.1rem;
+            }
+            
+            .educational-modal-body {
+                padding: 15px;
+                font-size: 0.9rem;
+            }
+            
+            .educational-modal-body ul {
+                padding-left: 20px;
+            }
+            
+            .educational-modal-footer {
+                padding: 15px 15px 20px 15px;
+            }
+            
+            .understand-btn {
+                padding: 12px 25px;
+                font-size: 1rem;
+            }
+        }
             font-size: 1rem;
         }
         @media (max-width: 768px) {
@@ -247,6 +439,30 @@
                     <input type="text" id="terminal-input" class="terminal-input" autocomplete="off">
                 </form>
                 <button id="tip-btn" class="tip-btn">💡</button>
+            </div>
+        </div>
+
+        <!-- Educational Purposes Warning Modal -->
+        <div id="educational-modal" class="educational-modal">
+            <div class="educational-modal-content">
+                <div class="educational-modal-header">
+                    <h2>⚠️ Educational Purposes Only</h2>
+                    <button id="close-educational-modal" class="close-modal-btn">&times;</button>
+                </div>
+                <div class="educational-modal-body">
+                    <p>This application is created <strong>exclusively for educational purposes</strong> to demonstrate:</p>
+                    <ul>
+                        <li>Web development technologies and frameworks</li>
+                        <li>API integration and data handling</li>
+                        <li>User interface design and user experience</li>
+                        <li>Responsive web design principles</li>
+                        <li>Modern JavaScript and CSS techniques</li>
+                    </ul>
+                    <p><strong>Important:</strong> This is a learning project and should not be used for commercial purposes or to distribute copyrighted content.</p>
+                </div>
+                <div class="educational-modal-footer">
+                    <button id="understand-btn" class="understand-btn">I Understand</button>
+                </div>
             </div>
         </div>
 
