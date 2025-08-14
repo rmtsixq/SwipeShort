@@ -11,6 +11,8 @@ const { v4: uuidv4 } = require('uuid');
 const axios = require('axios');
 const cors = require('cors');
 const { HfInference } = require('@huggingface/inference');
+const compression = require('compression');
+const slowDown = require('express-slow-down');
 require('dotenv').config();
 
 // HuggingFace API setup
@@ -102,23 +104,189 @@ const app = express();
 const PORT = process.env.PORT || 8080;
 const upload = multer({ dest: process.env.UPLOAD_DIR || 'uploads/' });
 
-// Serve static files from public directory
-app.use(express.static('public'));
+// Enhanced CORS configuration for Mac and Apache compatibility
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Allow all origins for development
+    callback(null, true);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD'],
+  allowedHeaders: [
+    'Origin', 
+    'X-Requested-With', 
+    'Content-Type', 
+    'Accept', 
+    'Authorization', 
+    'Range',
+    'Cache-Control',
+    'Pragma',
+    'If-Modified-Since',
+    'If-None-Match'
+  ],
+  exposedHeaders: [
+    'Content-Length',
+    'Content-Range',
+    'Accept-Ranges',
+    'Content-Type',
+    'Cache-Control',
+    'Pragma',
+    'Expires'
+  ],
+  maxAge: 86400 // 24 hours
+};
+
+// Apply CORS middleware
+app.use(cors(corsOptions));
+
+// Compression middleware for better performance
+app.use(compression({
+  filter: (req, res) => {
+    // Don't compress video streams
+    if (req.path.includes('/api/video-stream') || req.path.includes('/proxy/stream')) {
+      return false;
+    }
+    return compression.filter(req, res);
+  },
+  level: 6,
+  threshold: 1024
+}));
+
+// Rate limiting for API endpoints
+const speedLimiter = slowDown({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  delayAfter: 100, // Allow 100 requests per 15 minutes, then...
+  delayMs: 500 // Begin adding 500ms of delay per request above 100
+});
+
+// Apply rate limiting to API routes
+app.use('/api/', speedLimiter);
+app.use('/proxy/', speedLimiter);
+
+// Health check endpoint for Mac debugging
+app.get('/health', (req, res) => {
+  const healthInfo = {
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    platform: process.platform,
+    nodeVersion: process.version,
+    memory: process.memoryUsage(),
+    headers: req.headers,
+    userAgent: req.headers['user-agent'],
+    platform: req.headers['sec-ch-ua-platform'] || 'unknown',
+    cors: {
+      origin: req.headers.origin || 'none',
+      method: req.method,
+      headers: req.headers
+    }
+  };
+  
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  
+  res.json(healthInfo);
+});
+
+// Mac-specific debugging endpoint
+app.get('/debug/mac', (req, res) => {
+  const debugInfo = {
+    timestamp: new Date().toISOString(),
+    request: {
+      method: req.method,
+      url: req.url,
+      headers: req.headers,
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+      platform: req.headers['sec-ch-ua-platform'] || 'unknown',
+      accept: req.headers.accept,
+      acceptEncoding: req.headers['accept-encoding'],
+      acceptLanguage: req.headers['accept-language']
+    },
+    server: {
+      platform: process.platform,
+      arch: process.arch,
+      nodeVersion: process.version,
+      memory: process.memoryUsage(),
+      env: {
+        NODE_ENV: process.env.NODE_ENV,
+        PORT: process.env.PORT
+      }
+    }
+  };
+  
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Content-Type', 'application/json');
+  
+  res.json(debugInfo);
+});
+
+// Additional security headers for Mac and Apache compatibility
+app.use((req, res, next) => {
+  // Enhanced CORS headers
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, HEAD');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Range, Cache-Control, Pragma, If-Modified-Since, If-None-Match');
+  res.header('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges, Content-Type, Cache-Control, Pragma, Expires');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
+  // Security headers for better compatibility
+  res.header('X-Content-Type-Options', 'nosniff');
+  res.header('X-Frame-Options', 'SAMEORIGIN');
+  res.header('X-XSS-Protection', '1; mode=block');
+  res.header('Referrer-Policy', 'strict-origin-when-cross-origin');
+  
+  // Cache control for video content
+  if (req.path.includes('/api/video-stream') || req.path.includes('/proxy/stream')) {
+    res.header('Cache-Control', 'public, max-age=3600, s-maxage=3600');
+  } else {
+    res.header('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.header('Pragma', 'no-cache');
+    res.header('Expires', '0');
+  }
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+  
+  next();
+});
+
+// Serve static files from public directory with proper headers
+app.use(express.static('public', {
+  setHeaders: (res, path) => {
+    // Set proper MIME types for video files
+    if (path.endsWith('.mp4')) {
+      res.setHeader('Content-Type', 'video/mp4');
+      res.setHeader('Accept-Ranges', 'bytes');
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+    } else if (path.endsWith('.m3u8')) {
+      res.setHeader('Content-Type', 'application/x-mpegURL');
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+    } else if (path.endsWith('.ts')) {
+      res.setHeader('Content-Type', 'video/MP2T');
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+    }
+    
+    // CORS headers for static files
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Range, Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  }
+}));
 
 // Error handling middleware
 app.use((err, req, res, next) => {
     console.error('Server error:', err);
     res.status(500).json({ error: 'Internal server error', details: err.message });
 });
-
-// CORS header ekle (güvenli test için)
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  next();
-});
-
-// CORS middleware
-app.use(cors());
 
 // Video stream proxy - Cloudnestra videolarını doğrudan stream et
 app.get('/api/video-stream', async (req, res) => {
@@ -134,17 +302,22 @@ app.get('/api/video-stream', async (req, res) => {
         // Range request desteği için
         const range = req.headers.range;
         
+        // Enhanced headers for Mac compatibility
+        const fetchHeaders = {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            'Accept': '*/*',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Connection': 'keep-alive',
+            'Referer': 'https://cloudnestra.com/',
+            'Origin': 'https://cloudnestra.com',
+            'Range': range || undefined,
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+        };
+        
         const response = await fetch(url, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-                'Accept': '*/*',
-                'Accept-Language': 'en-US,en;q=0.9',
-                'Accept-Encoding': 'gzip, deflate, br',
-                'Connection': 'keep-alive',
-                'Referer': 'https://cloudnestra.com/',
-                'Origin': 'https://cloudnestra.com',
-                'Range': range || undefined
-            },
+            headers: fetchHeaders,
             timeout: 30000
         });
         
@@ -157,15 +330,18 @@ app.get('/api/video-stream', async (req, res) => {
         const contentLength = response.headers.get('content-length');
         const acceptRanges = response.headers.get('accept-ranges');
         
-        // CORS ve video headers ekle
+        // Enhanced CORS ve video headers for Mac
         res.set({
             'Access-Control-Allow-Origin': '*',
             'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
-            'Access-Control-Allow-Headers': 'Range, Origin, X-Requested-With, Content-Type, Accept, Authorization',
+            'Access-Control-Allow-Headers': 'Range, Origin, X-Requested-With, Content-Type, Accept, Authorization, Cache-Control, Pragma, If-Modified-Since, If-None-Match',
+            'Access-Control-Expose-Headers': 'Content-Length, Content-Range, Accept-Ranges, Content-Type, Cache-Control, Pragma, Expires',
             'Content-Type': contentType,
             'Accept-Ranges': acceptRanges || 'bytes',
-            'Cache-Control': 'public, max-age=3600',
-            'X-Content-Type-Options': 'nosniff'
+            'Cache-Control': 'public, max-age=3600, s-maxage=3600',
+            'X-Content-Type-Options': 'nosniff',
+            'X-Frame-Options': 'SAMEORIGIN',
+            'X-XSS-Protection': '1; mode=block'
         });
         
         // Range request varsa content-length ekle
@@ -173,15 +349,39 @@ app.get('/api/video-stream', async (req, res) => {
             res.set('Content-Length', contentLength);
         }
         
-        // Video stream'i pipe et
+        // Handle preflight requests
+        if (req.method === 'OPTIONS') {
+            res.status(200).end();
+            return;
+        }
+        
+        // Video stream'i pipe et with error handling
+        response.body.on('error', (error) => {
+            console.error('Video stream pipe error:', error);
+            if (!res.headersSent) {
+                res.status(500).json({ 
+                    error: 'Video stream error', 
+                    details: error.message 
+                });
+            }
+        });
+        
         response.body.pipe(res);
         
     } catch (error) {
         console.error('Video stream error:', error);
-        res.status(500).json({ 
-            error: 'Video stream error', 
-            details: error.message 
-        });
+        
+        // Enhanced error response for Mac debugging
+        const errorResponse = {
+            error: 'Video stream error',
+            details: error.message,
+            timestamp: new Date().toISOString(),
+            url: url,
+            userAgent: req.headers['user-agent'],
+            platform: req.headers['sec-ch-ua-platform'] || 'unknown'
+        };
+        
+        res.status(500).json(errorResponse);
     }
 });
 
@@ -1294,13 +1494,16 @@ app.get('/proxy/stream', async (req, res) => {
         const isPlaylist = streamUrl.toLowerCase().endsWith('.m3u8');
         console.log('Is playlist request:', isPlaylist);
 
+        // Enhanced headers for Mac compatibility
         const fetchOptions = {
             headers: {
                 'Accept': isPlaylist ? 'application/x-mpegURL,application/vnd.apple.mpegurl,*/*' : '*/*',
                 'Accept-Language': 'en-US,en;q=0.9',
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
-                // Potentially add Referer based on the original URL, but let's test without first
-                // 'Referer': new URL(streamUrl).origin // Or maybe the base path of the original m3u8 URL?
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'Connection': 'keep-alive',
+                'Cache-Control': 'no-cache',
+                'Pragma': 'no-cache'
             }
         };
 
@@ -1317,8 +1520,23 @@ app.get('/proxy/stream', async (req, res) => {
                 error: `Failed to fetch stream from source (${response.status})`,
                 details: response.statusText,
                 url: streamUrl,
-                headers: headers // Add response headers for debugging
+                headers: headers, // Add response headers for debugging
+                timestamp: new Date().toISOString(),
+                platform: req.headers['sec-ch-ua-platform'] || 'unknown'
             });
+        }
+
+        // Enhanced CORS headers for Mac
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS, HEAD');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Range, Origin, Referer, Cache-Control, Pragma, If-Modified-Since, If-None-Match');
+        res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges, Content-Type, Cache-Control, Pragma, Expires');
+        res.setHeader('Access-Control-Allow-Credentials', 'true');
+
+        // Handle OPTIONS request for CORS preflight
+        if (req.method === 'OPTIONS') {
+             console.log('Received OPTIONS request, sending 200 OK');
+             return res.status(200).end();
         }
 
         // Copy original headers to the response, except for CORS-related ones and content-length for playlist
@@ -1327,18 +1545,6 @@ app.get('/proxy/stream', async (req, res) => {
                 res.setHeader(name, value);
             }
         });
-
-        // Always allow CORS for our frontend
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Range, Origin, Referer'); // Allow relevant headers
-        res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range');
-
-        // Handle OPTIONS request for CORS preflight
-        if (req.method === 'OPTIONS') {
-             console.log('Received OPTIONS request, sending 200 OK');
-             return res.status(200).end();
-        }
 
         if (isPlaylist) {
             console.log('Processing M3U8 playlist...');
@@ -1374,13 +1580,27 @@ app.get('/proxy/stream', async (req, res) => {
 
             // Set appropriate Content-Type for HLS playlist
             res.setHeader('Content-Type', 'application/x-mpegURL'); // Standard HLS content type
-            // res.setHeader('Content-Length', Buffer.byteLength(processedPlaylist)); // Let the browser determine length
+            res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=3600');
             res.status(200).send(processedPlaylist);
 
         } else {
             console.log('Piping stream segment...');
             // If it's a segment or other file, just pipe the response body
             // Handle range requests if necessary, though fetch might handle it automatically with piping
+            
+            // Enhanced error handling for Mac
+            response.body.on('error', (error) => {
+                console.error('Stream pipe error:', error);
+                if (!res.headersSent) {
+                    res.status(500).json({
+                        error: 'Stream pipe failed',
+                        details: error.message,
+                        timestamp: new Date().toISOString(),
+                        url: streamUrl
+                    });
+                }
+            });
+            
             response.body.pipe(res);
         }
 
@@ -1391,6 +1611,8 @@ app.get('/proxy/stream', async (req, res) => {
                 error: 'Failed to proxy stream due to internal error',
                 details: error.message,
                 url: streamUrl,
+                timestamp: new Date().toISOString(),
+                platform: req.headers['sec-ch-ua-platform'] || 'unknown',
                 stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
             });
         }
