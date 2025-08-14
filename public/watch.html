@@ -635,7 +635,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
     <script src="scripts/firebase-config.js"></script>
-    <script src="https://kit.fontawesome.com/4e7b8e7e2a.js" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous"></script>
     <script>
     // Back button function
     function goBack() {
@@ -685,15 +685,42 @@
         const data = await res.json();
         return data.name || '';
     }
-    // Video player için proxy kullanarak cloudnestra embed'i yükle
+    // Video player için Cloudnestra embed'i direkt yükle
     async function createVideoPlayer(embedUrl, frame) {
         try {
-            // Sadece proxy kullanarak cloudnestra embed'i yükle
-            const proxyUrl = `/api/iframe-proxy?url=${encodeURIComponent(embedUrl)}`;
-            frame.innerHTML = `<iframe src="${proxyUrl}" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true"></iframe>`;
+            console.log('🎬 createVideoPlayer called with:', embedUrl);
+            console.log('🎯 Frame element:', frame);
+            
+            // Cloudnestra URL'ini direkt iframe'de kullan
+            // URL'de //cloudnestra.com varsa https:// yap
+            let finalUrl = embedUrl;
+            if (embedUrl.startsWith('//')) {
+                finalUrl = 'https:' + embedUrl;
+            }
+            
+            console.log('🎯 Final iframe URL:', finalUrl);
+            
+            // Iframe'i direkt oluştur - proxy olmadan
+            const iframeHtml = `<iframe 
+                src="${finalUrl}" 
+                allowfullscreen="true" 
+                webkitallowfullscreen="true" 
+                mozallowfullscreen="true" 
+                style="width: 100%; height: 100%; border: none;"
+                referrerpolicy="no-referrer">
+            </iframe>`;
+            console.log('📺 Iframe HTML:', iframeHtml);
+            
+            frame.innerHTML = iframeHtml;
+            console.log('✅ Iframe added to frame element');
+            
+            // Iframe element'ini kontrol et
+            const iframe = frame.querySelector('iframe');
+            console.log('🎬 Iframe element found:', iframe);
+            
             return true;
         } catch (e) {
-            console.error('Proxy video player failed:', e);
+            console.error('❌ Cloudnestra video player failed:', e);
             return false;
         }
     }
@@ -707,6 +734,12 @@
         const frame = document.getElementById('video-frame');
         const spinner = document.getElementById('spinner');
         const titleSpan = document.getElementById('movie-title');
+        
+        // Debug: Video player durumunu kontrol et
+        console.log('🎬 Video player loading started');
+        console.log('📺 Movie ID:', movieId, 'TV ID:', tvId, 'Season:', season, 'Episode:', episode);
+        console.log('🎯 Frame element:', frame);
+        console.log('🔄 Spinner element:', spinner);
         if (tvId && season && episode) {
             // TV Show
             titleSpan.textContent = 'Loading...';
@@ -715,7 +748,7 @@
                 else titleSpan.textContent = 'TV Show';
             });
             try {
-                // Diziler için de cloudnestra embed url'sini backend'den fetch et
+                // Diziler için de vidsrc embed url'sini backend'den fetch et
                 const url = `/api/smart-embed?tvId=${tvId}&season=${season}&episode=${episode}`;
                 const response = await fetch(url);
                 if (!response.ok) throw new Error('No video found');
@@ -753,37 +786,31 @@
         });
         try {
             const embedUrl = await getCloudnestraEmbedUrl(movieId);
-            console.log('Final embed URL for iframe:', embedUrl); // Debug
+            console.log('Final Cloudnestra embed URL for iframe:', embedUrl);
             spinner.style.display = 'none';
             
-            // Warning mesajını kontrol et
-            if (embedUrl.includes('warning')) {
-                console.warn('Backend warning: URL may be expired');
-            }
-            
-            // Yeni video player sistemi ile yükle
+            // Cloudnestra video player ile yükle
             const success = await createVideoPlayer(embedUrl, frame);
             if (!success) {
-                throw new Error('All video player methods failed');
+                throw new Error('Cloudnestra video player failed');
             }
         } catch (e) {
             spinner.style.display = 'none';
             console.error('Movie loading error:', e);
             
-            // Fallback: Direct vidsrc URL deneme
-            try {
-                const fallbackUrl = `https://vidsrc.xyz/embed/movie/${movieId}`;
-                frame.innerHTML = `<iframe src="${fallbackUrl}" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true"></iframe>`;
-            } catch (fallbackError) {
-                frame.innerHTML = `<div class="error-message">
-                    <h3>⚠️ Video Not Available</h3>
-                    <p>${e.message}</p>
-                    <button onclick="location.reload()" style="background:#38cfff;color:#111;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;margin-top:10px;">
-                        🔄 Try Again
-                    </button>
-                </div>`;
-            }
-            }
+            // Sadece Cloudnestra kullan, vidsrc fallback yok
+            frame.innerHTML = `<div class="error-message">
+                <h3>⚠️ Video Not Available</h3>
+                <p>${e.message}</p>
+                <p style="font-size: 0.9rem; color: #aaa; margin-top: 10px;">
+                    We use Cloudnestra for high-quality video playback.<br>
+                    <strong>Note:</strong> Cloudnestra embed with localhost cleanup.
+                </p>
+                <button onclick="location.reload()" style="background:#38cfff;color:#111;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;margin-top:10px;">
+                    🔄 Try Again
+                </button>
+            </div>`;
+        }
         } else {
             spinner.style.display = 'none';
             frame.innerHTML = '<div class="error-message">No video selected.</div>';

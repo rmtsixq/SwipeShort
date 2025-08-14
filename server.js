@@ -226,6 +226,14 @@ app.get('/api/iframe-proxy', async (req, res) => {
         let html = await response.text();
         console.log(`Received HTML length: ${html.length} characters`);
         
+        // HTML'de localhost referansları var mı kontrol et
+        const localhostInHtml = html.match(/localhost[^"'\s>]*/g);
+        if (localhostInHtml) {
+            console.log(`🔍 Found ${localhostInHtml.length} localhost references in HTML:`, localhostInHtml);
+        } else {
+            console.log('✅ No localhost references found in HTML');
+        }
+        
         // Relative URL'leri absolute yap ve localhost referanslarını düzelt
         if (html.includes('src="//')) {
             html = html.replace(/src="\/\//g, 'src="https://');
@@ -259,10 +267,59 @@ app.get('/api/iframe-proxy', async (req, res) => {
             html = html.replace(/localhost[^"'\s>]*/g, 'cloudnestra.com');
         }
         
+        // Regex ile tüm localhost varyasyonlarını yakala
+        html = html.replace(/localhost(?::\d+)?(?:\/[^"'\s>]*)?/g, 'cloudnestra.com');
+        
+        // Debug için kalan localhost referanslarını kontrol et
+        const remainingLocalhost = html.match(/localhost[^"'\s>]*/g);
+        if (remainingLocalhost) {
+            console.log(`Remaining localhost references after cleanup:`, remainingLocalhost);
+        }
+        
+        // Son bir temizlik daha - tüm localhost varyasyonlarını yakala
+        html = html.replace(/localhost(?::\d+)?(?:\/[^"'\s>]*)?/g, 'cloudnestra.com');
+        html = html.replace(/localhost(?:\/[^"'\s>]*)?/g, 'cloudnestra.com');
+        
+        // Port numaraları ile birlikte tüm localhost referanslarını temizle
+        html = html.replace(/localhost:\d+/g, 'cloudnestra.com');
+        html = html.replace(/localhost\//g, 'cloudnestra.com/');
+        
+        // Final kontrol
+        const finalLocalhost = html.match(/localhost[^"'\s>]*/g);
+        if (finalLocalhost) {
+            console.log(`⚠️ FINAL WARNING: Still found localhost references:`, finalLocalhost);
+            
+            // Son çare: Tüm localhost referanslarını manuel olarak değiştir
+            html = html.replace(/localhost(?::\d+)?(?:\/[^"'\s>]*)?/g, 'cloudnestra.com');
+            html = html.replace(/localhost\//g, 'cloudnestra.com/');
+            html = html.replace(/localhost"/g, 'cloudnestra.com"');
+            html = html.replace(/localhost'/g, "cloudnestra.com'");
+            html = html.replace(/localhost\s/g, 'cloudnestra.com ');
+            html = html.replace(/localhost/g, 'cloudnestra.com');
+            
+            // JavaScript string'lerindeki localhost referanslarını da temizle
+            html = html.replace(/(['"])localhost(?::\d+)?([^'"]*)\1/g, '$1cloudnestra.com$2$1');
+            html = html.replace(/(['"])localhost([^'"]*)\1/g, '$1cloudnestra.com$2$1');
+            
+            // URL'lerdeki localhost referanslarını temizle
+            html = html.replace(/http:\/\/localhost(?::\d+)?/g, 'https://cloudnestra.com');
+            html = html.replace(/https:\/\/localhost(?::\d+)?/g, 'https://cloudnestra.com');
+            
+            // Son bir temizlik daha - tüm kalan localhost referanslarını yakala
+            html = html.replace(/localhost[^"'\s>]*/g, 'cloudnestra.com');
+            html = html.replace(/localhost/g, 'cloudnestra.com');
+            
+            console.log('🔧 Applied aggressive localhost cleanup');
+        } else {
+            console.log('✅ All localhost references cleaned successfully');
+        }
+        
         // CSS ve JS dosya yollarını özel olarak düzelt
         html = html.replace(/style_rcp-[^"']*\.css/g, 'style_rcp.css');
         html = html.replace(/base64\.js/g, 'base64.js');
-        html = html.replace(/sbx\.js/g, 'sbx.js');
+        // sbx.js referanslarını düzelt - artık direkt route'umuz var
+        html = html.replace(/\/sbx\.js/g, '/sbx.js');
+        html = html.replace(/sbx\.js/g, '/sbx.js');
         
         // FontAwesome ve diğer CDN referanslarını düzelt
         html = html.replace(/https:\/\/cloudnestra\.com\/\/cdnjs\.cloudflare\.com/g, 'https://cdnjs.cloudflare.com');
@@ -275,6 +332,17 @@ app.get('/api/iframe-proxy', async (req, res) => {
         // Localhost referanslarını tamamen temizle
         html = html.replace(/http:\/\/localhost:\d+/g, 'https://cloudnestra.com');
         html = html.replace(/localhost:\d+/g, 'cloudnestra.com');
+        
+        // Hardcoded localhost:8080 referanslarını da temizle
+        html = html.replace(/localhost:8080/g, 'cloudnestra.com');
+        html = html.replace(/localhost:80/g, 'cloudnestra.com');
+        html = html.replace(/localhost:3000/g, 'cloudnestra.com');
+        
+        // Port numarası olmadan localhost referanslarını da temizle
+        html = html.replace(/localhost\//g, 'cloudnestra.com/');
+        html = html.replace(/localhost"/g, 'cloudnestra.com"');
+        html = html.replace(/localhost'/g, "cloudnestra.com'");
+        html = html.replace(/localhost\s/g, 'cloudnestra.com ');
         
         // Cloudnestra'nın kendi dosyalarını düzgün yolla
         html = html.replace(/src=["']\/rcp\//g, 'src="https://cloudnestra.com/rcp/');
@@ -299,24 +367,87 @@ app.get('/api/iframe-proxy', async (req, res) => {
             return `href="https://cloudnestra.com/${filename}"`;
         });
         
-        // Cloudnestra asset and AJAX calls should go through our proxy to avoid CORS
-        // Attribute references to cloudnestra.com -> backend proxy
-        html = html.replace(/(src|href)=["']https:\/\/cloudnestra\.com\/([^"']+)["']/g,
-            (m, attr, path) => `${attr}="/api/cn-proxy?url=https://cloudnestra.com/${path}"`);
+        // JavaScript ve CSS dosyalarını direkt Cloudnestra'dan yükle (proxy olmadan)
+        html = html.replace(/src=["']https:\/\/cloudnestra\.com\/([^"']+)["']/g,
+            (m, path) => `src="https://cloudnestra.com/${path}"`);
         
-        // Attribute references with relative paths -> backend proxy
-        html = html.replace(/(src|href)=["']\/(rcp|prorcp|assets|static|player|cdn)\/([^"']+)["']/g,
-            (m, attr, seg, rest) => `${attr}="/api/cn-proxy?url=https://cloudnestra.com/${seg}/${rest}"`);
+        // Relative path'leri direkt Cloudnestra'dan yükle
+        html = html.replace(/src=["']\/(rcp|prorcp|assets|static|player|cdn)\/([^"']+)["']/g,
+            (m, seg, rest) => `src="https://cloudnestra.com/${seg}/${rest}"`);
         
-        // JS string usages like '/prorcp/...' -> backend proxy
+        // JS string kullanımlarını direkt Cloudnestra'dan yönlendir
         html = html.replace(/(["'])\/(rcp|prorcp)\/([^"']+)\1/g,
-            (m, q, seg, rest) => `${q}/api/cn-proxy?url=https://cloudnestra.com/${seg}/${rest}${q}`);
+            (m, q, seg, rest) => `${q}https://cloudnestra.com/${seg}/${rest}${q}`);
         
-        // Also handle any remaining absolute cloudnestra.com references
+        // Kalan Cloudnestra referanslarını direkt yönlendir
         html = html.replace(/(["'])https:\/\/cloudnestra\.com\/([^"']+)\1/g,
-            (m, q, path) => `${q}/api/cn-proxy?url=https://cloudnestra.com/${path}${q}`);
+            (m, q, path) => `${q}https://cloudnestra.com/${path}${q}`);
+        
+        // JavaScript içindeki localhost referanslarını da proxy'ye yönlendir
+        html = html.replace(/(['"])localhost(?::\d+)?([^'"]*)\1/g, '$1/api/cn-proxy?url=https://cloudnestra.com$2$1');
+        html = html.replace(/(['"])localhost([^'"]*)\1/g, '$1/api/cn-proxy?url=https://cloudnestra.com$2$1');
+        
+        // JavaScript dosyalarında localhost referanslarını proxy'ye yönlendir
+        html = html.replace(/localhost(?::\d+)?(?:\/[^"'\s>]*)?/g, '/api/cn-proxy?url=https://cloudnestra.com');
+        
+        // Özel localhost pattern'larını yakala
+        html = html.replace(/localhost:8080/g, '/api/cn-proxy?url=https://cloudnestra.com');
+        html = html.replace(/localhost:80/g, '/api/cn-proxy?url=https://cloudnestra.com');
+        html = html.replace(/localhost:3000/g, '/api/cn-proxy?url=https://cloudnestra.com');
+        
+        // JavaScript string'lerindeki localhost referanslarını da temizle
+        html = html.replace(/(['"])localhost(?::\d+)?([^'"]*)\1/g, '$1/api/cn-proxy?url=https://cloudnestra.com$2$1');
+        html = html.replace(/(['"])localhost([^'"]*)\1/g, '$1/api/cn-proxy?url=https://cloudnestra.com$2$1');
+        
+        // JavaScript dosyalarında localhost referanslarını proxy'ye yönlendir
+        html = html.replace(/localhost(?::\d+)?(?:\/[^"'\s>]*)?/g, '/api/cn-proxy?url=https://cloudnestra.com');
+        
+        // Özel dosyaları proxy'ye yönlendir
+        html = html.replace(/src=["']([^"']*\.(js|css))["']/g, (match, filename) => {
+            if (filename.startsWith('http')) return match;
+            if (filename.startsWith('//')) return `src="https:${filename}"`;
+            if (filename.startsWith('/')) return `src="/api/cn-proxy?url=https://cloudnestra.com${filename}"`;
+            return `src="/api/cn-proxy?url=https://cloudnestra.com/${filename}"`;
+        });
+        
+        // sbx.html referanslarını özel olarak düzelt
+        html = html.replace(/\/sbx\.html/g, '/api/cn-proxy?url=https://cloudnestra.com/sbx.html');
+        html = html.replace(/sbx\.html/g, '/api/cn-proxy?url=https://cloudnestra.com/sbx.html');
+        
+        // Çift proxy URL'leri temizle
+        html = html.replace(/\/api\/cn-proxy\?url=https:\/\/cloudnestra\.com\/\/api\/cn-proxy\?url=https:\/\/cloudnestra\.com/g, '/api/cn-proxy?url=https://cloudnestra.com');
+        html = html.replace(/\/api\/cn-proxy\?url=https:\/\/cloudnestra\.com\/api\/cn-proxy\?url=https:\/\/cloudnestra\.com/g, '/api/cn-proxy?url=https://cloudnestra.com');
         
         console.log('HTML cleanup completed');
+        
+        // Debug: HTML'de localhost var mı kontrol et
+        const debugLocalhost = html.match(/localhost[^"'\s>]*/g);
+        if (debugLocalhost) {
+            console.log('🚨 DEBUG: HTML cleanup sonrası hala localhost var:', debugLocalhost);
+            console.log('HTML sample (first 1000 chars):', html.substring(0, 1000));
+            
+            // Son bir temizlik daha
+            html = html.replace(/localhost[^"'\s>]*/g, '/api/cn-proxy?url=https://cloudnestra.com');
+            console.log('🔧 Applied final localhost cleanup');
+        } else {
+            console.log('✅ DEBUG: HTML cleanup başarılı - localhost yok');
+        }
+        
+        // Final kontrol - tüm localhost referanslarını temizle
+        const finalCheck = html.match(/localhost[^"'\s>]*/g);
+        if (finalCheck) {
+            console.log('⚠️ FINAL WARNING: Still found localhost after cleanup:', finalCheck);
+            html = html.replace(/localhost/g, '/api/cn-proxy?url=https://cloudnestra.com');
+            
+            // Son bir kontrol daha
+            const finalFinalCheck = html.match(/localhost[^"'\s>]*/g);
+            if (finalFinalCheck) {
+                console.log('🚨 CRITICAL: localhost still exists after final cleanup:', finalFinalCheck);
+                // Son çare: Tüm localhost referanslarını manuel olarak değiştir
+                html = html.replace(/localhost(?::\d+)?(?:\/[^"'\s>]*)?/g, '/api/cn-proxy?url=https://cloudnestra.com');
+                html = html.replace(/localhost/g, '/api/cn-proxy?url=https://cloudnestra.com');
+            }
+        }
         
         // CORS headers ekle
         res.set({
@@ -326,7 +457,8 @@ app.get('/api/iframe-proxy', async (req, res) => {
             'Content-Type': 'text/html',
             'Cache-Control': 'no-cache, no-store, must-revalidate',
             'Pragma': 'no-cache',
-            'Expires': '0'
+            'Expires': '0',
+            'Content-Security-Policy': "default-src 'self' https: http: data: 'unsafe-inline' 'unsafe-eval'; script-src 'self' https: http: 'unsafe-inline' 'unsafe-eval'; connect-src 'self' https: http:; frame-src 'self' https: http:; img-src 'self' https: http: data:; object-src 'none';"
         });
         
         console.log('Sending proxied HTML response');
@@ -348,6 +480,58 @@ app.get('/api/cn-proxy', async (req, res) => {
     if (!url || !/^https?:\/\/cloudnestra\.com\//.test(url)) {
       return res.status(400).json({ error: 'Valid url query required to cloudnestra.com' });
     }
+
+    // sbx.html için özel handling
+    if (url.includes('sbx.html')) {
+      console.log('🔧 Special handling for sbx.html');
+      const fallbackHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SBX Handler</title>
+    <script>
+        // Sandbox detection bypass
+        function dtc_sbx() {
+            try {
+                // Return to parent without redirect
+                if (window.parent && window.parent !== window) {
+                    window.parent.postMessage('sbx-handled', '*');
+                    // Handler'ı kapat
+                    setTimeout(() => {
+                        window.close();
+                    }, 100);
+                }
+            } catch (e) {
+                console.log('SBX handler completed');
+                // Handler'ı kapat
+                setTimeout(() => {
+                    window.close();
+                }, 100);
+            }
+        }
+        
+        // Otomatik çalıştır
+        dtc_sbx();
+        
+        // 2 saniye sonra otomatik kapat
+        setTimeout(() => {
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage('sbx-timeout', '*');
+                window.close();
+            }
+        }, 2000);
+    </script>
+</head>
+<body>
+    <div>SBX Handler - Processing...</div>
+</body>
+</html>`;
+      
+      res.setHeader('Content-Type', 'text/html');
+      return res.send(fallbackHtml);
+    }
+
+    console.log('🔧 Proxying Cloudnestra asset:', url);
 
     // Forward headers to mimic browser and correct referer/origin
     const upstreamHeaders = {
@@ -380,9 +564,56 @@ app.get('/api/cn-proxy', async (req, res) => {
       if (v) res.setHeader(h, v);
     });
 
-    // Ensure JavaScript files have correct MIME type
-    if (url.includes('.js') && (!upstream.headers.get('content-type') || upstream.headers.get('content-type').includes('text/html'))) {
-      res.setHeader('Content-Type', 'application/javascript');
+    // Ensure JavaScript files have correct MIME type and clean localhost references
+    if (url.includes('.js')) {
+      if (!upstream.headers.get('content-type') || upstream.headers.get('content-type').includes('text/html')) {
+        res.setHeader('Content-Type', 'application/javascript');
+      }
+      
+      // JavaScript dosyalarında localhost referanslarını temizle
+      try {
+        const jsContent = await upstream.text();
+        console.log('🔍 Original JavaScript content (first 200 chars):', jsContent.substring(0, 200));
+        
+        const cleanedJs = jsContent
+          .replace(/localhost:8080/g, '/api/cn-proxy?url=https://cloudnestra.com')
+          .replace(/localhost:80/g, '/api/cn-proxy?url=https://cloudnestra.com')
+          .replace(/localhost:3000/g, '/api/cn-proxy?url=https://cloudnestra.com')
+          .replace(/localhost(?::\d+)?(?:\/[^"'\s>]*)?/g, '/api/cn-proxy?url=https://cloudnestra.com')
+          .replace(/localhost/g, '/api/cn-proxy?url=https://cloudnestra.com')
+          // sbx.html referanslarını düzelt
+          .replace(/\/sbx\.html/g, '/api/cn-proxy?url=https://cloudnestra.com/sbx.html')
+          .replace(/sbx\.html/g, '/api/cn-proxy?url=https://cloudnestra.com/sbx.html')
+          // Çift proxy URL'leri temizle
+          .replace(/\/api\/cn-proxy\?url=https:\/\/cloudnestra\.com\/\/api\/cn-proxy\?url=https:\/\/cloudnestra\.com/g, '/api/cn-proxy?url=https://cloudnestra.com')
+          .replace(/\/api\/cn-proxy\?url=https:\/\/cloudnestra\.com\/api\/cn-proxy\?url=https:\/\/cloudnestra\.com/g, '/api/cn-proxy?url=https://cloudnestra.com');
+        
+        console.log('🔧 Cleaned JavaScript file:', url);
+        console.log('🔍 Cleaned JavaScript content (first 200 chars):', cleanedJs.substring(0, 200));
+        
+        return res.send(cleanedJs);
+      } catch (err) {
+        console.error('JavaScript cleanup failed:', err);
+        // Fallback to original content
+        if (upstream.body) {
+          upstream.body.pipe(res);
+        } else {
+          res.status(500).json({ error: 'JavaScript processing failed' });
+        }
+      }
+    }
+    
+    // Handle other file types
+    if (url.includes('.css')) {
+      if (!upstream.headers.get('content-type') || upstream.headers.get('content-type').includes('text/html')) {
+        res.setHeader('Content-Type', 'text/css');
+      }
+    }
+    
+    if (url.includes('.woff') || url.includes('.woff2') || url.includes('.ttf') || url.includes('.eot')) {
+      if (!upstream.headers.get('content-type') || upstream.headers.get('content-type').includes('text/html')) {
+        res.setHeader('Content-Type', 'font/woff2');
+      }
     }
 
     // CORS for our frontend
@@ -390,12 +621,24 @@ app.get('/api/cn-proxy', async (req, res) => {
     res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Range');
 
-    // Stream body
+    // Stream body with better error handling
     if (upstream.body) {
-      upstream.body.pipe(res);
+      upstream.body.pipe(res).on('error', (err) => {
+        console.error('Stream error:', err);
+        if (!res.headersSent) {
+          res.status(500).json({ error: 'Stream failed', details: err.message });
+        }
+      });
     } else {
-      const text = await upstream.text();
-      res.send(text);
+      try {
+        const text = await upstream.text();
+        res.send(text);
+      } catch (err) {
+        console.error('Text processing error:', err);
+        if (!res.headersSent) {
+          res.status(500).json({ error: 'Text processing failed', details: err.message });
+        }
+      }
     }
   } catch (err) {
     console.error('cn-proxy error:', err);
@@ -403,12 +646,227 @@ app.get('/api/cn-proxy', async (req, res) => {
   }
 });
 
+// Function to get Cloudnestra embed URL from vidsrc
+async function getCloudnestraEmbedUrl(movieId) {
+    try {
+        console.log('Getting Cloudnestra embed URL for movie ID:', movieId);
+        
+        // Önce vidsrc'den Cloudnestra URL'ini al
+        const vidsrcApiUrl = `https://vidsrc.to/embed/movie/${movieId}`;
+        console.log('Fetching from vidsrc API:', vidsrcApiUrl);
+
+        const response = await fetch(vidsrcApiUrl, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'Connection': 'keep-alive',
+                'Referer': 'https://vidsrc.to/',
+                'Origin': 'https://vidsrc.to',
+                'Sec-Fetch-Dest': 'document',
+                'Sec-Fetch-Mode': 'navigate',
+                'Sec-Fetch-Site': 'same-origin',
+                'Sec-Fetch-User': '?1',
+                'Upgrade-Insecure-Requests': '1',
+                'Cache-Control': 'no-cache',
+                'Pragma': 'no-cache'
+            },
+            timeout: 10000
+        });
+
+        if (response.status === 403) {
+            throw new Error('Cloudflare protection detected');
+        }
+        if (response.status === 429) {
+            throw new Error('Rate limit exceeded');
+        }
+        if (!response.ok) {
+            throw new Error(`Vidsrc API error: ${response.status}`);
+        }
+
+        const html = await response.text();
+        console.log('Vidsrc response received, length:', html.length);
+
+        if (html.includes('cf-browser-verification') || html.includes('challenge-platform')) {
+            throw new Error('Cloudflare verification page detected');
+        }
+
+        // Look for Cloudnestra iframe
+        const iframeMatches = html.match(/<iframe[^>]*src="([^"]*)"[^>]*>/g);
+        console.log('Found iframes:', iframeMatches);
+
+        let embedUrl = null;
+        if (iframeMatches) {
+            for (const iframe of iframeMatches) {
+                const srcMatch = iframe.match(/src="([^"]*)"/);
+                if (srcMatch) {
+                    const src = srcMatch[1];
+                    console.log('Found iframe src:', src);
+                    if (src.includes('cloudnestra')) {
+                        embedUrl = src;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Fallback: look for Cloudnestra URLs in HTML
+        if (!embedUrl) {
+            const cloudnestraMatch = html.match(/(?:https?:)?\/\/[^"']*cloudnestra[^"']*/);
+            if (cloudnestraMatch) {
+                embedUrl = cloudnestraMatch[0];
+            }
+        }
+
+        if (embedUrl) {
+            // Ensure URL has protocol
+            if (embedUrl.startsWith('//')) {
+                embedUrl = 'https:' + embedUrl;
+            }
+            console.log('Found embed URL:', embedUrl);
+            return embedUrl;
+        } else {
+            console.log('No embed URL found');
+            return null;
+        }
+    } catch (error) {
+        console.error('Error getting Cloudnestra embed URL:', error);
+        return null;
+    }
+}
+
+// Function to get Cloudnestra embed URL for TV series from vidsrc
+async function getTvCloudnestraEmbedUrl(tvId, season, episode) {
+    try {
+        console.log('Getting Cloudnestra embed URL for TV series:', { tvId, season, episode });
+        
+        // Get TV series embed URL from vidsrc
+        const vidsrcApiUrl = `https://vidsrc.to/embed/tv/${tvId}/${season}/${episode}`;
+        console.log('Fetching from vidsrc API:', vidsrcApiUrl);
+
+        const response = await fetch(vidsrcApiUrl, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'Connection': 'keep-alive',
+                'Referer': 'https://vidsrc.to/',
+                'Origin': 'https://vidsrc.to',
+                'Sec-Fetch-Dest': 'document',
+                'Sec-Fetch-Mode': 'navigate',
+                'Sec-Fetch-Site': 'same-origin',
+                'Sec-Fetch-User': '?1',
+                'Upgrade-Insecure-Requests': '1',
+                'Cache-Control': 'no-cache',
+                'Pragma': 'no-cache'
+            },
+            timeout: 10000
+        });
+
+        if (response.status === 403) {
+            throw new Error('Cloudflare protection detected');
+        }
+        if (response.status === 429) {
+            throw new Error('Rate limit exceeded');
+        }
+        if (!response.ok) {
+            throw new Error(`Vidsrc API error: ${response.status}`);
+        }
+
+        const html = await response.text();
+        console.log('Vidsrc TV response received, length:', html.length);
+
+        if (html.includes('cf-browser-verification') || html.includes('challenge-platform')) {
+            throw new Error('Cloudflare verification page detected');
+        }
+
+        // Look for Cloudnestra iframe
+        const iframeMatches = html.match(/<iframe[^>]*src="([^"]*)"[^>]*>/g);
+        console.log('Found TV iframes:', iframeMatches);
+
+        let embedUrl = null;
+        if (iframeMatches) {
+            for (const iframe of iframeMatches) {
+                const srcMatch = iframe.match(/src="([^"]*)"/);
+                if (srcMatch) {
+                    const src = srcMatch[1];
+                    console.log('Found TV iframe src:', src);
+                    if (src.includes('cloudnestra')) {
+                        embedUrl = src;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Fallback: look for Cloudnestra URLs in HTML
+        if (!embedUrl) {
+            const cloudnestraMatch = html.match(/(?:https?:)?\/\/[^"']*cloudnestra[^"']*/);
+            if (cloudnestraMatch) {
+                embedUrl = cloudnestraMatch[0];
+            }
+        }
+
+        if (embedUrl) {
+            // Ensure URL has protocol
+            if (embedUrl.startsWith('//')) {
+                embedUrl = 'https:' + embedUrl;
+            }
+            console.log('Found TV embed URL:', embedUrl);
+            return embedUrl;
+        } else {
+            console.log('No TV embed URL found');
+            return null;
+        }
+    } catch (error) {
+        console.error('Error getting TV Cloudnestra embed URL:', error);
+        return null;
+    }
+}
+
 // Add smart embed URL refresh endpoint that handles expired URLs
 app.get('/api/smart-embed', async (req, res) => {
   try {
-    const { movieId, retryCount = 0 } = req.query;
+    const { movieId, tvId, season, episode, retryCount = 0 } = req.query;
+    
+    // Handle TV Series
+    if (tvId && season && episode) {
+      console.log(`=== TV Series Embed Fetching Started ===`);
+      console.log(`TV ID: ${tvId}, Season: ${season}, Episode: ${episode}`);
+      
+      try {
+        // Get TV series embed URL
+        const embedUrl = await getTvCloudnestraEmbedUrl(tvId, season, episode);
+        
+        if (!embedUrl) {
+          throw new Error('Failed to get TV series embed URL from vidsrc');
+        }
+        
+        console.log('✅ TV Series Embed URL is working, returning to client');
+        return res.json({
+          cloudnestraEmbedUrl: embedUrl,
+          source: 'cloudnestra',
+          status: 'fresh',
+          type: 'tv',
+          tvId: tvId,
+          season: season,
+          episode: episode
+        });
+        
+      } catch (tvError) {
+        console.error('TV Series loading error:', tvError);
+        return res.status(400).json({ 
+          error: 'TV series video not available',
+          details: tvError.message 
+        });
+      }
+    }
+    
+    // Handle Movies
     if (!movieId) {
-      return res.status(400).json({ error: 'Movie ID required' });
+      return res.status(400).json({ error: 'Movie ID or TV series parameters required' });
     }
 
     console.log(`=== Smart Embed Fetching Started (Attempt ${retryCount + 1}) ===`);
@@ -793,6 +1251,71 @@ app.get('/tv', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'tv.html'));
 });
 
+// sbx.html için özel route handler
+app.get('/sbx.html', (req, res) => {
+    console.log('🔧 Direct sbx.html request received');
+    
+        // Minimal HTML template - sadece gerekli işlevsellik
+    const fallbackHtml = `<!DOCTYPE html>
+<html>
+<head>
+    <title>SBX</title>
+    <meta charset="utf-8">
+</head>
+<body>
+    <script>
+        try {
+            // Hemen parent'a mesaj gönder ve kapat
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage('sbx-handled', '*');
+                // Hemen kapat
+                window.close();
+            }
+        } catch (error) {
+            // Hata olursa da kapat
+            try { window.close(); } catch(e) {}
+        }
+    </script>
+</body>
+</html>`;
+    
+    try {
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.send(fallbackHtml);
+        console.log('✅ sbx.html response sent successfully');
+    } catch (error) {
+        console.error('❌ Error sending sbx.html:', error);
+        res.status(500).send('Internal Server Error');
+    }
+});
+
+// sbx.js için özel route handler
+app.get('/sbx.js', (req, res) => {
+    console.log('🔧 Direct sbx.js request received');
+    
+    // Minimal JavaScript - sadece gerekli işlevsellik
+    const sbxJs = `// Sandbox detection bypass
+try {
+    if (window.parent && window.parent !== window) {
+        window.parent.postMessage('sbx-handled', '*');
+        window.close();
+    }
+} catch (error) {
+    try { window.close(); } catch(e) {}
+}`;
+    
+    try {
+        res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.send(sbxJs);
+        console.log('✅ sbx.js response sent successfully');
+    } catch (error) {
+        console.error('❌ Error sending sbx.js:', error);
+        res.status(500).send('// Error occurred');
+    }
+});
+
 // Cloudnestra embed URL'sini almak için yeni endpoint
 app.get('/api/get-cloudnestra-embed', async (req, res) => {
     const { movieId, tvId, season, episode } = req.query;
@@ -808,9 +1331,9 @@ app.get('/api/get-cloudnestra-embed', async (req, res) => {
     try {
         let vidsrcApiUrl;
         if (movieId) {
-            vidsrcApiUrl = `https://vidsrc.xyz/embed/movie/${movieId}`;
+            vidsrcApiUrl = `https://vidsrc.to/embed/movie/${movieId}`;
         } else {
-            vidsrcApiUrl = `https://vidsrc.xyz/embed/tv/${tvId}/${season}/${episode}`;
+            vidsrcApiUrl = `https://vidsrc.to/embed/tv/${tvId}/${season}/${episode}`;
         }
         console.log('Fetching from vidsrc API:', vidsrcApiUrl);
 
@@ -821,8 +1344,8 @@ app.get('/api/get-cloudnestra-embed', async (req, res) => {
                 'Accept-Language': 'en-US,en;q=0.9',
                 'Accept-Encoding': 'gzip, deflate, br',
                 'Connection': 'keep-alive',
-                'Referer': 'https://vidsrc.xyz/',
-                'Origin': 'https://vidsrc.xyz',
+                'Referer': 'https://vidsrc.to/',
+                'Origin': 'https://vidsrc.to',
                 'Sec-Fetch-Dest': 'document',
                 'Sec-Fetch-Mode': 'navigate',
                 'Sec-Fetch-Site': 'same-origin',
