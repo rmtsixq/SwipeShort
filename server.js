@@ -159,7 +159,7 @@ app.use(compression({
 const speedLimiter = slowDown({
   windowMs: 15 * 60 * 1000, // 15 minutes
   delayAfter: 100, // Allow 100 requests per 15 minutes, then...
-  delayMs: 500 // Begin adding 500ms of delay per request above 100
+  delayMs: () => 500 // Begin adding 500ms of delay per request above 100 (updated per v2 behavior)
 });
 
 // Apply rate limiting to API routes
@@ -2008,3 +2008,67 @@ app.post('/api/chat', async (req, res) => {
         });
     }
 });
+
+// Expose Firebase config from environment variables (no secrets)
+app.get('/config/firebase.json', (req, res) => {
+  const firebaseConfig = {
+    apiKey: process.env.FIREBASE_API_KEY,
+    authDomain: process.env.FIREBASE_AUTH_DOMAIN,
+    projectId: process.env.FIREBASE_PROJECT_ID,
+    storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.FIREBASE_API_ID || process.env.FIREBASE_APP_ID,
+    measurementId: process.env.FIREBASE_MEASUREMENT_ID
+  };
+
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('Content-Type', 'application/json');
+  res.json(firebaseConfig);
+});
+
+// JS variant to initialize Firebase synchronously in script order
+app.get('/config/firebase.js', (req, res) => {
+  const firebaseConfig = {
+    apiKey: process.env.FIREBASE_API_KEY,
+    authDomain: process.env.FIREBASE_AUTH_DOMAIN,
+    projectId: process.env.FIREBASE_PROJECT_ID,
+    storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.FIREBASE_API_ID || process.env.FIREBASE_APP_ID,
+    measurementId: process.env.FIREBASE_MEASUREMENT_ID
+  };
+
+  const body = `window.__FIREBASE_CONFIG__ = ${JSON.stringify(firebaseConfig)};\n` +
+    `(function(){\n` +
+    `  if (window.firebase && (!firebase.apps || !firebase.apps.length)) {\n` +
+    `    firebase.initializeApp(window.__FIREBASE_CONFIG__);\n` +
+    `  }\n` +
+    `})();`;
+
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('Content-Type', 'application/javascript');
+  res.send(body);
+});
+
+// Serve static files from public directory with proper headers
+app.use(express.static('public', {
+  setHeaders: (res, path) => {
+    // Set proper MIME types for video files
+    if (path.endsWith('.mp4')) {
+      res.setHeader('Content-Type', 'video/mp4');
+      res.setHeader('Accept-Ranges', 'bytes');
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+    } else if (path.endsWith('.m3u8')) {
+      res.setHeader('Content-Type', 'application/x-mpegURL');
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+    } else if (path.endsWith('.ts')) {
+      res.setHeader('Content-Type', 'video/MP2T');
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+    }
+    
+    // CORS headers for static files
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Range, Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  }
+}));
