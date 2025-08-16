@@ -29,7 +29,7 @@ class ChatBot {
     addWelcomeMessage() {
         this.addMessage({
             role: 'assistant',
-            content: "Hello! I'm your AI assistant. How can I help you today?"
+            content: "Hello! I'm your AI movie assistant. I'm here to help you discover amazing movies and TV shows, answer your questions about films, and provide personalized recommendations. I can help you find movies by genre, year, rating, or even by describing what you're looking for. What would you like to know about movies today?"
         });
     }
 

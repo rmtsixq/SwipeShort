@@ -1,6 +1,10 @@
 // Firebase initialization requires config file and CDN!
 // This file should be called at the bottom of dashboard.html
 
+// Authentication state and modal management
+let currentUser = null;
+let isGuestUser = false;
+
 // Check if user came from index page and show educational modal
 document.addEventListener('DOMContentLoaded', function() {
     const urlParams = new URLSearchParams(window.location.search);
@@ -17,7 +21,197 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Add event listeners for educational modal
     setupEducationalModal();
+    
+    // Initialize authentication state
+    initializeAuthentication();
 });
+
+// Initialize authentication state
+function initializeAuthentication() {
+    firebase.auth().onAuthStateChanged(function(user) {
+        currentUser = user;
+        isGuestUser = !user;
+        
+        // Update profile section
+        const profilePicture = document.getElementById('userProfilePicture');
+        const profileName = document.getElementById('userProfileName');
+        
+        if (profilePicture && profileName) {
+            // Set profile picture
+            if (user && user.photoURL) {
+                profilePicture.src = user.photoURL;
+            } else {
+                // Use first letter of email/name as avatar
+                const initial = user ? (user.displayName || user.email || '?')[0].toUpperCase() : '?';
+                profilePicture.src = `https://ui-avatars.com/api/?name=${initial}&background=random&color=fff`;
+            }
+            
+            // Set profile name
+            profileName.textContent = user ? (user.displayName || user.email.split('@')[0] || 'User') : 'Guest';
+        }
+        
+        // Setup authentication required features
+        setupAuthenticationRequiredFeatures();
+    });
+}
+
+// Setup features that require authentication
+function setupAuthenticationRequiredFeatures() {
+    // Like buttons - sadece bunlar için authentication gerekli
+    setupLikeButtonsAuthentication();
+    
+    // Chat button - robot karakteri için
+    setupChatButtonAuthentication();
+    
+    // Messaging button - mesajlaşma için
+    setupMessagingButtonAuthentication();
+    
+    // Profile link - profil için
+    setupProfileLinkAuthentication();
+    
+    // Friends button - arkadaşlar için
+    setupFriendsButtonAuthentication();
+    
+    // Discover button - keşfet için (eğer özel özellikler varsa)
+    setupDiscoverButtonAuthentication();
+}
+
+// Setup like buttons authentication
+function setupLikeButtonsAuthentication() {
+    const likeButtons = document.querySelectorAll('.like-btn');
+    likeButtons.forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            if (isGuestUser || !currentUser) {
+                e.preventDefault();
+                e.stopPropagation();
+                showAccountRequiredModal();
+            }
+        });
+    });
+}
+
+// Setup chat button authentication
+function setupChatButtonAuthentication() {
+    const chatBtn = document.querySelector('.chat-btn');
+    if (chatBtn) {
+        chatBtn.addEventListener('click', function(e) {
+            if (isGuestUser || !currentUser) {
+                e.preventDefault();
+                showAccountRequiredModal();
+            }
+        });
+    }
+}
+
+// Setup messaging button authentication
+function setupMessagingButtonAuthentication() {
+    const messagingBtn = document.querySelector('a[href="messaging.html"]');
+    if (messagingBtn) {
+        messagingBtn.addEventListener('click', function(e) {
+            if (isGuestUser || !currentUser) {
+                e.preventDefault();
+                showAccountRequiredModal();
+            }
+        });
+    }
+}
+
+// Setup profile link authentication
+function setupProfileLinkAuthentication() {
+    const profileLink = document.querySelector('a[href="profile.html"]');
+    if (profileLink) {
+        profileLink.addEventListener('click', function(e) {
+            if (isGuestUser || !currentUser) {
+                e.preventDefault();
+                showAccountRequiredModal();
+            }
+        });
+    }
+}
+
+// Setup friends button authentication
+function setupFriendsButtonAuthentication() {
+    const friendsBtn = document.querySelector('a[href="friends.html"]');
+    if (friendsBtn) {
+        friendsBtn.addEventListener('click', function(e) {
+            if (isGuestUser || !currentUser) {
+                e.preventDefault();
+                showAccountRequiredModal();
+            }
+        });
+    }
+}
+
+// Setup discover button authentication (eğer özel özellikler varsa)
+function setupDiscoverButtonAuthentication() {
+    const discoverBtn = document.querySelector('a[href="discover.html"]');
+    if (discoverBtn) {
+        // Discover sayfasına gitmek için authentication gerekmez
+        // Sadece özel özellikler varsa kontrol edilir
+        discoverBtn.addEventListener('click', function(e) {
+            // Şimdilik authentication gerekmez
+            // Eğer discover sayfasında özel özellikler varsa buraya eklenebilir
+        });
+    }
+}
+
+// Show account required modal
+function showAccountRequiredModal() {
+    const modal = document.getElementById('account-required-modal');
+    if (modal) {
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+// Hide account required modal
+function hideAccountRequiredModal() {
+    const modal = document.getElementById('account-required-modal');
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+}
+
+// Setup account required modal
+function setupAccountRequiredModal() {
+    const modal = document.getElementById('account-required-modal');
+    const closeBtn = document.getElementById('close-account-modal');
+    const createAccountBtn = document.getElementById('create-account-btn');
+    const loginBtn = document.getElementById('login-btn');
+    
+    if (closeBtn) {
+        closeBtn.addEventListener('click', hideAccountRequiredModal);
+    }
+    
+    if (createAccountBtn) {
+        createAccountBtn.addEventListener('click', () => {
+            window.location.href = 'auth.html?tab=signup';
+        });
+    }
+    
+    if (loginBtn) {
+        loginBtn.addEventListener('click', () => {
+            window.location.href = 'auth.html?tab=login';
+        });
+    }
+    
+    // Close modal when clicking outside
+    if (modal) {
+        modal.addEventListener('click', function(event) {
+            if (event.target === modal) {
+                hideAccountRequiredModal();
+            }
+        });
+    }
+    
+    // Close modal with Escape key
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            hideAccountRequiredModal();
+        }
+    });
+}
 
 // Educational Modal Functions
 function showEducationalModal() {
@@ -123,11 +317,22 @@ class RobotCharacter {
         window.addEventListener('resize', () => this.updateScreenBounds());
         this.startMovement();
         this.setupInteraction();
+        
+        // Show welcome message after a short delay
+        setTimeout(() => {
+            this.speak("Hello! I'm your AI movie assistant. I'm here to help you discover amazing movies and TV shows. I can provide recommendations, help you find specific content, and answer your movie questions. Click on me anytime for help!");
+        }, 2000);
     }
 
     setupInteraction() {
         this.container.addEventListener('click', () => {
-            this.speak("Let me help you find the perfect movie! Click again to chat with me.");
+            if (isGuestUser || !currentUser) {
+                this.speak("Hi! I'm your AI movie assistant. I can help you discover movies, but to chat with me and get personalized recommendations, you'll need to create an account. It's free and only takes a minute!");
+                showAccountRequiredModal();
+                return;
+            }
+            
+            this.speak("Great! I'm your AI movie companion. I'm excited to help you find the perfect movie and chat about films! Click again to start our conversation.");
             this.container.addEventListener('click', () => {
                 window.location.href = 'chat.html';
             }, { once: true });
@@ -136,11 +341,13 @@ class RobotCharacter {
 
     showRandomTip() {
         const tips = [
-            "Hey! I can help you find great movies and TV shows. Just use the search bar at the top!",
-            "Did you know? You can filter movies by genre, year, and rating using the filter panel.",
-            "Try clicking on a movie card to see more details and watch the trailer!",
-            "You can switch between Movies and TV Shows using the tabs above.",
-            "Need help? Just click on me anytime for tips and guidance!"
+            "Hey! I'm your AI movie assistant. I can help you find great movies and TV shows. Just use the search bar at the top!",
+            "Hi there! I'm here to help you discover amazing content. You can filter movies by genre, year, and rating using the filter panel.",
+            "Hello! I'm your personal movie guide. Try clicking on a movie card to see more details and watch the trailer!",
+            "Greetings! I'm your AI companion for movie discovery. You can switch between Movies and TV Shows using the tabs above.",
+            "Welcome! I'm here to enhance your movie experience. Need help? Just click on me anytime for tips and guidance!",
+            "Hi! I'm your movie buddy. I can help you find the perfect film for any mood or occasion!",
+            "Hello there! I'm your AI movie expert. Let me know if you need help finding something specific!"
         ];
 
         const randomTip = tips[Math.floor(Math.random() * tips.length)];
@@ -239,32 +446,12 @@ class RobotCharacter {
 document.addEventListener('DOMContentLoaded', function() {
     new RobotCharacter();
     setupMajikTrigger();
+    
+    // Setup account required modal
+    setupAccountRequiredModal();
 
     // Kullanıcı login kontrolü ve diğer dashboard fonksiyonları burada kalabilir
-    firebase.auth().onAuthStateChanged(function(user) {
-        // Remove the automatic redirect to auth.html
-        // if (!user) {
-        //     window.location.href = 'auth.html?tab=login';
-        // } else {
-            // Update profile section
-            const profilePicture = document.getElementById('userProfilePicture');
-            const profileName = document.getElementById('userProfileName');
-            
-            if (profilePicture && profileName) {
-                // Set profile picture
-                if (user && user.photoURL) {
-                    profilePicture.src = user.photoURL;
-                } else {
-                    // Use first letter of email/name as avatar
-                    const initial = user ? (user.displayName || user.email || '?')[0].toUpperCase() : '?';
-                    profilePicture.src = `https://ui-avatars.com/api/?name=${initial}&background=random&color=fff`;
-                }
-                
-                // Set profile name
-                profileName.textContent = user ? (user.displayName || user.email.split('@')[0] || 'User') : 'Guest';
-            }
-        // }
-    });
+    // Bu kısım artık initializeAuthentication() fonksiyonunda yapılıyor
 
     // Sadece header arama modalı için kodlar:
     const mainSearchInput = document.getElementById('mainSearchInput');
@@ -659,6 +846,7 @@ function renderGrid(items = allMovies) {
         `;
         
         card.onclick = () => {
+            // Film detaylarına gitmek için authentication gerekmez
             window.location.href = `${currentType}.html?id=${item.id}`;
         };
         
@@ -1360,6 +1548,7 @@ function createSearchCard(item) {
             
     // Add click handler
     card.addEventListener('click', () => {
+        // Film detaylarına gitmek için authentication gerekmez
         window.location.href = isMovie ? `movie.html?id=${item.id}` : `tv.html?id=${item.id}`;
         });
 
@@ -1424,23 +1613,4 @@ function setupCardLikeButton(card, id, type) {
     });
 } 
 
-// Handle authentication state
-firebase.auth().onAuthStateChanged((user) => {
-    // Update profile section
-    const profilePicture = document.getElementById('userProfilePicture');
-    const profileName = document.getElementById('userProfileName');
-    
-    if (profilePicture && profileName) {
-        // Set profile picture
-        if (user && user.photoURL) {
-            profilePicture.src = user.photoURL;
-        } else {
-            // Use first letter of email/name as avatar
-            const initial = user ? (user.displayName || user.email || '?')[0].toUpperCase() : '?';
-            profilePicture.src = `https://ui-avatars.com/api/?name=${initial}&background=random&color=fff`;
-        }
-        
-        // Set profile name
-        profileName.textContent = user ? (user.displayName || user.email.split('@')[0] || 'User') : 'Guest';
-    }
-}); 
+// Handle authentication state - Bu kısım artık initializeAuthentication() fonksiyonunda yapılıyor 
