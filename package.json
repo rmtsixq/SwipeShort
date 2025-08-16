@@ -44,7 +44,10 @@
     "puppeteer-extra-plugin-stealth": "^2.11.2",
     "socks-proxy-agent": "^8.0.5",
     "uuid": "^9.0.0",
-    "ytdl-core": "^4.11.5"
+    "ytdl-core": "^4.11.5",
+    "compression": "^1.7.4",
+    "express-slow-down": "^2.0.0",
+    "express-validator": "^7.0.1"
   },
   "devDependencies": {
     "nodemon": "^2.0.22"
