@@ -17,11 +17,18 @@
 <body>
     <header class="main-header">
       <div class="main-header__left">
-        
         <span class="main-header__brand">ShortSwipe</span>
-        <span class="main-header__disclaimer">Educational Project Disclaimer</span>
+        <span class="main-header__disclaimer">EDU</span>
       </div>
-      <nav class="main-header__nav">
+      
+      <!-- Hamburger Menu Button -->
+      <div class="hamburger-menu" id="hamburgerMenu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+      
+      <nav class="main-header__nav" id="mainNav">
         <a href="dashboard.html?fromIndex=true" class="main-header__auth-btn continue">Continue without account</a>
         <span class="main-header__divider">|</span>
         <a href="auth.html?tab=login" class="main-header__auth-btn login">Login</a>
@@ -354,6 +361,25 @@
             if (e.target === modal) {
                 modal.classList.remove('show');
                 setTimeout(() => modal.style.display = 'none', 300);
+            }
+        });
+    });
+    
+    // Hamburger Menu Functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        const hamburgerMenu = document.getElementById('hamburgerMenu');
+        const mainNav = document.getElementById('mainNav');
+        
+        hamburgerMenu.addEventListener('click', function() {
+            hamburgerMenu.classList.toggle('active');
+            mainNav.classList.toggle('active');
+        });
+        
+        // Close menu when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!hamburgerMenu.contains(e.target) && !mainNav.contains(e.target)) {
+                hamburgerMenu.classList.remove('active');
+                mainNav.classList.remove('active');
             }
         });
     });
