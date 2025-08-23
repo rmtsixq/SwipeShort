@@ -1372,6 +1372,18 @@ body, html {
   letter-spacing: 1px;
 }
 
+.main-header__disclaimer {
+  color: #5170FF;
+  font-size: 0.8rem;
+  font-weight: 400;
+  opacity: 0.8;
+  padding: 4px 8px;
+  background: rgba(81, 112, 255, 0.1);
+  border: 1px solid rgba(81, 112, 255, 0.3);
+  border-radius: 12px;
+  white-space: nowrap;
+}
+
 .main-header__nav {
   display: flex;
   align-items: center;
@@ -1457,20 +1469,28 @@ body, html {
 
 @media (max-width: 768px) {
     .main-header {
-        padding: 10px 20px;
+        padding: 0 20px;
+        width: 90vw;
     }
+
     .main-header__brand {
-        display: none; /* Hide ShortSwipe text on mobile */
+        font-size: 1.1rem;
     }
-    .main-header__nav {
-        display: flex;
-        gap: 10px;
-        align-items: center;
+    
+    .main-header__disclaimer {
+        font-size: 0.7rem;
+        padding: 3px 6px;
     }
+
+    .main-header__nav a {
+        font-size: 0.95rem;
+        padding: 0 12px;
+    }
+
     .main-header__auth-btn {
-        padding: 8px 12px;
-        font-size: 14px;
-        white-space: nowrap;
+        padding: 3px 10px;
+        font-size: 0.85rem;
+        margin-left: 8px;
     }
     .main-header__divider {
         display: none; /* Hide divider on mobile */
@@ -1547,28 +1567,105 @@ body, html {
         width: 32px;
         height: 32px;
     }
-    .watch-anywhere__content h3 {
-        font-size: 1.8rem;
-    }
-    .watch-anywhere__content p {
+    .main-header__brand {
         font-size: 1rem;
     }
+    
+    .main-header__disclaimer {
+        font-size: 0.6rem;
+        padding: 2px 4px;
+    }
+
+    .main-header__nav a {
+        font-size: 0.95rem;
+        padding: 0 12px;
+    }
+
+    .main-header__auth-btn {
+        padding: 3px 10px;
+        font-size: 0.85rem;
+        margin-left: 8px;
+    }
+    .main-header__divider {
+        display: none;
+    }
+    .watch-anywhere {
+        width: 95%;
+        padding: 30px 20px;
+        margin: 60px auto;
+        flex-direction: column;
+    }
+
+    .watch-anywhere__content {
+        padding-right: 0;
+        margin-bottom: 30px;
+        text-align: center;
+    }
+
+    .watch-anywhere__content h3 {
+        font-size: 2rem;
+        margin-bottom: 15px;
+    }
+
+    .watch-anywhere__content p {
+        font-size: 1.1rem;
+    }
+
+    .watch-anywhere__image {
+        min-height: 200px;
+    }
+
+    .watch-anywhere__image img {
+        max-width: 90%;
+    }
+
+    .features-grid {
+        grid-template-columns: 1fr;
+        padding: 20px 15px;
+        gap: 20px;
+    }
+
     .feature-card {
-        padding: 15px;
+        padding: 20px;
     }
+
+    .feature-card i {
+        font-size: 2rem;
+    }
+
+    .feature-card h3 {
+        font-size: 1.3rem;
+    }
+
+    .feature-card p {
+        font-size: 0.95rem;
+    }
+
     .movie-slider__slide {
-        flex: 0 0 120px;
+        flex: 0 0 140px;
     }
+
     .movie-slider__slide img {
-        height: 180px;
+        height: 210px;
     }
+
+    .watch-clever-section {
+        padding: 40px 15px;
+    }
+
     .watch-clever-section h2 {
-        font-size: 1.8rem;
+        font-size: 2rem;
     }
+
+    .watch-clever-section p {
+        font-size: 1rem;
+        padding: 0 15px;
+    }
+
     .watch-clever-section .button2 {
-        width: 140px;
-        height: 45px;
-        font-size: 0.9rem;
+        width: 160px;
+        height: 50px;
+        font-size: 1rem;
     }
 }
 
@@ -1990,5 +2087,141 @@ body, html {
         width: 140px;
         height: 45px;
         font-size: 0.9rem;
+    }
+}
+
+/* Educational Disclaimer Section Styles */
+.educational-disclaimer {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    padding: 60px 20px;
+    margin: 40px 0;
+    color: white;
+}
+
+.disclaimer-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.disclaimer-header h2 {
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+    background: linear-gradient(45deg, #5170FF, #FF66C4);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.disclaimer-subtitle {
+    font-size: 1.2rem;
+    color: #b8c5d6;
+    margin-bottom: 40px;
+}
+
+.disclaimer-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    margin-bottom: 40px;
+}
+
+.disclaimer-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    padding: 30px;
+    text-align: left;
+    backdrop-filter: blur(10px);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.disclaimer-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.disclaimer-card h3 {
+    font-size: 1.5rem;
+    margin-bottom: 20px;
+    color: #5170FF;
+}
+
+.disclaimer-card ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.disclaimer-card li {
+    margin-bottom: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.disclaimer-card li:last-child {
+    border-bottom: none;
+}
+
+.disclaimer-footer {
+    background: rgba(81, 112, 255, 0.1);
+    border: 1px solid rgba(81, 112, 255, 0.3);
+    border-radius: 10px;
+    padding: 20px;
+    margin-top: 20px;
+}
+
+.disclaimer-footer p {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #5170FF;
+}
+
+/* Responsive Design for Disclaimer */
+@media (max-width: 768px) {
+    .educational-disclaimer {
+        padding: 40px 15px;
+        margin: 20px 0;
+    }
+    
+    .disclaimer-header h2 {
+        font-size: 2rem;
+    }
+    
+    .disclaimer-content {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    .disclaimer-card {
+        padding: 20px;
+    }
+    
+    .disclaimer-card h3 {
+        font-size: 1.3rem;
+    }
+    
+    .disclaimer-card li {
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .disclaimer-header h2 {
+        font-size: 1.8rem;
+    }
+    
+    .disclaimer-subtitle {
+        font-size: 1rem;
+    }
+    
+    .disclaimer-card {
+        padding: 15px;
+    }
+    
+    .disclaimer-footer p {
+        font-size: 1rem;
     }
 }
