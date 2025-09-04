@@ -1,17 +1,14 @@
-let globalAspectMode = 'portrait'; // 'portrait', 'landscape', 'fullscreen'
-let globalFitMode = 'contain'; // 'contain' or 'cover'
+let globalAspectMode = 'portrait';
+let globalFitMode = 'contain';
 let swiperInstance = null;
 
-/* Video viewer initialization */
 document.addEventListener('DOMContentLoaded', () => {
     loadClips();
     addAspectRatioToggle();
 });
 
-/* Load and display video clips */
 async function loadClips() {
     try {
-        // Get all clips from /clips directory
         const response = await fetch('/api/clips');
         const clips = await response.json();
 
@@ -22,7 +19,6 @@ async function loadClips() {
             const slide = document.createElement('div');
             slide.className = 'swiper-slide';
             
-            // Ambiant background effect for visual depth
             const ambiant = document.createElement('div');
             ambiant.className = 'ambiant-effect';
             ambiant.style.position = 'absolute';
@@ -40,7 +36,6 @@ async function loadClips() {
             videoContainer.style.position = 'relative';
             videoContainer.style.zIndex = 1;
 
-            // Video element
     const video = document.createElement('video');
             video.src = `/clips/${clip.filename}`;
             video.loop = true;
@@ -50,7 +45,6 @@ async function loadClips() {
             video.style.background = '#222';
             applyAspectMode(video, globalAspectMode, globalFitMode);
 
-            // Add video controls
             const videoTime = document.createElement('div');
             videoTime.className = 'video-time';
             videoTime.innerHTML = `
@@ -81,11 +75,9 @@ async function loadClips() {
             slide.appendChild(videoContainer);
             container.appendChild(slide);
 
-            // Setup video controls
             setupVideoControls(video, videoTime, progressBar, overlay, videoContainer);
         });
         
-        /* Initialize Swiper */
         swiperInstance = new Swiper('.swiper-container', {
             direction: 'vertical',
             slidesPerView: 1,
@@ -113,7 +105,6 @@ async function loadClips() {
             }
         });
 
-        // İlk yüklemede sadece ilk video oynasın
         const allVideos = document.querySelectorAll('video');
         allVideos.forEach((video, idx) => {
             if (idx === 0) {
@@ -125,7 +116,6 @@ async function loadClips() {
             }
         });
 
-        // Side buttons (aspect, fit)
         setupSideButtons();
         
     } catch (error) {
@@ -152,7 +142,6 @@ function setupSideButtons() {
         sideButtons.innerHTML = '';
     }
 
-    // Mute button
     const muteBtn = document.createElement('button');
     muteBtn.className = 'control-button mute';
     muteBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
@@ -175,7 +164,6 @@ function setupSideButtons() {
         }
     };
 
-    // Download button
     const downloadBtn = document.createElement('button');
     downloadBtn.className = 'control-button download';
     downloadBtn.innerHTML = '<i class="fas fa-download"></i>';
@@ -201,7 +189,6 @@ function setupSideButtons() {
         }
     };
 
-    // Share button
     const shareBtn = document.createElement('button');
     shareBtn.className = 'control-button share';
     shareBtn.innerHTML = '<i class="fas fa-share-alt"></i>';
@@ -217,7 +204,6 @@ function setupSideButtons() {
     shareBtn.onclick = () => {
         const video = getActiveVideo();
         if (video) {
-            // Create and show duration selector modal
             const modal = document.createElement('div');
             modal.className = 'share-duration-modal';
             modal.innerHTML = `
@@ -276,10 +262,8 @@ function setupSideButtons() {
                 const endTime = parseFloat(endSlider.value);
                 const duration = endTime - startTime;
                 
-                // Create share URL with time parameters
                 const shareUrl = `${window.location.origin}${window.location.pathname}?video=${encodeURIComponent(video.src)}&start=${startTime}&end=${endTime}`;
                 
-                // Copy to clipboard
                 navigator.clipboard.writeText(shareUrl).then(() => {
                     alert('Share link copied to clipboard!');
                 }).catch(err => {
@@ -298,7 +282,6 @@ function setupSideButtons() {
         }
     };
 
-    // Aspect ratio/resize button
     const aspectBtn = document.createElement('button');
     aspectBtn.className = 'control-button aspect';
     aspectBtn.innerHTML = '<i class="fas fa-mobile-alt"></i>';
@@ -313,14 +296,12 @@ function setupSideButtons() {
     aspectBtn.title = 'Change Aspect Ratio';
 
     aspectBtn.onclick = () => {
-        // Cycle: portrait (9:16) -> landscape (16:9) -> fullscreen -> portrait ...
         if (globalAspectMode === 'portrait') {
             globalAspectMode = 'landscape';
             aspectBtn.innerHTML = '<i class="fas fa-tv"></i>';
         } else if (globalAspectMode === 'landscape') {
             globalAspectMode = 'fullscreen';
             aspectBtn.innerHTML = '<i class="fas fa-expand"></i>';
-            // Fullscreen API
             const activeSlide = document.querySelector('.swiper-slide-active');
             if (activeSlide) {
                 const video = activeSlide.querySelector('video');
@@ -335,7 +316,6 @@ function setupSideButtons() {
             } else {
             globalAspectMode = 'portrait';
             aspectBtn.innerHTML = '<i class="fas fa-mobile-alt"></i>';
-            // Exit fullscreen
             if (document.fullscreenElement) {
                 document.exitFullscreen();
             } else if (document.webkitFullscreenElement) {
@@ -344,13 +324,11 @@ function setupSideButtons() {
                 document.msExitFullscreen();
             }
         }
-        // Apply to all videos
         document.querySelectorAll('video').forEach(video => {
             applyAspectMode(video, globalAspectMode, globalFitMode);
         });
     };
 
-    // Video Fit (cover/contain) button
     const fitBtn = document.createElement('button');
     fitBtn.className = 'control-button fit';
     fitBtn.innerHTML = '<i class="fas fa-arrows-alt"></i>';
@@ -403,7 +381,7 @@ function applyAspectMode(video, mode, fit) {
     }
 }
 
-function addAspectRatioToggle() { /* No-op, handled inline above */ }
+function addAspectRatioToggle() { }
 
 function setupVideoControls(video, timeDisplay, progressBar, playPauseOverlay, videoContainer) {
     let isPlaying = true;
@@ -467,7 +445,6 @@ function setupVideoControls(video, timeDisplay, progressBar, playPauseOverlay, v
         }, 3000);
     }
 
-    // Event listeners
     video.addEventListener('timeupdate', () => {
         updateTime();
         updateProgress();

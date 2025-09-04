@@ -1,4 +1,3 @@
-/* Base styles */
 body, html {
     margin: 0;
     padding: 0;
@@ -15,7 +14,6 @@ body, html {
     display: inline-block;
 }
 
-/* Main hero section */
 .big-pic {
     background-color: #000000;
     background-repeat: no-repeat;
@@ -80,7 +78,6 @@ body, html {
     font-size: 12vw;
 }
 
-/* Button styles */
 .big-pic button {
     font-family: roboto;
     height: 60px;

@@ -1,4 +1,3 @@
-// Chat functionality
 class ChatBot {
     constructor() {
         this.messagesContainer = document.querySelector('.chat-messages');
@@ -19,7 +18,6 @@ class ChatBot {
             }
         });
 
-        // Auto-resize textarea
         this.messageInput.addEventListener('input', () => {
             this.messageInput.style.height = 'auto';
             this.messageInput.style.height = (this.messageInput.scrollHeight) + 'px';
@@ -37,12 +35,10 @@ class ChatBot {
         const message = this.messageInput.value.trim();
         if (!message) return;
 
-        // Add user message
         this.addMessage({ role: 'user', content: message });
         this.messageInput.value = '';
         this.messageInput.style.height = 'auto';
 
-        // Show typing indicator
         this.showTypingIndicator();
 
         try {
@@ -94,7 +90,6 @@ class ChatBot {
         
         let content = this.formatMessage(message.content);
         
-        // If there are movie details, display movie posters
         if (message.movieDetails && message.movieDetails.length > 0) {
             const postersContainer = document.createElement('div');
             postersContainer.className = 'movie-posters';
@@ -114,9 +109,8 @@ class ChatBot {
                     posterElement.style.cursor = 'pointer';
                     posterElement.style.transition = 'transform 0.2s';
                     
-                    console.log('Creating poster for:', movie); // Debug log
+                    console.log('Creating poster for:', movie);
                     
-                    // Create a link element instead of a div
                     const linkElement = document.createElement('a');
                     linkElement.href = movie.mediaType === 'tv' ? `/tv.html?id=${movie.tmdbId}` : `/movie.html?id=${movie.imdbId}`;
                     linkElement.style.textDecoration = 'none';
@@ -131,8 +125,8 @@ class ChatBot {
                     `;
                     
                     linkElement.addEventListener('click', (e) => {
-                        e.preventDefault(); // Prevent default link behavior
-                        console.log('Link clicked for:', movie.title, 'Type:', movie.mediaType); // Debug log
+                        e.preventDefault();
+                        console.log('Link clicked for:', movie.title, 'Type:', movie.mediaType);
                         window.location.href = movie.mediaType === 'tv' ? `/tv.html?id=${movie.tmdbId}` : `/movie.html?id=${movie.imdbId}`;
                     });
                     
@@ -167,7 +161,6 @@ class ChatBot {
     }
 
     formatMessage(content) {
-        // Convert markdown to HTML
         return marked.parse(content);
     }
 
@@ -189,7 +182,6 @@ class ChatBot {
     }
 }
 
-// Initialize chat when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     new ChatBot();
 }); 

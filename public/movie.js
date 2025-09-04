@@ -1,13 +1,10 @@
-// TMDB API
 const TMDB_API_KEY = 'fda9bed2dd52a349ecb7cfe38b050ca5';
 
-// URL'den film ID'sini al
 function getMovieIdFromUrl() {
     const params = new URLSearchParams(window.location.search);
     return params.get('id');
 }
 
-// Cloudnestra Embed URL'ini al
 async function getCloudnestraEmbedUrl(movieId) {
     console.log('=== Frontend: Cloudnestra Embed URL Fetching Started ===');
     console.log('Movie ID:', movieId);
@@ -27,14 +24,13 @@ async function getCloudnestraEmbedUrl(movieId) {
         const data = await response.json();
         console.log('Response data:', data);
 
-        // API'dan gelen yanıta göre embed URL'ini kontrol et
         if (!data.cloudnestraEmbedUrl) {
             console.error('No cloudnestraEmbedUrl in response data');
             throw new Error('No Cloudnestra embed URL found');
         }
 
         console.log('=== Frontend: Cloudnestra Embed URL Fetching Completed ===');
-        return data.cloudnestraEmbedUrl; // Direkt embed URL'i döndür
+        return data.cloudnestraEmbedUrl;
     } catch (error) {
         console.error('=== Frontend: Cloudnestra Embed URL Fetching Failed ===');
         console.error('Error details:', error);
@@ -43,7 +39,6 @@ async function getCloudnestraEmbedUrl(movieId) {
     }
 }
 
-// Film detaylarını yükle
 async function loadMovieDetails() {
     console.log('=== Frontend: Loading Movie Details Started ===');
     const movieId = getMovieIdFromUrl();
@@ -56,7 +51,6 @@ async function loadMovieDetails() {
     }
 
     try {
-        // TMDB'den film bilgilerini al
         console.log('Fetching movie details from TMDB...');
         const res = await fetch(`https://api.themoviedb.org/3/movie/${movieId}?api_key=${TMDB_API_KEY}&language=en-US`);
         console.log('TMDB response status:', res.status);
@@ -68,7 +62,6 @@ async function loadMovieDetails() {
         const data = await res.json();
         console.log('Movie details received:', data);
 
-        // Başlık ve meta bilgileri güncelle
         console.log('Updating UI with movie details...');
         document.getElementById('movie-title').textContent = data.title;
         document.getElementById('movie-title-main').textContent = data.title;
@@ -88,15 +81,12 @@ async function loadMovieDetails() {
         }
         document.getElementById('movie-description').textContent = data.overview || '';
 
-        // Set hero background
         if (data.backdrop_path) {
             document.getElementById('movie-hero').style.backgroundImage = `url('https://image.tmdb.org/t/p/original${data.backdrop_path}')`;
         }
-        // Poster
         document.getElementById('movie-poster').src = data.poster_path ? `https://image.tmdb.org/t/p/w500${data.poster_path}` : '';
         document.getElementById('movie-poster').alt = data.title + ' Poster';
 
-        // Embed URL (video)
         let embedSrc = null;
         try {
             embedSrc = await getCloudnestraEmbedUrl(movieId);
@@ -114,7 +104,6 @@ async function loadMovieDetails() {
             startBtn.disabled = true;
             startBtn.title = 'Video not available.';
         }
-        // Hide player in movie.html
         const playerContainer = document.getElementById('movie-player');
         if (playerContainer) playerContainer.style.display = 'none';
 
@@ -129,7 +118,6 @@ async function loadMovieDetails() {
         document.getElementById('movie-title').textContent = 'Movie Not Found';
         document.getElementById('movie-title-main').textContent = 'Movie Not Found';
         document.getElementById('movie-description').textContent = 'Could not load movie details.';
-        // Hide start button and player
         const startBtn = document.getElementById('start-movie-btn');
         const playerContainer = document.getElementById('movie-player');
         if (startBtn) startBtn.style.display = 'none';
@@ -137,10 +125,8 @@ async function loadMovieDetails() {
     }
 }
 
-// Sayfa yüklendiğinde film detaylarını yükle
 document.addEventListener('DOMContentLoaded', loadMovieDetails);
 
-// Share functionality
 document.addEventListener('DOMContentLoaded', () => {
     const shareButton = document.querySelector('.share-button');
     const shareModal = document.querySelector('.share-duration-modal');
@@ -165,7 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateSliderMax() {
         if (videoPlayer) {
-            const duration = videoPlayer.duration || 7200; // Varsayılan 2 saat
+            const duration = videoPlayer.duration || 7200;
             startSlider.max = duration;
             endSlider.max = duration;
             endSlider.value = duration;
@@ -199,13 +185,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const startTime = parseFloat(startSlider.value);
         const endTime = parseFloat(endSlider.value);
 
-        // Create share URL with time parameters
         const currentUrl = new URL(window.location.href);
         currentUrl.searchParams.set('start', startTime);
         currentUrl.searchParams.set('end', endTime);
         const shareUrl = currentUrl.toString();
 
-        // Copy to clipboard
         navigator.clipboard.writeText(shareUrl).then(() => {
             alert('Share link copied to clipboard!');
         }).catch(err => {
@@ -221,7 +205,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 }); 
 
-// --- Like Button Firestore Logic ---
 function setupLikeButton(movieId) {
     const likeBtn = document.getElementById('like-btn');
     const likeCount = document.getElementById('like-count');
@@ -237,11 +220,9 @@ function setupLikeButton(movieId) {
         likeBtn.title = '';
         const likeDoc = db.collection('likes').doc('movie_' + movieId);
         const userLikeDoc = likeDoc.collection('userLikes').doc(user.uid);
-        // Toplam like sayısını çek
         likeDoc.collection('userLikes').onSnapshot(snapshot => {
             likeCount.textContent = snapshot.size;
         });
-        // Kullanıcı daha önce like'ladı mı?
         userLikeDoc.get().then(doc => {
             if (doc.exists) {
                 likeBtn.classList.add('liked');
@@ -252,7 +233,6 @@ function setupLikeButton(movieId) {
         likeBtn.addEventListener('click', async () => {
             const doc = await userLikeDoc.get();
             if (!doc.exists) {
-                // Like at
                 await userLikeDoc.set({ 
                     liked: true, 
                     userId: user.uid,
@@ -260,16 +240,12 @@ function setupLikeButton(movieId) {
                 });
                 likeBtn.classList.add('liked');
             } else {
-                // Like'ı geri al
                 await userLikeDoc.delete();
                 likeBtn.classList.remove('liked');
             }
         });
     });
 }
-
-// Call this after getting movieId in your loadMovieDetails or main init
-// setupLikeButton(movieId); 
 
 document.addEventListener('DOMContentLoaded', function() {
     const startBtn = document.getElementById('start-movie-btn');

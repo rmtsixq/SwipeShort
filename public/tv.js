@@ -1,4 +1,3 @@
-// TMDB API
 const TMDB_API_KEY = 'fda9bed2dd52a349ecb7cfe38b050ca5';
 
 function getTvIdFromUrl() {
@@ -6,7 +5,6 @@ function getTvIdFromUrl() {
     return params.get('id');
 }
 
-// Load TV show details
 async function loadTvDetails() {
     console.log('=== Loading TV Details Started ===');
     const tvId = getTvIdFromUrl();
@@ -19,18 +17,15 @@ async function loadTvDetails() {
     }
 
     try {
-        // Önce TV show mu film mi kontrol et
         console.log('Checking if ID is a TV show...');
         const res = await fetch(`https://api.themoviedb.org/3/tv/${tvId}?api_key=${TMDB_API_KEY}&language=en-US`);
         console.log('TMDB response status:', res.status);
 
         if (!res.ok) {
-            // TV show değilse, film olabilir
             console.log('Not a TV show, checking if it\'s a movie...');
             const movieRes = await fetch(`https://api.themoviedb.org/3/movie/${tvId}?api_key=${TMDB_API_KEY}&language=en-US`);
             
             if (movieRes.ok) {
-                // Film ID'si ise, dashboard'a yönlendir
                 console.log('ID is a movie, redirecting to dashboard');
                 window.location.href = 'dashboard.html';
                 return;
@@ -41,7 +36,6 @@ async function loadTvDetails() {
         const data = await res.json();
         console.log('TV details received:', data);
 
-        // Update UI with TV show details
         document.getElementById('tv-title').textContent = data.name;
         document.getElementById('tv-year').textContent = data.first_air_date ? new Date(data.first_air_date).getFullYear() : '';
         document.getElementById('tv-rating').textContent = data.vote_average ? `⭐ ${data.vote_average.toFixed(1)}` : '';
@@ -68,7 +62,6 @@ async function loadTvDetails() {
         document.getElementById('tv-poster').src = data.poster_path ? `https://image.tmdb.org/t/p/w500${data.poster_path}` : '';
         document.getElementById('tv-poster').alt = data.name + ' Poster';
         
-        // Load seasons if available
         if (data.seasons && data.seasons.length > 0) {
             console.log('Found seasons:', data.seasons);
             populateSeasonSelect(data.seasons);
@@ -84,7 +77,6 @@ async function loadTvDetails() {
         document.getElementById('start-tv-btn').style.display = 'none';
         document.getElementById('tv-player').style.display = 'none';
         
-        // Add retry button
         const retryBtn = document.createElement('button');
         retryBtn.textContent = 'Retry';
         retryBtn.className = 'start-movie-btn';
@@ -98,13 +90,11 @@ function populateSeasonSelect(seasons) {
     const select = document.getElementById('season-select');
     select.innerHTML = '';
     
-    // Add "All Episodes" option
     const allOption = document.createElement('option');
     allOption.value = 'all';
     allOption.textContent = 'All Episodes';
     select.appendChild(allOption);
     
-    // Add "Special Episodes" option if season 0 exists
     const specialSeason = seasons.find(s => s.season_number === 0);
     if (specialSeason) {
         const specialOption = document.createElement('option');
@@ -113,9 +103,8 @@ function populateSeasonSelect(seasons) {
         select.appendChild(specialOption);
     }
     
-    // Add regular seasons
     seasons.forEach(season => {
-        if (season.season_number === 0) return; // Skip specials as we already added them
+        if (season.season_number === 0) return;
         const option = document.createElement('option');
         option.value = season.season_number;
         option.textContent = `Season ${season.season_number}`;
@@ -123,7 +112,7 @@ function populateSeasonSelect(seasons) {
     });
     
     if (seasons.length > 0) {
-        loadEpisodes('all'); // Start with all episodes
+        loadEpisodes('all');
     }
     
     select.addEventListener('change', function() {
@@ -138,7 +127,6 @@ async function loadEpisodes(seasonNumber) {
     
     try {
         if (seasonNumber === 'all') {
-            // Load all seasons
             const allEpisodes = [];
             const seasons = Array.from(document.getElementById('season-select').options)
                 .map(opt => parseInt(opt.value))
@@ -151,7 +139,6 @@ async function loadEpisodes(seasonNumber) {
                 allEpisodes.push(...data.episodes);
             }
             
-            // Sort episodes by season and episode number
             allEpisodes.sort((a, b) => {
                 if (a.season_number !== b.season_number) {
                     return a.season_number - b.season_number;
@@ -161,7 +148,6 @@ async function loadEpisodes(seasonNumber) {
             
             renderEpisodes(allEpisodes, tvId);
         } else {
-            // Load specific season
             const res = await fetch(`https://api.themoviedb.org/3/tv/${tvId}/season/${seasonNumber}?api_key=${TMDB_API_KEY}&language=en-US`);
             if (!res.ok) throw new Error('Could not load episodes');
             const data = await res.json();
@@ -183,7 +169,6 @@ function renderEpisodes(episodes, tvId) {
         let likeCount = 0;
         let liked = false;
         
-        // Firestore'dan like sayısını çek
         likeDoc.get().then(doc => {
             if (doc.exists && doc.data().count) {
                 likeCount = doc.data().count;
@@ -191,7 +176,6 @@ function renderEpisodes(episodes, tvId) {
             updateLikeUI();
         });
         
-        // Kullanıcıya özel like durumu
         liked = localStorage.getItem(likeKey + '_liked') === '1';
         
         const epDiv = document.createElement('div');
@@ -228,7 +212,6 @@ function renderEpisodes(episodes, tvId) {
             likeIcon.textContent = liked ? '❤️' : '🤍';
         }
         
-        // Firestore'dan gerçek zamanlı güncelleme
         likeDoc.onSnapshot(doc => {
             if (doc.exists && doc.data().count !== undefined) {
                 likeCount = doc.data().count;
@@ -260,7 +243,6 @@ function renderEpisodes(episodes, tvId) {
     });
 }
 
-// --- Like Button Firestore Logic ---
 function setupLikeButton(tvId) {
     const likeBtn = document.getElementById('like-btn');
     const likeCount = document.getElementById('like-count');
@@ -276,11 +258,9 @@ function setupLikeButton(tvId) {
         likeBtn.title = '';
         const likeDoc = db.collection('likes').doc('tv_' + tvId);
         const userLikeDoc = likeDoc.collection('userLikes').doc(user.uid);
-        // Toplam like sayısını çek
         likeDoc.collection('userLikes').onSnapshot(snapshot => {
             likeCount.textContent = snapshot.size;
         });
-        // Kullanıcı daha önce like'ladı mı?
         userLikeDoc.get().then(doc => {
             if (doc.exists) {
                 likeBtn.classList.add('liked');
@@ -291,7 +271,6 @@ function setupLikeButton(tvId) {
         likeBtn.addEventListener('click', async () => {
             const doc = await userLikeDoc.get();
             if (!doc.exists) {
-                // Like at
                 await userLikeDoc.set({ 
                     liked: true, 
                     userId: user.uid,
@@ -299,7 +278,6 @@ function setupLikeButton(tvId) {
                 });
                 likeBtn.classList.add('liked');
             } else {
-                // Like'ı geri al
                 await userLikeDoc.delete();
                 likeBtn.classList.remove('liked');
             }

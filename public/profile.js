@@ -10,11 +10,9 @@ document.addEventListener('DOMContentLoaded', () => {
             bio: '',
             avatar: '/images/user.jpg'
         };
-        // Sidebar
         document.getElementById('sidebarProfileImage').src = '/images/user.jpg';
         document.getElementById('sidebarProfileName').textContent = userData.name;
         document.getElementById('sidebarProfileEmail').textContent = userData.email;
-        // Main profile
         document.getElementById('profileAvatar').src = userData.avatar;
         document.getElementById('profileName').textContent = userData.name;
         document.getElementById('profileEmail').textContent = userData.email;
@@ -26,7 +24,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function setupProfileEvents() {
-    // Profile image change
     const changeAvatarBtn = document.getElementById('changeAvatarBtn');
     if (changeAvatarBtn) {
         changeAvatarBtn.addEventListener('click', () => {
@@ -38,7 +35,6 @@ function setupProfileEvents() {
         });
     }
 
-    // Profile settings form
     const profileForm = document.getElementById('profileSettingsForm');
     if (profileForm) {
         profileForm.addEventListener('submit', async (e) => {
@@ -78,7 +74,6 @@ async function saveProfileSettings() {
 
         await new Promise(resolve => setTimeout(resolve, 1000));
 
-        // Update UI
         document.getElementById('profileName').textContent = formData.displayName;
         document.getElementById('sidebarProfileName').textContent = formData.displayName;
         
@@ -92,8 +87,6 @@ async function saveProfileSettings() {
 
 async function loadUserMovies() {
     try {
-        // TODO: Replace with actual API calls
-        // Simulate loading liked and disliked movies
         const likedMovies = [
             { id: 1, title: 'Movie 1', poster: 'https://via.placeholder.com/200x300' },
             { id: 2, title: 'Movie 2', poster: 'https://via.placeholder.com/200x300' }
@@ -104,11 +97,9 @@ async function loadUserMovies() {
             { id: 4, title: 'Movie 4', poster: 'https://via.placeholder.com/200x300' }
         ];
 
-        // Update counts
         document.getElementById('likedMoviesCount').textContent = likedMovies.length;
         document.getElementById('dislikedMoviesCount').textContent = dislikedMovies.length;
 
-        // Render movie grids
         renderMovieGrid('likedMoviesGrid', likedMovies);
         renderMovieGrid('dislikedMoviesGrid', dislikedMovies);
 
@@ -133,6 +124,5 @@ function renderMovieGrid(gridId, movies) {
 }
 
 function showNotification(message, type = 'info') {
-    // Only log, no alert
     console.log(`${type.toUpperCase()}: ${message}`);
 } 

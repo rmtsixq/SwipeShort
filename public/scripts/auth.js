@@ -1,4 +1,3 @@
-// Sekme kontrolü: URL'den tab parametresini oku ve ilgili sekmeyi aç
 const urlParams = new URLSearchParams(window.location.search);
 const tabParam = urlParams.get('tab');
 if (tabParam === 'signup' || tabParam === 'login') {
@@ -8,17 +7,14 @@ if (tabParam === 'signup' || tabParam === 'login') {
     }, 0);
 }
 
-// Tab switching
 const tabs = document.querySelectorAll('.auth-tab');
 const forms = document.querySelectorAll('.auth-form');
 
 tabs.forEach(tab => {
     tab.addEventListener('click', () => {
         const target = tab.dataset.tab;
-        // Update tabs
         tabs.forEach(t => t.classList.remove('active'));
         tab.classList.add('active');
-        // Update forms
         forms.forEach(form => {
             form.classList.remove('active');
             if (form.id === `${target}Form`) {
@@ -28,7 +24,6 @@ tabs.forEach(tab => {
     });
 });
 
-// Login form submission
 const loginForm = document.getElementById('loginForm');
 if (loginForm) {
     loginForm.addEventListener('submit', async (e) => {
@@ -44,7 +39,6 @@ if (loginForm) {
     });
 }
 
-// Signup form submission
 const signupForm = document.getElementById('signupForm');
 if (signupForm) {
     signupForm.addEventListener('submit', async (e) => {
@@ -59,7 +53,6 @@ if (signupForm) {
         }
         try {
             const userCredential = await firebase.auth().createUserWithEmailAndPassword(email, password);
-            // Kullanıcı adı kaydet
             await userCredential.user.updateProfile({ displayName: username });
             window.location.href = '/dashboard.html';
         } catch (error) {
@@ -68,14 +61,12 @@ if (signupForm) {
     });
 }
 
-// Google authentication
 const googleButtons = document.querySelectorAll('.google-auth-button');
 googleButtons.forEach(button => {
     button.addEventListener('click', async () => {
         const provider = new firebase.auth.GoogleAuthProvider();
         try {
             const result = await firebase.auth().signInWithPopup(provider);
-            // Eğer yeni kullanıcı ise displayName yoksa prompt ile sor
             if (!result.user.displayName) {
                 let username = prompt('Please enter a username:');
                 if (username) {

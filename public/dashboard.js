@@ -1,16 +1,10 @@
-// Firebase initialization requires config file and CDN!
-// This file should be called at the bottom of dashboard.html
-
-// Authentication state and modal management
 let currentUser = null;
 let isGuestUser = false;
 
-// Check if user came from index page and show educational modal
 document.addEventListener('DOMContentLoaded', function() {
     const urlParams = new URLSearchParams(window.location.search);
     const fromIndex = urlParams.get('fromIndex');
     
-    // Check if user has already seen the modal today
     const lastSeen = localStorage.getItem('educationalModalLastSeen');
     const today = new Date().toDateString();
     
@@ -19,64 +13,48 @@ document.addEventListener('DOMContentLoaded', function() {
         localStorage.setItem('educationalModalLastSeen', today);
     }
     
-    // Add event listeners for educational modal
     setupEducationalModal();
     
-    // Initialize authentication state
     initializeAuthentication();
 });
 
-// Initialize authentication state
 function initializeAuthentication() {
     firebase.auth().onAuthStateChanged(function(user) {
         currentUser = user;
         isGuestUser = !user;
         
-        // Update profile section
         const profilePicture = document.getElementById('userProfilePicture');
         const profileName = document.getElementById('userProfileName');
         
         if (profilePicture && profileName) {
-            // Set profile picture
             if (user && user.photoURL) {
                 profilePicture.src = user.photoURL;
             } else {
-                // Use first letter of email/name as avatar
                 const initial = user ? (user.displayName || user.email || '?')[0].toUpperCase() : '?';
                 profilePicture.src = `https://ui-avatars.com/api/?name=${initial}&background=random&color=fff`;
             }
             
-            // Set profile name
             profileName.textContent = user ? (user.displayName || user.email.split('@')[0] || 'User') : 'Guest';
         }
         
-        // Setup authentication required features
         setupAuthenticationRequiredFeatures();
     });
 }
 
-// Setup features that require authentication
 function setupAuthenticationRequiredFeatures() {
-    // Like buttons - sadece bunlar için authentication gerekli
     setupLikeButtonsAuthentication();
     
-    // Chat button - robot karakteri için
     setupChatButtonAuthentication();
     
-    // Messaging button - mesajlaşma için
     setupMessagingButtonAuthentication();
     
-    // Profile link - profil için
     setupProfileLinkAuthentication();
     
-    // Friends button - arkadaşlar için
     setupFriendsButtonAuthentication();
     
-    // Discover button - keşfet için (eğer özel özellikler varsa)
     setupDiscoverButtonAuthentication();
 }
 
-// Setup like buttons authentication
 function setupLikeButtonsAuthentication() {
     const likeButtons = document.querySelectorAll('.like-btn');
     likeButtons.forEach(btn => {
@@ -90,7 +68,6 @@ function setupLikeButtonsAuthentication() {
     });
 }
 
-// Setup chat button authentication
 function setupChatButtonAuthentication() {
     const chatBtn = document.querySelector('.chat-btn');
     if (chatBtn) {
@@ -103,7 +80,6 @@ function setupChatButtonAuthentication() {
     }
 }
 
-// Setup messaging button authentication
 function setupMessagingButtonAuthentication() {
     const messagingBtn = document.querySelector('a[href="messaging.html"]');
     if (messagingBtn) {
@@ -116,7 +92,6 @@ function setupMessagingButtonAuthentication() {
     }
 }
 
-// Setup profile link authentication
 function setupProfileLinkAuthentication() {
     const profileLink = document.querySelector('a[href="profile.html"]');
     if (profileLink) {
@@ -129,7 +104,6 @@ function setupProfileLinkAuthentication() {
     }
 }
 
-// Setup friends button authentication
 function setupFriendsButtonAuthentication() {
     const friendsBtn = document.querySelector('a[href="friends.html"]');
     if (friendsBtn) {
@@ -142,20 +116,14 @@ function setupFriendsButtonAuthentication() {
     }
 }
 
-// Setup discover button authentication (eğer özel özellikler varsa)
 function setupDiscoverButtonAuthentication() {
     const discoverBtn = document.querySelector('a[href="discover.html"]');
     if (discoverBtn) {
-        // Discover sayfasına gitmek için authentication gerekmez
-        // Sadece özel özellikler varsa kontrol edilir
         discoverBtn.addEventListener('click', function(e) {
-            // Şimdilik authentication gerekmez
-            // Eğer discover sayfasında özel özellikler varsa buraya eklenebilir
         });
     }
 }
 
-// Show account required modal
 function showAccountRequiredModal() {
     const modal = document.getElementById('account-required-modal');
     if (modal) {
@@ -164,7 +132,6 @@ function showAccountRequiredModal() {
     }
 }
 
-// Hide account required modal
 function hideAccountRequiredModal() {
     const modal = document.getElementById('account-required-modal');
     if (modal) {
@@ -173,7 +140,6 @@ function hideAccountRequiredModal() {
     }
 }
 
-// Setup account required modal
 function setupAccountRequiredModal() {
     const modal = document.getElementById('account-required-modal');
     const closeBtn = document.getElementById('close-account-modal');
@@ -196,7 +162,6 @@ function setupAccountRequiredModal() {
         });
     }
     
-    // Close modal when clicking outside
     if (modal) {
         modal.addEventListener('click', function(event) {
             if (event.target === modal) {
@@ -205,7 +170,6 @@ function setupAccountRequiredModal() {
         });
     }
     
-    // Close modal with Escape key
     document.addEventListener('keydown', function(event) {
         if (event.key === 'Escape') {
             hideAccountRequiredModal();
@@ -213,12 +177,11 @@ function setupAccountRequiredModal() {
     });
 }
 
-// Educational Modal Functions
 function showEducationalModal() {
     const modal = document.getElementById('educational-modal');
     if (modal) {
         modal.style.display = 'block';
-        document.body.style.overflow = 'hidden'; // Prevent background scrolling
+        document.body.style.overflow = 'hidden';
     }
 }
 
@@ -226,7 +189,7 @@ function hideEducationalModal() {
     const modal = document.getElementById('educational-modal');
     if (modal) {
         modal.style.display = 'none';
-        document.body.style.overflow = 'auto'; // Restore scrolling
+        document.body.style.overflow = 'auto';
     }
 }
 
@@ -243,7 +206,6 @@ function setupEducationalModal() {
         understandBtn.addEventListener('click', hideEducationalModal);
     }
     
-    // Close modal when clicking outside
     if (modal) {
         modal.addEventListener('click', function(event) {
             if (event.target === modal) {
@@ -252,14 +214,12 @@ function setupEducationalModal() {
         });
     }
     
-    // Close modal with Escape key
     document.addEventListener('keydown', function(event) {
         if (event.key === 'Escape') {
             hideEducationalModal();
         }
     });
     
-    // Also check referrer to detect if user came from index page
     const lastSeen = localStorage.getItem('educationalModalLastSeen');
     const today = new Date().toDateString();
     
@@ -267,26 +227,22 @@ function setupEducationalModal() {
         document.referrer.includes('index.html') || 
         document.referrer.includes('index.html?')) && 
         lastSeen !== today) {
-        // User came from index page or external source
         setTimeout(() => {
             showEducationalModal();
             localStorage.setItem('educationalModalLastSeen', today);
-        }, 1000); // Show after 1 second delay
+        }, 1000);
     }
 }
 
-// Function to manually show educational modal (for testing or admin use)
 function showEducationalModalManually() {
     showEducationalModal();
 }
 
-// Function to reset educational modal seen status
 function resetEducationalModalStatus() {
     localStorage.removeItem('educationalModalLastSeen');
     console.log('Educational modal status reset. Modal will show again on next visit.');
 }
 
-// Robot Character Class
 class RobotCharacter {
     constructor() {
         this.robot = document.getElementById('robot-character');
@@ -318,7 +274,6 @@ class RobotCharacter {
         this.startMovement();
         this.setupInteraction();
         
-        // Show welcome message after a short delay
         setTimeout(() => {
             this.speak("Hello! I'm your AI movie assistant. I'm here to help you discover amazing movies and TV shows. I can provide recommendations, help you find specific content, and answer your movie questions. Click on me anytime for help!");
         }, 2000);
@@ -358,7 +313,6 @@ class RobotCharacter {
         this.speechBubble.textContent = message;
         this.speechBubble.classList.add('visible');
         
-        // Hide the speech bubble after 5 seconds
         setTimeout(() => {
             this.speechBubble.classList.remove('visible');
         }, 5000);
@@ -442,19 +396,12 @@ class RobotCharacter {
     }
 }
 
-// Initialize robot when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     new RobotCharacter();
     setupMajikTrigger();
     
-    // Setup account required modal
     setupAccountRequiredModal();
 
-    // Kullanıcı login kontrolü ve diğer dashboard fonksiyonları burada kalabilir
-    // Bu kısım artık initializeAuthentication() fonksiyonunda yapılıyor
-
-    // Sadece header arama modalı için kodlar:
-    const mainSearchInput = document.getElementById('mainSearchInput');
     const searchModal = document.getElementById('searchModal');
     const modalSearchInput = document.getElementById('modalSearchInput');
     const searchModalClose = document.getElementById('searchModalClose');
@@ -495,21 +442,17 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Content type selector events
     document.querySelectorAll('.content-type-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             const type = this.getAttribute('data-type');
             
-            // Update active states
             document.querySelectorAll('.content-type-btn').forEach(b => b.classList.remove('active'));
             this.classList.add('active');
             
-            // Show/hide relevant tabs
             document.querySelectorAll('.film-tabs-header').forEach(header => {
                 header.style.display = header.getAttribute('data-type') === type ? 'flex' : 'none';
             });
             
-            // Update current type and reset to first tab
             currentType = type;
             const firstTab = document.querySelector(`.film-tabs-header[data-type="${type}"] .film-tab`);
             if (firstTab) {
@@ -522,17 +465,14 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Tab click events
     document.querySelectorAll('.film-tab').forEach(tab => {
         tab.addEventListener('click', function() {
             const tabName = this.textContent.trim();
             const type = this.getAttribute('data-type');
-            // Update active states for tabs of the same type
             document.querySelectorAll(`.film-tab[data-type="${type}"]`).forEach(t => {
                 t.classList.remove('active');
             });
             this.classList.add('active');
-            // Reset to page 1 when changing tabs
             currentPage = 1;
             fetchContent(tabName, 1);
         });
@@ -554,18 +494,18 @@ const TMDB_API_KEY = 'fda9bed2dd52a349ecb7cfe38b050ca5';
 const FILMS_PER_PAGE = 20;
 let allMovies = [];
 let currentPage = 1;
-let currentTab = 'New Releases'; // Default tab
-let currentType = 'movie'; // Track current content type (movie or tv)
+let currentTab = 'New Releases';
+let currentType = 'movie';
 
 const tabEndpoints = {
-    // Movie tabs
+
     'New Releases': { type: 'movie', endpoint: 'discover', sort: 'release_date.desc', minVote: 0 },
     'Recommended': { type: 'movie', endpoint: 'discover', sort: 'popularity.desc', minVote: 0 },
     'IMDB 7+ Films': { type: 'movie', endpoint: 'discover', sort: 'vote_average.desc', minVote: 7 },
     'Most Commented': { type: 'movie', endpoint: 'discover', sort: 'vote_count.desc', minVote: 0 },
     'Most Liked': { type: 'movie', endpoint: 'discover', sort: 'vote_average.desc', minVote: 0 },
     
-    // TV Show tabs
+
     'New Episodes': { type: 'tv', endpoint: 'discover', sort: 'first_air_date.desc', minVote: 0 },
     'Popular Shows': { type: 'tv', endpoint: 'discover', sort: 'popularity.desc', minVote: 0 },
     'Top Rated': { type: 'tv', endpoint: 'discover', sort: 'vote_average.desc', minVote: 0 },
@@ -573,14 +513,13 @@ const tabEndpoints = {
     'On The Air': { type: 'tv', endpoint: 'on_the_air', minVote: 0 }
 };
 
-// Filter state
 let activeFilters = {
     genre: null,
     year: null,
     rating: null
 };
 
-// Update filter button state
+
 function updateFilterButton() {
     const filterBtn = document.querySelector('.filter-btn');
     if (!filterBtn) return;
