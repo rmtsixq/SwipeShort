@@ -133,13 +133,11 @@ video {
     transform: scale(1.1);
 }
 
-/* Video container hover efekti */
 .video-container:hover .play-pause-overlay {
     opacity: 1;
     transform: translate(-50%, -50%) scale(1);
 }
 
-/* Yeni animasyon tanımları */
 @keyframes popIn {
     0% {
         transform: translate(-50%, -50%) scale(0.8);
@@ -230,7 +228,6 @@ video {
     }
 }
 
-/* Responsive header */
 @media (max-width: 768px) {
     .header {
         width: 100%;
@@ -340,7 +337,6 @@ video {
     }
 }
 
-/* Share Duration Modal Styles */
 .share-duration-modal {
     position: fixed;
     top: 0;

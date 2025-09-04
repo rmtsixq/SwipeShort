@@ -254,7 +254,6 @@ body, html {
     box-sizing: border-box;
 }
 
-/* Upload section styles */
 .drag-drop, .youtube-url {
     flex: 1;
     margin: 30px;
@@ -521,7 +520,6 @@ body, html {
     top: 0px;
 }
 
-/* Button styles */
 .big-pic .button1 {
     position: relative;
     font-family: roboto;
@@ -672,7 +670,6 @@ body, html {
     transform: scale(1.02);
 }
 
-/* Feature cards grid */
 .features-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -715,7 +712,6 @@ body, html {
     line-height: 1.6;
 }
 
-/* Responsive design */
 @media (max-width: 1200px) {
     .features-grid {
         grid-template-columns: repeat(2, 1fr);
@@ -859,7 +855,6 @@ body, html {
     word-break: break-all;
 }
 
-/* Processing Overlay */
 .processing-overlay {
     position: fixed;
     top: 0;
@@ -899,7 +894,6 @@ body, html {
     to { transform: rotate(360deg); }
 }
 
-/* Clip Duration Modal */
 .clip-duration-modal {
     position: fixed;
     top: 0;
@@ -990,7 +984,6 @@ body, html {
     transform: translateY(0);
 }
 
-/* Duration Selection Modal */
 .duration-modal {
     display: none;
     position: fixed;
@@ -1093,7 +1086,6 @@ body, html {
     transform: translateY(0);
 }
 
-/* Processing Overlay */
 .processing-overlay {
     display: none;
     position: fixed;
@@ -1130,7 +1122,6 @@ body, html {
     100% { transform: rotate(360deg); }
 }
 
-/* Submit Button */
 .submit-button {
     background: #6f38d4;
     color: white;
@@ -1148,7 +1139,6 @@ body, html {
     background: #6f38d4;
 }
 
-/* PreUploaded Videos Section */
 .preuploaded-section {
   position: relative;
   background: #111;
@@ -1170,7 +1160,6 @@ body, html {
   background: linear-gradient(90deg, #a259ff, #38cfff);
   z-index: 0;
   pointer-events: none;
-  /* Border kalınlığı için mask kullan */
   padding: 0;
   -webkit-mask:
     linear-gradient(#fff 0 0) content-box, 
@@ -1239,7 +1228,6 @@ body, html {
   z-index: 0;
   padding: 0;
   pointer-events: none;
-  /* Border kalınlığı için içeriği küçültmek için mask kullan */
   -webkit-mask:
     linear-gradient(#fff 0 0) content-box, 
     linear-gradient(#fff 0 0);
@@ -1323,7 +1311,6 @@ body, html {
   flex-direction: column;
 }
 
-/* === HEADER === */
 .main-header {
   position: fixed;
   top: 30px;
@@ -1383,7 +1370,6 @@ body, html {
   letter-spacing: 0.5px;
 }
 
-/* Hamburger Menu Styles */
 .hamburger-menu {
   display: none;
   flex-direction: column;
@@ -1511,12 +1497,10 @@ body, html {
         padding: 2px 4px;
     }
     
-    /* Show hamburger menu on mobile */
     .hamburger-menu {
         display: flex;
     }
     
-    /* Hide regular navigation on mobile */
     .main-header__nav {
         position: fixed;
         top: 0;
@@ -1740,7 +1724,6 @@ body, html {
     }
 }
 
-/* Remove discover section styles */
 .discover-section,
 .section-title,
 .category-grid,
@@ -1751,7 +1734,6 @@ body, html {
     display: none;
 }
 
-/* Movie Slider */
 .movie-slider {
     width: 100%;
     overflow: hidden;
@@ -1800,7 +1782,6 @@ body, html {
     }
 }
 
-/* Watch Clever Section */
 .watch-clever-section {
     text-align: center;
     padding: 80px 20px;
@@ -1875,7 +1856,6 @@ body, html {
     transition: none;
 }
 
-/* Responsive design for movie slider and watch clever section */
 @media (max-width: 768px) {
     .movie-slider__slide {
         flex: 0 0 150px;
@@ -1895,7 +1875,6 @@ body, html {
     }
 }
 
-/* Movie20 Modal Styles */
 .movie20-modal {
     position: fixed;
     top: 0;
@@ -2011,7 +1990,6 @@ body, html {
     transform: translateY(0);
 }
 
-/* Responsive design improvements */
 @media (max-width: 768px) {
     .main-header {
         padding: 10px 15px;
@@ -2161,7 +2139,6 @@ body, html {
     }
 }
 
-/* Educational Disclaimer Section Styles */
 .educational-disclaimer {
     background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
     padding: 60px 20px;
@@ -2250,7 +2227,6 @@ body, html {
     color: #5170FF;
 }
 
-/* Responsive Design for Disclaimer */
 @media (max-width: 768px) {
     .educational-disclaimer {
         padding: 40px 15px;

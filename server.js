@@ -15,29 +15,22 @@ const compression = require('compression');
 const slowDown = require('express-slow-down');
 require('dotenv').config();
 
-// HuggingFace API setup
 const HUGGINGFACE_API_KEY = process.env.HUGGINGFACE_API_KEY;
 const MODEL_ID = "deepseek-ai/DeepSeek-V3-0324";
 const PROVIDER = "novita";
 
-// Initialize HuggingFace client
 const hf = new HfInference(HUGGINGFACE_API_KEY);
 
-// Chat history to maintain context
 const chatHistories = new Map();
 
-// Get AI response using HuggingFace API
 async function getAIResponse(message, userId) {
     try {
-        // Initialize chat history for new users
         if (!chatHistories.has(userId)) {
             chatHistories.set(userId, []);
         }
 
-        // Get user's chat history
         const history = chatHistories.get(userId);
 
-        // System prompt to train AI for movie recommendations (ENGLISH)
         const systemPrompt = {
             role: "system",
             content: `You are a movie and TV show recommendation assistant. Your job is to help users find movies and TV shows. Please follow these rules:
@@ -56,7 +49,6 @@ async function getAIResponse(message, userId) {
             13. Always mention if it's a movie or TV show in your response.`
         };
 
-        // Format messages in the required format
         const messages = [
             systemPrompt,
             ...history.map(msg => ({
@@ -66,7 +58,6 @@ async function getAIResponse(message, userId) {
             { role: "user", content: message }
         ];
 
-        // Call HuggingFace API using chatCompletion with optimized parameters
         const result = await hf.chatCompletion({
             provider: PROVIDER,
             model: MODEL_ID,
@@ -81,14 +72,11 @@ async function getAIResponse(message, userId) {
             }
         });
 
-        // Get the generated text
         const aiResponse = result.choices[0].message.content.trim();
 
-        // Add messages to history
         history.push(`User: ${message}`);
         history.push(`Assistant: ${aiResponse}`);
 
-        // Keep only last 3 message pairs (reduced from 5)
         if (history.length > 6) {
             history.splice(0, 2);
         }
@@ -104,13 +92,10 @@ const app = express();
 const PORT = process.env.PORT || 8080;
 const upload = multer({ dest: process.env.UPLOAD_DIR || 'uploads/' });
 
-// Enhanced CORS configuration for Mac and Apache compatibility
 const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
-    // Allow all origins for development
     callback(null, true);
   },
   credentials: true,
@@ -139,13 +124,10 @@ const corsOptions = {
   maxAge: 86400 // 24 hours
 };
 
-// Apply CORS middleware
 app.use(cors(corsOptions));
 
-// Compression middleware for better performance
 app.use(compression({
   filter: (req, res) => {
-    // Don't compress video streams
     if (req.path.includes('/api/video-stream') || req.path.includes('/proxy/stream')) {
       return false;
     }
@@ -155,18 +137,15 @@ app.use(compression({
   threshold: 1024
 }));
 
-// Rate limiting for API endpoints
 const speedLimiter = slowDown({
   windowMs: 15 * 60 * 1000, // 15 minutes
   delayAfter: 100, // Allow 100 requests per 15 minutes, then...
   delayMs: () => 500 // Begin adding 500ms of delay per request above 100 (updated per v2 behavior)
 });
 
-// Apply rate limiting to API routes
 app.use('/api/', speedLimiter);
 app.use('/proxy/', speedLimiter);
 
-// Health check endpoint for Mac debugging
 app.get('/health', (req, res) => {
   const healthInfo = {
     status: 'OK',
@@ -192,7 +171,6 @@ app.get('/health', (req, res) => {
   res.json(healthInfo);
 });
 
-// Mac-specific debugging endpoint
 app.get('/debug/mac', (req, res) => {
   const debugInfo = {
     timestamp: new Date().toISOString(),
@@ -226,22 +204,18 @@ app.get('/debug/mac', (req, res) => {
   res.json(debugInfo);
 });
 
-// Additional security headers for Mac and Apache compatibility
 app.use((req, res, next) => {
-  // Enhanced CORS headers
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, HEAD');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Range, Cache-Control, Pragma, If-Modified-Since, If-None-Match');
   res.header('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges, Content-Type, Cache-Control, Pragma, Expires');
   res.header('Access-Control-Allow-Credentials', 'true');
   
-  // Security headers for better compatibility
   res.header('X-Content-Type-Options', 'nosniff');
   res.header('X-Frame-Options', 'SAMEORIGIN');
   res.header('X-XSS-Protection', '1; mode=block');
   res.header('Referrer-Policy', 'strict-origin-when-cross-origin');
   
-  // Cache control for video content
   if (req.path.includes('/api/video-stream') || req.path.includes('/proxy/stream')) {
     res.header('Cache-Control', 'public, max-age=3600, s-maxage=3600');
   } else {
@@ -250,7 +224,6 @@ app.use((req, res, next) => {
     res.header('Expires', '0');
   }
   
-  // Handle preflight requests
   if (req.method === 'OPTIONS') {
     res.status(200).end();
     return;
@@ -259,10 +232,8 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve static files from public directory with proper headers
 app.use(express.static('public', {
   setHeaders: (res, path) => {
-    // Set proper MIME types for video files
     if (path.endsWith('.mp4')) {
       res.setHeader('Content-Type', 'video/mp4');
       res.setHeader('Accept-Ranges', 'bytes');
@@ -275,20 +246,17 @@ app.use(express.static('public', {
       res.setHeader('Cache-Control', 'public, max-age=3600');
     }
     
-    // CORS headers for static files
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Range, Origin, X-Requested-With, Content-Type, Accept, Authorization');
   }
 }));
 
-// Error handling middleware
 app.use((err, req, res, next) => {
     console.error('Server error:', err);
     res.status(500).json({ error: 'Internal server error', details: err.message });
 });
 
-// Video stream proxy - Cloudnestra videolarını doğrudan stream et
 app.get('/api/video-stream', async (req, res) => {
     const { url } = req.query;
     
@@ -299,10 +267,8 @@ app.get('/api/video-stream', async (req, res) => {
     try {
         console.log('Streaming video from:', url);
         
-        // Range request desteği için
         const range = req.headers.range;
         
-        // Enhanced headers for Mac compatibility
         const fetchHeaders = {
             'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
             'Accept': '*/*',
@@ -325,12 +291,10 @@ app.get('/api/video-stream', async (req, res) => {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
         
-        // Video content type'ını al
         const contentType = response.headers.get('content-type') || 'video/mp4';
         const contentLength = response.headers.get('content-length');
         const acceptRanges = response.headers.get('accept-ranges');
         
-        // Enhanced CORS ve video headers for Mac
         res.set({
             'Access-Control-Allow-Origin': '*',
             'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
@@ -344,18 +308,15 @@ app.get('/api/video-stream', async (req, res) => {
             'X-XSS-Protection': '1; mode=block'
         });
         
-        // Range request varsa content-length ekle
         if (range && contentLength) {
             res.set('Content-Length', contentLength);
         }
         
-        // Handle preflight requests
         if (req.method === 'OPTIONS') {
             res.status(200).end();
             return;
         }
         
-        // Video stream'i pipe et with error handling
         response.body.on('error', (error) => {
             console.error('Video stream pipe error:', error);
             if (!res.headersSent) {
@@ -371,7 +332,6 @@ app.get('/api/video-stream', async (req, res) => {
     } catch (error) {
         console.error('Video stream error:', error);
         
-        // Enhanced error response for Mac debugging
         const errorResponse = {
             error: 'Video stream error',
             details: error.message,
@@ -385,7 +345,6 @@ app.get('/api/video-stream', async (req, res) => {
     }
 });
 
-// Video iframe proxy - HTML iframe içeriğini proxy olarak döndür (fallback için)
 app.get('/api/iframe-proxy', async (req, res) => {
     const { url } = req.query;
     
@@ -426,7 +385,6 @@ app.get('/api/iframe-proxy', async (req, res) => {
         let html = await response.text();
         console.log(`Received HTML length: ${html.length} characters`);
         
-        // HTML'de localhost referansları var mı kontrol et
         const localhostInHtml = html.match(/localhost[^"'\s>]*/g);
         if (localhostInHtml) {
             console.log(`🔍 Found ${localhostInHtml.length} localhost references in HTML:`, localhostInHtml);
@@ -434,13 +392,11 @@ app.get('/api/iframe-proxy', async (req, res) => {
             console.log('✅ No localhost references found in HTML');
         }
         
-        // Relative URL'leri absolute yap ve localhost referanslarını düzelt
         if (html.includes('src="//')) {
             html = html.replace(/src="\/\//g, 'src="https://');
             console.log('Fixed relative URLs');
         }
         
-        // Cloudnestra'nın localhost referanslarını tamamen düzelt
         const localhostMatches = html.match(/localhost:\d+/g);
         if (localhostMatches) {
             console.log(`Found ${localhostMatches.length} localhost references, fixing...`);
@@ -448,48 +404,38 @@ app.get('/api/iframe-proxy', async (req, res) => {
             html = html.replace(/localhost:\d+/g, 'cloudnestra.com');
         }
         
-        // Daha kapsamlı localhost referans düzeltmesi
         html = html.replace(/['"]http:\/\/localhost:\d+['"]/g, '"https://cloudnestra.com"');
         html = html.replace(/['"]localhost:\d+['"]/g, '"cloudnestra.com"');
         
-        // CSS ve JS dosya yollarını düzelt
         html = html.replace(/href=["']http:\/\/localhost:\d+\//g, 'href="https://cloudnestra.com/');
         html = html.replace(/src=["']http:\/\/localhost:\d+\//g, 'src="https://cloudnestra.com/');
         
-        // Relative path'leri de düzelt
         html = html.replace(/href=["']\//g, 'href="https://cloudnestra.com/');
         html = html.replace(/src=["']\//g, 'src="https://cloudnestra.com/');
         
-        // Tüm localhost referanslarını yakala ve düzelt
         const allLocalhostRefs = html.match(/localhost[^"'\s>]*/g);
         if (allLocalhostRefs) {
             console.log(`Found additional localhost references:`, allLocalhostRefs);
             html = html.replace(/localhost[^"'\s>]*/g, 'cloudnestra.com');
         }
         
-        // Regex ile tüm localhost varyasyonlarını yakala
         html = html.replace(/localhost(?::\d+)?(?:\/[^"'\s>]*)?/g, 'cloudnestra.com');
         
-        // Debug için kalan localhost referanslarını kontrol et
         const remainingLocalhost = html.match(/localhost[^"'\s>]*/g);
         if (remainingLocalhost) {
             console.log(`Remaining localhost references after cleanup:`, remainingLocalhost);
         }
         
-        // Son bir temizlik daha - tüm localhost varyasyonlarını yakala
         html = html.replace(/localhost(?::\d+)?(?:\/[^"'\s>]*)?/g, 'cloudnestra.com');
         html = html.replace(/localhost(?:\/[^"'\s>]*)?/g, 'cloudnestra.com');
         
-        // Port numaraları ile birlikte tüm localhost referanslarını temizle
         html = html.replace(/localhost:\d+/g, 'cloudnestra.com');
         html = html.replace(/localhost\//g, 'cloudnestra.com/');
         
-        // Final kontrol
         const finalLocalhost = html.match(/localhost[^"'\s>]*/g);
         if (finalLocalhost) {
             console.log(`⚠️ FINAL WARNING: Still found localhost references:`, finalLocalhost);
             
-            // Son çare: Tüm localhost referanslarını manuel olarak değiştir
             html = html.replace(/localhost(?::\d+)?(?:\/[^"'\s>]*)?/g, 'cloudnestra.com');
             html = html.replace(/localhost\//g, 'cloudnestra.com/');
             html = html.replace(/localhost"/g, 'cloudnestra.com"');
@@ -497,15 +443,12 @@ app.get('/api/iframe-proxy', async (req, res) => {
             html = html.replace(/localhost\s/g, 'cloudnestra.com ');
             html = html.replace(/localhost/g, 'cloudnestra.com');
             
-            // JavaScript string'lerindeki localhost referanslarını da temizle
             html = html.replace(/(['"])localhost(?::\d+)?([^'"]*)\1/g, '$1cloudnestra.com$2$1');
             html = html.replace(/(['"])localhost([^'"]*)\1/g, '$1cloudnestra.com$2$1');
             
-            // URL'lerdeki localhost referanslarını temizle
             html = html.replace(/http:\/\/localhost(?::\d+)?/g, 'https://cloudnestra.com');
             html = html.replace(/https:\/\/localhost(?::\d+)?/g, 'https://cloudnestra.com');
             
-            // Son bir temizlik daha - tüm kalan localhost referanslarını yakala
             html = html.replace(/localhost[^"'\s>]*/g, 'cloudnestra.com');
             html = html.replace(/localhost/g, 'cloudnestra.com');
             
@@ -514,45 +457,35 @@ app.get('/api/iframe-proxy', async (req, res) => {
             console.log('✅ All localhost references cleaned successfully');
         }
         
-        // CSS ve JS dosya yollarını özel olarak düzelt
         html = html.replace(/style_rcp-[^"']*\.css/g, 'style_rcp.css');
         html = html.replace(/base64\.js/g, 'base64.js');
-        // sbx.js referanslarını düzelt - artık direkt route'umuz var
         html = html.replace(/\/sbx\.js/g, '/sbx.js');
         html = html.replace(/sbx\.js/g, '/sbx.js');
         
-        // FontAwesome ve diğer CDN referanslarını düzelt
         html = html.replace(/https:\/\/cloudnestra\.com\/\/cdnjs\.cloudflare\.com/g, 'https://cdnjs.cloudflare.com');
         html = html.replace(/https:\/\/cloudnestra\.com\/\/fonts\.googleapis\.com/g, 'https://fonts.googleapis.com');
         html = html.replace(/https:\/\/cloudnestra\.com\/\/fonts\.gstatic\.com/g, 'https://fonts.gstatic.com');
         
-        // Çift slash'ları düzelt
         html = html.replace(/https:\/\/cloudnestra\.com\/\//g, 'https://cloudnestra.com/');
         
-        // Localhost referanslarını tamamen temizle
         html = html.replace(/http:\/\/localhost:\d+/g, 'https://cloudnestra.com');
         html = html.replace(/localhost:\d+/g, 'cloudnestra.com');
         
-        // Hardcoded localhost:8080 referanslarını da temizle
         html = html.replace(/localhost:8080/g, 'cloudnestra.com');
         html = html.replace(/localhost:80/g, 'cloudnestra.com');
         html = html.replace(/localhost:3000/g, 'cloudnestra.com');
         
-        // Port numarası olmadan localhost referanslarını da temizle
         html = html.replace(/localhost\//g, 'cloudnestra.com/');
         html = html.replace(/localhost"/g, 'cloudnestra.com"');
         html = html.replace(/localhost'/g, "cloudnestra.com'");
         html = html.replace(/localhost\s/g, 'cloudnestra.com ');
         
-        // Cloudnestra'nın kendi dosyalarını düzgün yolla
         html = html.replace(/src=["']\/rcp\//g, 'src="https://cloudnestra.com/rcp/');
         html = html.replace(/href=["']\/rcp\//g, 'href="https://cloudnestra.com/rcp/');
         
-        // Relative path'leri absolute yap
         html = html.replace(/src=["']\/(?!https?:\/\/)/g, 'src="https://cloudnestra.com/');
         html = html.replace(/href=["']\/(?!https?:\/\/)/g, 'href="https://cloudnestra.com/');
         
-        // CSS ve JS dosyalarını düzgün yolla
         html = html.replace(/src=["']([^"']*\.(css|js))["']/g, (match, filename) => {
             if (filename.startsWith('http')) return match;
             if (filename.startsWith('//')) return `src="https:${filename}"`;
@@ -567,42 +500,32 @@ app.get('/api/iframe-proxy', async (req, res) => {
             return `href="https://cloudnestra.com/${filename}"`;
         });
         
-        // JavaScript ve CSS dosyalarını direkt Cloudnestra'dan yükle (proxy olmadan)
         html = html.replace(/src=["']https:\/\/cloudnestra\.com\/([^"']+)["']/g,
             (m, path) => `src="https://cloudnestra.com/${path}"`);
         
-        // Relative path'leri direkt Cloudnestra'dan yükle
         html = html.replace(/src=["']\/(rcp|prorcp|assets|static|player|cdn)\/([^"']+)["']/g,
             (m, seg, rest) => `src="https://cloudnestra.com/${seg}/${rest}"`);
         
-        // JS string kullanımlarını direkt Cloudnestra'dan yönlendir
         html = html.replace(/(["'])https:\/\/cloudnestra\.com\/([^"']+)\1/g,
             (m, q, path) => `${q}https://cloudnestra.com/${path}${q}`);
         
-        // Kalan Cloudnestra referanslarını direkt yönlendir
         html = html.replace(/(["'])https:\/\/cloudnestra\.com\/([^"']+)\1/g,
             (m, q, path) => `${q}https://cloudnestra.com/${path}${q}`);
         
-        // JavaScript içindeki localhost referanslarını da proxy'ye yönlendir
         html = html.replace(/(['"])localhost(?::\d+)?([^'"]*)\1/g, '$1/api/cn-proxy?url=https://cloudnestra.com$2$1');
         html = html.replace(/(['"])localhost([^'"]*)\1/g, '$1/api/cn-proxy?url=https://cloudnestra.com$2$1');
         
-        // JavaScript dosyalarında localhost referanslarını proxy'ye yönlendir
         html = html.replace(/localhost(?::\d+)?(?:\/[^"'\s>]*)?/g, '/api/cn-proxy?url=https://cloudnestra.com');
         
-        // Özel localhost pattern'larını yakala
         html = html.replace(/localhost:8080/g, '/api/cn-proxy?url=https://cloudnestra.com');
         html = html.replace(/localhost:80/g, '/api/cn-proxy?url=https://cloudnestra.com');
         html = html.replace(/localhost:3000/g, '/api/cn-proxy?url=https://cloudnestra.com');
         
-        // JavaScript string'lerindeki localhost referanslarını da temizle
         html = html.replace(/(['"])localhost(?::\d+)?([^'"]*)\1/g, '$1/api/cn-proxy?url=https://cloudnestra.com$2$1');
         html = html.replace(/(['"])localhost([^'"]*)\1/g, '$1/api/cn-proxy?url=https://cloudnestra.com$2$1');
         
-        // JavaScript dosyalarında localhost referanslarını proxy'ye yönlendir
         html = html.replace(/localhost(?::\d+)?(?:\/[^"'\s>]*)?/g, '/api/cn-proxy?url=https://cloudnestra.com');
         
-        // Özel dosyaları proxy'ye yönlendir
         html = html.replace(/src=["']([^"']*\.(js|css))["']/g, (match, filename) => {
             if (filename.startsWith('http')) return match;
             if (filename.startsWith('//')) return `src="https:${filename}"`;
@@ -610,46 +533,38 @@ app.get('/api/iframe-proxy', async (req, res) => {
             return `src="/api/cn-proxy?url=https://cloudnestra.com/${filename}"`;
         });
         
-        // sbx.html referanslarını özel olarak düzelt
         html = html.replace(/\/sbx\.html/g, '/api/cn-proxy?url=https://cloudnestra.com/sbx.html');
         html = html.replace(/sbx\.html/g, '/api/cn-proxy?url=https://cloudnestra.com/sbx.html');
         
-        // Çift proxy URL'leri temizle
         html = html.replace(/\/api\/cn-proxy\?url=https:\/\/cloudnestra\.com\/\/api\/cn-proxy\?url=https:\/\/cloudnestra\.com/g, '/api/cn-proxy?url=https://cloudnestra.com');
         html = html.replace(/\/api\/cn-proxy\?url=https:\/\/cloudnestra\.com\/api\/cn-proxy\?url=https:\/\/cloudnestra\.com/g, '/api/cn-proxy?url=https://cloudnestra.com');
         
         console.log('HTML cleanup completed');
         
-        // Debug: HTML'de localhost var mı kontrol et
         const debugLocalhost = html.match(/localhost[^"'\s>]*/g);
         if (debugLocalhost) {
             console.log('🚨 DEBUG: HTML cleanup sonrası hala localhost var:', debugLocalhost);
             console.log('HTML sample (first 1000 chars):', html.substring(0, 1000));
             
-            // Son bir temizlik daha
             html = html.replace(/localhost[^"'\s>]*/g, '/api/cn-proxy?url=https://cloudnestra.com');
             console.log('🔧 Applied final localhost cleanup');
         } else {
             console.log('✅ DEBUG: HTML cleanup başarılı - localhost yok');
         }
         
-        // Final kontrol - tüm localhost referanslarını temizle
         const finalCheck = html.match(/localhost[^"'\s>]*/g);
         if (finalCheck) {
             console.log('⚠️ FINAL WARNING: Still found localhost after cleanup:', finalCheck);
             html = html.replace(/localhost/g, '/api/cn-proxy?url=https://cloudnestra.com');
             
-            // Son bir kontrol daha
             const finalFinalCheck = html.match(/localhost[^"'\s>]*/g);
             if (finalFinalCheck) {
                 console.log('🚨 CRITICAL: localhost still exists after final cleanup:', finalFinalCheck);
-                // Son çare: Tüm localhost referanslarını manuel olarak değiştir
                 html = html.replace(/localhost(?::\d+)?(?:\/[^"'\s>]*)?/g, '/api/cn-proxy?url=https://cloudnestra.com');
                 html = html.replace(/localhost/g, '/api/cn-proxy?url=https://cloudnestra.com');
             }
         }
         
-        // CORS headers ekle
         res.set({
             'Access-Control-Allow-Origin': '*',
             'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
@@ -673,7 +588,6 @@ app.get('/api/iframe-proxy', async (req, res) => {
     }
 });
 
-// Add Cloudnestra asset proxy to avoid CORS and wrong origins for secondary requests
 app.get('/api/cn-proxy', async (req, res) => {
   try {
     const { url } = req.query;
@@ -681,7 +595,6 @@ app.get('/api/cn-proxy', async (req, res) => {
       return res.status(400).json({ error: 'Valid url query required to cloudnestra.com' });
     }
 
-    // sbx.html için özel handling
     if (url.includes('sbx.html')) {
       console.log('🔧 Special handling for sbx.html');
       const fallbackHtml = `
@@ -690,30 +603,24 @@ app.get('/api/cn-proxy', async (req, res) => {
 <head>
     <title>SBX Handler</title>
     <script>
-        // Sandbox detection bypass
         function dtc_sbx() {
             try {
-                // Return to parent without redirect
                 if (window.parent && window.parent !== window) {
                     window.parent.postMessage('sbx-handled', '*');
-                    // Handler'ı kapat
                     setTimeout(() => {
                         window.close();
                     }, 100);
                 }
             } catch (e) {
                 console.log('SBX handler completed');
-                // Handler'ı kapat
                 setTimeout(() => {
                     window.close();
                 }, 100);
             }
         }
         
-        // Otomatik çalıştır
         dtc_sbx();
         
-        // 2 saniye sonra otomatik kapat
         setTimeout(() => {
             if (window.parent && window.parent !== window) {
                 window.parent.postMessage('sbx-timeout', '*');
@@ -733,7 +640,6 @@ app.get('/api/cn-proxy', async (req, res) => {
 
     console.log('🔧 Proxying Cloudnestra asset:', url);
 
-    // Forward headers to mimic browser and correct referer/origin
     const upstreamHeaders = {
       'User-Agent': req.headers['user-agent'] || 'Mozilla/5.0',
       'Accept': req.headers['accept'] || '*/*',
@@ -745,17 +651,14 @@ app.get('/api/cn-proxy', async (req, res) => {
       'Pragma': 'no-cache'
     };
 
-    // Range support
     if (req.headers['range']) {
       upstreamHeaders['Range'] = req.headers['range'];
     }
 
     const upstream = await fetch(url, { headers: upstreamHeaders });
 
-    // Pass through status for range requests
     res.status(upstream.status);
 
-    // Copy headers of interest
     const passHeaders = [
       'content-type','content-length','accept-ranges','content-range','cache-control','pragma','expires'
     ];
@@ -764,13 +667,11 @@ app.get('/api/cn-proxy', async (req, res) => {
       if (v) res.setHeader(h, v);
     });
 
-    // Ensure JavaScript files have correct MIME type and clean localhost references
     if (url.includes('.js')) {
       if (!upstream.headers.get('content-type') || upstream.headers.get('content-type').includes('text/html')) {
         res.setHeader('Content-Type', 'application/javascript');
       }
       
-      // JavaScript dosyalarında localhost referanslarını temizle
       try {
         const jsContent = await upstream.text();
         console.log('🔍 Original JavaScript content (first 200 chars):', jsContent.substring(0, 200));
@@ -781,10 +682,8 @@ app.get('/api/cn-proxy', async (req, res) => {
           .replace(/localhost:3000/g, '/api/cn-proxy?url=https://cloudnestra.com')
           .replace(/localhost(?::\d+)?(?:\/[^"'\s>]*)?/g, '/api/cn-proxy?url=https://cloudnestra.com')
           .replace(/localhost/g, '/api/cn-proxy?url=https://cloudnestra.com')
-          // sbx.html referanslarını düzelt
           .replace(/\/sbx\.html/g, '/api/cn-proxy?url=https://cloudnestra.com/sbx.html')
           .replace(/sbx\.html/g, '/api/cn-proxy?url=https://cloudnestra.com/sbx.html')
-          // Çift proxy URL'leri temizle
           .replace(/\/api\/cn-proxy\?url=https:\/\/cloudnestra\.com\/\/api\/cn-proxy\?url=https:\/\/cloudnestra\.com/g, '/api/cn-proxy?url=https://cloudnestra.com')
           .replace(/\/api\/cn-proxy\?url=https:\/\/cloudnestra\.com\/api\/cn-proxy\?url=https:\/\/cloudnestra\.com/g, '/api/cn-proxy?url=https://cloudnestra.com');
         
@@ -794,7 +693,6 @@ app.get('/api/cn-proxy', async (req, res) => {
         return res.send(cleanedJs);
       } catch (err) {
         console.error('JavaScript cleanup failed:', err);
-        // Fallback to original content
         if (upstream.body) {
           upstream.body.pipe(res);
         } else {
@@ -803,7 +701,6 @@ app.get('/api/cn-proxy', async (req, res) => {
       }
     }
     
-    // Handle other file types
     if (url.includes('.css')) {
       if (!upstream.headers.get('content-type') || upstream.headers.get('content-type').includes('text/html')) {
         res.setHeader('Content-Type', 'text/css');
@@ -816,12 +713,10 @@ app.get('/api/cn-proxy', async (req, res) => {
       }
     }
 
-    // CORS for our frontend
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Range');
 
-    // Stream body with better error handling
     if (upstream.body) {
       upstream.body.pipe(res).on('error', (err) => {
         console.error('Stream error:', err);
@@ -846,12 +741,10 @@ app.get('/api/cn-proxy', async (req, res) => {
   }
 });
 
-// Function to get Cloudnestra embed URL from vidsrc
 async function getCloudnestraEmbedUrl(movieId) {
     try {
         console.log('Getting Cloudnestra embed URL for movie ID:', movieId);
         
-        // User-Agent rotasyonu için array - Cloudflare bypass için
         const userAgents = [
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
@@ -860,15 +753,12 @@ async function getCloudnestraEmbedUrl(movieId) {
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0'
         ];
         
-        // Rastgele User-Agent seç
         const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
         
-        // Önce vidsrc'den Cloudnestra URL'ini al
         const vidsrcApiUrl = `https://vidsrc.icu/embed/movie/${movieId}`;
         console.log('Fetching from vidsrc API:', vidsrcApiUrl);
         console.log('Using User-Agent:', randomUserAgent);
 
-        // Rate limiting - Cloudflare bypass için
         await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 3000));
 
         const response = await fetch(vidsrcApiUrl, {
@@ -912,7 +802,6 @@ async function getCloudnestraEmbedUrl(movieId) {
             throw new Error('Cloudflare verification page detected');
         }
 
-        // Look for vidsrc.icu player iframe (not just Cloudnestra)
         const iframeMatches = html.match(/<iframe[^>]*src="([^"]*)"[^>]*>/g);
         console.log('Found iframes:', iframeMatches);
 
@@ -923,7 +812,6 @@ async function getCloudnestraEmbedUrl(movieId) {
                 if (srcMatch) {
                     const src = srcMatch[1];
                     console.log('Found iframe src:', src);
-                    // Accept vidsrc.icu player URLs (not just Cloudnestra)
                     if (src.includes('vidsrc.icu') || src.includes('cloudnestra')) {
                         embedUrl = src;
                         break;
@@ -932,7 +820,6 @@ async function getCloudnestraEmbedUrl(movieId) {
             }
         }
 
-        // Fallback: look for vidsrc.icu or Cloudnestra URLs in HTML
         if (!embedUrl) {
             const vidsrcMatch = html.match(/(?:https?:)?\/\/[^"']*vidsrc[^"']*/);
             const cloudnestraMatch = html.match(/(?:https?:)?\/\/[^"']*cloudnestra[^"']*/);
@@ -944,13 +831,11 @@ async function getCloudnestraEmbedUrl(movieId) {
         }
 
         if (embedUrl) {
-            // Ensure URL has protocol
             if (embedUrl.startsWith('//')) {
                 embedUrl = 'https:' + embedUrl;
             }
             console.log('Found embed URL:', embedUrl);
             
-            // If it's a vidsrcme.vidsrc.icu player, fetch and clean it
             if (embedUrl.includes('vidsrcme.vidsrc.icu')) {
                 console.log('🔧 Fetching and cleaning vidsrcme player...');
                 try {
@@ -969,7 +854,6 @@ async function getCloudnestraEmbedUrl(movieId) {
                         let playerHtml = await playerResponse.text();
                         console.log('Player HTML received, length:', playerHtml.length);
                         
-                        // Clean reklam script'lerini
                         const cleanHtml = playerHtml
                             .replace(/g\.json\?sid=[^"']*/g, '') // Google tracking
                             .replace(/pixels\?src=[^"']*/g, '') // Pixel tracking
@@ -980,7 +864,6 @@ async function getCloudnestraEmbedUrl(movieId) {
                         
                         console.log('Player cleaned, new length:', cleanHtml.length);
                         
-                        // Return cleaned HTML instead of URL
                         return {
                             type: 'html',
                             content: cleanHtml,
@@ -992,7 +875,6 @@ async function getCloudnestraEmbedUrl(movieId) {
                 }
             }
             
-            // Return original URL if cleaning failed or not needed
             return {
                 type: 'url',
                 content: embedUrl
@@ -1007,12 +889,10 @@ async function getCloudnestraEmbedUrl(movieId) {
     }
 }
 
-// Function to get Cloudnestra embed URL for TV series from vidsrc
 async function getTvCloudnestraEmbedUrl(tvId, season, episode) {
     try {
         console.log('Getting Cloudnestra embed URL for TV series:', { tvId, season, episode });
         
-        // User-Agent rotasyonu için array - Cloudflare bypass için
         const userAgents = [
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
@@ -1021,15 +901,12 @@ async function getTvCloudnestraEmbedUrl(tvId, season, episode) {
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0'
         ];
         
-        // Rastgele User-Agent seç
         const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
         
-        // Get TV series embed URL from vidsrc
         const vidsrcApiUrl = `https://vidsrc.icu/embed/tv/${tvId}/${season}/${episode}`;
         console.log('Fetching from vidsrc API:', vidsrcApiUrl);
         console.log('Using User-Agent:', randomUserAgent);
 
-        // Rate limiting - Cloudflare bypass için
         await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 3000));
 
         const response = await fetch(vidsrcApiUrl, {
@@ -1073,7 +950,6 @@ async function getTvCloudnestraEmbedUrl(tvId, season, episode) {
             throw new Error('Cloudflare verification page detected');
         }
 
-        // Look for vidsrc.icu player iframe (not just Cloudnestra)
         const iframeMatches = html.match(/<iframe[^>]*src="([^"]*)"[^>]*>/g);
         console.log('Found TV iframes:', iframeMatches);
 
@@ -1084,7 +960,6 @@ async function getTvCloudnestraEmbedUrl(tvId, season, episode) {
                 if (srcMatch) {
                     const src = srcMatch[1];
                     console.log('Found TV iframe src:', src);
-                    // Accept vidsrc.icu player URLs (not just Cloudnestra)
                     if (src.includes('vidsrc.icu') || src.includes('cloudnestra')) {
                         embedUrl = src;
                         break;
@@ -1093,7 +968,6 @@ async function getTvCloudnestraEmbedUrl(tvId, season, episode) {
             }
         }
 
-        // Fallback: look for vidsrc.icu or Cloudnestra URLs in HTML
         if (!embedUrl) {
             const vidsrcMatch = html.match(/(?:https?:)?\/\/[^"']*vidsrc[^"']*/);
             const cloudnestraMatch = html.match(/(?:https?:)?\/\/[^"']*cloudnestra[^"']*/);
@@ -1105,13 +979,11 @@ async function getTvCloudnestraEmbedUrl(tvId, season, episode) {
         }
 
         if (embedUrl) {
-            // Ensure URL has protocol
             if (embedUrl.startsWith('//')) {
                 embedUrl = 'https:' + embedUrl;
             }
             console.log('Found TV embed URL:', embedUrl);
             
-            // If it's a vidsrcme.vidsrc.icu player, fetch and clean it
             if (embedUrl.includes('vidsrcme.vidsrc.icu')) {
                 console.log('🔧 Fetching and cleaning vidsrcme player...');
                 try {
@@ -1130,7 +1002,6 @@ async function getTvCloudnestraEmbedUrl(tvId, season, episode) {
                         let playerHtml = await playerResponse.text();
                         console.log('Player HTML received, length:', playerHtml.length);
                         
-                        // Clean reklam script'lerini
                         const cleanHtml = playerHtml
                             .replace(/g\.json\?sid=[^"']*/g, '') // Google tracking
                             .replace(/pixels\?src=[^"']*/g, '') // Pixel tracking
@@ -1141,7 +1012,6 @@ async function getTvCloudnestraEmbedUrl(tvId, season, episode) {
                         
                         console.log('Player cleaned, new length:', cleanHtml.length);
                         
-                        // Return cleaned HTML instead of URL
                         return {
                             type: 'html',
                             content: cleanHtml,
@@ -1153,7 +1023,6 @@ async function getTvCloudnestraEmbedUrl(tvId, season, episode) {
                 }
             }
             
-            // Return original URL if cleaning failed or not needed
             return {
                 type: 'url',
                 content: embedUrl
@@ -1168,18 +1037,15 @@ async function getTvCloudnestraEmbedUrl(tvId, season, episode) {
     }
 }
 
-// Add smart embed URL refresh endpoint that handles expired URLs
 app.get('/api/smart-embed', async (req, res) => {
   try {
     const { movieId, tvId, season, episode, retryCount = 0 } = req.query;
     
-    // Handle TV Series
     if (tvId && season && episode) {
       console.log(`=== TV Series Embed Fetching Started ===`);
       console.log(`TV ID: ${tvId}, Season: ${season}, Episode: ${episode}`);
       
       try {
-        // Get TV series embed URL
         const embedUrl = await getTvCloudnestraEmbedUrl(tvId, season, episode);
         
         if (!embedUrl) {
@@ -1206,7 +1072,6 @@ app.get('/api/smart-embed', async (req, res) => {
       }
     }
     
-    // Handle Movies
     if (!movieId) {
       return res.status(400).json({ error: 'Movie ID or TV series parameters required' });
     }
@@ -1214,18 +1079,15 @@ app.get('/api/smart-embed', async (req, res) => {
     console.log(`=== Smart Embed Fetching Started (Attempt ${retryCount + 1}) ===`);
     console.log(`Movie ID: ${movieId}`);
 
-    // Try to get embed URL
     const embedUrl = await getCloudnestraEmbedUrl(movieId);
     
     if (!embedUrl) {
       throw new Error('Failed to get embed URL from vidsrc');
     }
 
-    // Handle new response format (object with type and content)
     let finalEmbedUrl = embedUrl;
     if (typeof embedUrl === 'object' && embedUrl.type) {
       if (embedUrl.type === 'html') {
-        // Direct HTML content - return immediately
         console.log('✅ Cleaned HTML player returned to client');
         return res.json({
           cloudnestraEmbedUrl: embedUrl,
@@ -1234,12 +1096,10 @@ app.get('/api/smart-embed', async (req, res) => {
           retryCount: retryCount
         });
       } else if (embedUrl.type === 'url') {
-        // URL content - use for testing
         finalEmbedUrl = embedUrl.content;
       }
     }
 
-    // Test if the URL is actually working
     try {
       const testResponse = await fetch(finalEmbedUrl, {
         headers: {
@@ -1261,12 +1121,10 @@ app.get('/api/smart-embed', async (req, res) => {
       } else {
         console.log(`❌ Embed URL returned ${testResponse.status}, trying to refresh...`);
         
-        // If we've tried too many times, return error
         if (retryCount >= 2) {
           throw new Error(`Embed URL expired after ${retryCount + 1} attempts. Vidsrc URLs have very short lifespan.`);
         }
 
-        // Try alternative movie IDs (sometimes different IDs work better)
         const alternativeIds = [
           parseInt(movieId) + 1,
           parseInt(movieId) - 1,
@@ -1279,7 +1137,6 @@ app.get('/api/smart-embed', async (req, res) => {
           try {
             const altEmbedUrl = await getCloudnestraEmbedUrl(altId.toString());
             if (altEmbedUrl) {
-              // Handle alternative URL format
               let altFinalUrl = altEmbedUrl;
               if (typeof altEmbedUrl === 'object' && altEmbedUrl.type === 'url') {
                 altFinalUrl = altEmbedUrl.content;
@@ -1311,7 +1168,6 @@ app.get('/api/smart-embed', async (req, res) => {
           }
         }
 
-        // If alternatives didn't work, try the original again with retry
         console.log('Trying original movie ID again...');
         return res.redirect(`/api/smart-embed?movieId=${movieId}&retryCount=${retryCount + 1}`);
       }
@@ -1322,7 +1178,6 @@ app.get('/api/smart-embed', async (req, res) => {
         throw new Error(`Failed to get working embed URL after ${retryCount + 1} attempts: ${testErr.message}`);
       }
 
-      // Retry with exponential backoff
       return res.redirect(`/api/smart-embed?movieId=${movieId}&retryCount=${retryCount + 1}`);
     }
 
@@ -1336,7 +1191,6 @@ app.get('/api/smart-embed', async (req, res) => {
   }
 });
 
-// Start server
 app.listen(PORT, () => {
     console.log(`Web server running on http://localhost:${PORT}`);
 }).on('error', (err) => {
@@ -1348,9 +1202,7 @@ app.listen(PORT, () => {
     process.exit(1);
 });
 
-// UPLOAD ENDPOINT
 app.post('/upload', upload.fields([{ name: 'video' }, { name: 'duration' }]), (req, res) => {
-    // Dosya ve duration'ı al
     const file = req.files && req.files['video'] ? req.files['video'][0] : null;
     const durationRaw = req.body && req.body.duration;
     console.log('Duration received from form:', durationRaw);
@@ -1378,10 +1230,8 @@ app.post('/upload', upload.fields([{ name: 'video' }, { name: 'duration' }]), (r
         });
 });
 
-// Now add JSON middleware for other endpoints
 app.use(express.json());
 
-/* Video processing and splitting */
 async function splitVideoIntoClips(videoPath, transcript = [], customDuration = process.env.DEFAULT_CLIP_DURATION || 20) {
     const outputDir = path.join(__dirname, process.env.CLIPS_DIR || 'clips');
     if (!fs.existsSync(outputDir)) {
@@ -1399,7 +1249,6 @@ async function splitVideoIntoClips(videoPath, transcript = [], customDuration = 
         const duration = metadata.format.duration;
         console.log(`Video Duration: ${duration} seconds`);
 
-        // For user uploaded videos, split into fixed duration clips
         const totalClips = Math.ceil(duration / customDuration);
         console.log(`Splitting into ${totalClips} clips of ${customDuration} seconds each`);
 
@@ -1432,7 +1281,6 @@ async function splitVideoIntoClips(videoPath, transcript = [], customDuration = 
 
             if (running.length >= maxParallel) {
                 await Promise.race(running);
-                // Remove resolved promises
                 running = running.filter(pr => pr.isPending && !pr.isFulfilled);
             }
         }
@@ -1443,7 +1291,6 @@ async function splitVideoIntoClips(videoPath, transcript = [], customDuration = 
     }
 }
 
-// Get all clips
 app.get('/api/clips', (req, res) => {
     const clipsDir = path.join(__dirname, 'clips');
     fs.readdir(clipsDir, (err, files) => {
@@ -1468,7 +1315,6 @@ app.get('/api/clips/:id/download', (req,res) => {
     res.download(clipPath);
 });
 
-// Film listesi proxy endpointi
 app.get('/api/movies', async (req, res) => {
   try {
     const response = await fetch('https://vidsrc.icu/vapi/movie/new');
@@ -1479,7 +1325,6 @@ app.get('/api/movies', async (req, res) => {
   }
 });
 
-// Proxy endpoint for m3u8 streams
 app.get('/proxy/stream', async (req, res) => {
     const streamUrl = req.query.url;
     console.log('Proxy request for:', streamUrl);
@@ -1490,11 +1335,9 @@ app.get('/proxy/stream', async (req, res) => {
     }
 
     try {
-        // Determine if the request is for an M3U8 playlist or a segment
         const isPlaylist = streamUrl.toLowerCase().endsWith('.m3u8');
         console.log('Is playlist request:', isPlaylist);
 
-        // Enhanced headers for Mac compatibility
         const fetchOptions = {
             headers: {
                 'Accept': isPlaylist ? 'application/x-mpegURL,application/vnd.apple.mpegurl,*/*' : '*/*',
@@ -1512,9 +1355,6 @@ app.get('/proxy/stream', async (req, res) => {
 
         if (!response.ok) {
             console.error('Proxy Error: Stream fetch failed', response.status, response.statusText, streamUrl);
-            // Fetch sırasında hata olursa, stream sunucusunun döndürdüğü durumu ve hata mesajını döndürelim
-            // Ancak 403 Forbidden gibi durumlarda detayları stream sunucusu vermeyebilir.
-            // Stream sunucusunun yanıtındaki başlıkları da aktaralım.
             const headers = Object.fromEntries(response.headers.entries());
             return res.status(response.status).json({
                 error: `Failed to fetch stream from source (${response.status})`,
@@ -1526,20 +1366,17 @@ app.get('/proxy/stream', async (req, res) => {
             });
         }
 
-        // Enhanced CORS headers for Mac
         res.setHeader('Access-Control-Allow-Origin', '*');
         res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS, HEAD');
         res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Range, Origin, Referer, Cache-Control, Pragma, If-Modified-Since, If-None-Match');
         res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges, Content-Type, Cache-Control, Pragma, Expires');
         res.setHeader('Access-Control-Allow-Credentials', 'true');
 
-        // Handle OPTIONS request for CORS preflight
         if (req.method === 'OPTIONS') {
              console.log('Received OPTIONS request, sending 200 OK');
              return res.status(200).end();
         }
 
-        // Copy original headers to the response, except for CORS-related ones and content-length for playlist
         response.headers.forEach((value, name) => {
             if (!['access-control-allow-origin', 'access-control-allow-methods', 'access-control-allow-headers', 'access-control-expose-headers', 'content-length', 'content-encoding'].includes(name.toLowerCase())) {
                 res.setHeader(name, value);
@@ -1553,22 +1390,17 @@ app.get('/proxy/stream', async (req, res) => {
             const baseUrl = streamUrl.substring(0, streamUrl.lastIndexOf('/') + 1);
 
             const processedLines = lines.map(line => {
-                // Check if the line is a URL (doesn't start with #) and is relative
                 if (line && !line.startsWith('#') && !line.startsWith('http://') && !line.startsWith('https://') && !line.startsWith('/')) {
-                    // Resolve relative URL using the base URL of the playlist
                     const absoluteUrl = baseUrl + line;
                     console.log(`Resolved relative URL: ${line} -> ${absoluteUrl}`);
-                    // Replace the line with a proxied URL for the segment
                     return `/proxy/stream?url=${encodeURIComponent(absoluteUrl)}`;
                 } else if (line && !line.startsWith('#') && line.startsWith('/')) {
-                     // Handle root-relative URLs as well
                     const origin = new URL(streamUrl).origin;
                     const absoluteUrl = origin + line;
                      console.log(`Resolved root-relative URL: ${line} -> ${absoluteUrl}`);
                      return `/proxy/stream?url=${encodeURIComponent(absoluteUrl)}`;
                 }
                  else if (line && !line.startsWith('#') && (line.startsWith('http://') || line.startsWith('https://'))) {
-                    // If it's already an absolute URL in the playlist, proxy it too.
                      console.log(`Found absolute URL in playlist: ${line}`);
                      return `/proxy/stream?url=${encodeURIComponent(line)}`;
                 }
@@ -1578,17 +1410,13 @@ app.get('/proxy/stream', async (req, res) => {
             const processedPlaylist = processedLines.join('\n');
             console.log('Processed Playlist Sample:', processedPlaylist.substring(0, 500)); // Log first 500 chars
 
-            // Set appropriate Content-Type for HLS playlist
             res.setHeader('Content-Type', 'application/x-mpegURL'); // Standard HLS content type
             res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=3600');
             res.status(200).send(processedPlaylist);
 
         } else {
             console.log('Piping stream segment...');
-            // If it's a segment or other file, just pipe the response body
-            // Handle range requests if necessary, though fetch might handle it automatically with piping
             
-            // Enhanced error handling for Mac
             response.body.on('error', (error) => {
                 console.error('Stream pipe error:', error);
                 if (!res.headersSent) {
@@ -1619,31 +1447,25 @@ app.get('/proxy/stream', async (req, res) => {
     }
 });
 
-// Ana sayfa
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Dashboard sayfası
 app.get('/dashboard', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
 
-// Film sayfası
 app.get('/movie', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'movie.html'));
 });
 
-// TV sayfası
 app.get('/tv', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'tv.html'));
 });
 
-// sbx.html için özel route handler
 app.get('/sbx.html', (req, res) => {
     console.log('🔧 Direct sbx.html request received');
     
-        // Minimal HTML template - sadece gerekli işlevsellik
     const fallbackHtml = `<!DOCTYPE html>
 <html>
 <head>
@@ -1653,14 +1475,11 @@ app.get('/sbx.html', (req, res) => {
 <body>
     <script>
         try {
-            // Hemen parent'a mesaj gönder ve kapat
             if (window.parent && window.parent !== window) {
                 window.parent.postMessage('sbx-handled', '*');
-                // Hemen kapat
                 window.close();
             }
         } catch (error) {
-            // Hata olursa da kapat
             try { window.close(); } catch(e) {}
         }
     </script>
@@ -1678,11 +1497,9 @@ app.get('/sbx.html', (req, res) => {
     }
 });
 
-// sbx.js için özel route handler
 app.get('/sbx.js', (req, res) => {
     console.log('🔧 Direct sbx.js request received');
     
-    // Minimal JavaScript - sadece gerekli işlevsellik
     const sbxJs = `// Sandbox detection bypass
 try {
     if (window.parent && window.parent !== window) {
@@ -1704,7 +1521,6 @@ try {
     }
 });
 
-// Cloudnestra embed URL'sini almak için yeni endpoint
 app.get('/api/get-cloudnestra-embed', async (req, res) => {
     const { movieId, tvId, season, episode } = req.query;
     console.log('\n=== Cloudnestra Embed Fetching Started ===');
@@ -1725,7 +1541,6 @@ app.get('/api/get-cloudnestra-embed', async (req, res) => {
         }
         console.log('Fetching from vidsrc API:', vidsrcApiUrl);
 
-        // User-Agent rotasyonu için array - Cloudflare bypass için
         const userAgents = [
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
@@ -1734,11 +1549,9 @@ app.get('/api/get-cloudnestra-embed', async (req, res) => {
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0'
         ];
         
-        // Rastgele User-Agent seç
         const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
         console.log('Using User-Agent:', randomUserAgent);
 
-        // Rate limiting - Cloudflare bypass için
         await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 3000));
 
         const response = await fetch(vidsrcApiUrl, {
@@ -1832,13 +1645,11 @@ app.get('/api/get-cloudnestra-embed', async (req, res) => {
             }
         }
         if (embedUrl) {
-            // Ensure URL has protocol
             if (embedUrl.startsWith('//')) {
                 embedUrl = 'https:' + embedUrl;
             }
             console.log('Found embed URL:', embedUrl);
             
-            // URL'yi doğrudan döndür, frontend'de proxy ile test edilecek
             res.json({
                 cloudnestraEmbedUrl: embedUrl,
                 source: source
@@ -1868,7 +1679,6 @@ app.get('/api/get-cloudnestra-embed', async (req, res) => {
     }
 });
 
-// TMDB Movie Search endpoint
 app.get('/api/search-movie', async (req, res) => {
     const query = req.query.query;
     const apiKey = process.env.TMDB_API_KEY || 'fda9bed2dd52a349ecb7cfe38b050ca5';
@@ -1885,7 +1695,6 @@ app.get('/api/search-movie', async (req, res) => {
     }
 });
 
-// TMDB TV Search endpoint
 app.get('/api/search-tv', async (req, res) => {
     const query = req.query.query;
     const apiKey = process.env.TMDB_API_KEY || 'fda9bed2dd52a349ecb7cfe38b050ca5';
@@ -1902,7 +1711,6 @@ app.get('/api/search-tv', async (req, res) => {
     }
 });
 
-// Function to extract IMDB IDs and TMDB IDs from AI response
 function extractIds(text) {
     const imdbRegex = /tt\d{7,8}/g;
     const tmdbRegex = /\[TMDB:(\d+)\]/g;
@@ -1916,7 +1724,6 @@ function extractIds(text) {
     };
 }
 
-// Chat endpoint
 app.post('/api/chat', async (req, res) => {
     try {
         const { message } = req.body;
@@ -1925,20 +1732,15 @@ app.post('/api/chat', async (req, res) => {
             return res.status(400).json({ error: 'Message is required' });
         }
 
-        // Generate a unique user ID if not provided
         const userId = req.headers['x-user-id'] || Date.now().toString();
 
-        // Get AI response
         const response = await getAIResponse(message, userId);
 
-        // Extract IDs from the response
         const { imdbIds, tmdbIds } = extractIds(response);
         console.log('Extracted IDs:', { imdbIds, tmdbIds }); // Debug log
 
-        // Fetch movie details from TMDB for each ID
         const apiKey = process.env.TMDB_API_KEY || 'fda9bed2dd52a349ecb7cfe38b050ca5';
         const movieDetails = await Promise.all([
-            // Process IMDB IDs (for movies)
             ...imdbIds.map(async (imdbId) => {
                 try {
                     const findUrl = `https://api.themoviedb.org/3/find/${imdbId}?api_key=${apiKey}&language=en-US&external_source=imdb_id`;
@@ -1967,7 +1769,6 @@ app.post('/api/chat', async (req, res) => {
                     return null;
                 }
             }),
-            // Process TMDB IDs (for TV shows)
             ...tmdbIds.map(async (tmdbId) => {
                 try {
                     const detailsUrl = `https://api.themoviedb.org/3/tv/${tmdbId}?api_key=${apiKey}&language=en-US`;
@@ -1990,7 +1791,6 @@ app.post('/api/chat', async (req, res) => {
             })
         ]);
 
-        // Filter out any null results
         const validMovieDetails = movieDetails.filter(details => details !== null);
         console.log('Valid movie details:', validMovieDetails); // Debug log
 
@@ -2009,7 +1809,6 @@ app.post('/api/chat', async (req, res) => {
     }
 });
 
-// Expose Firebase config from environment variables (no secrets)
 app.get('/config/firebase.json', (req, res) => {
   const firebaseConfig = {
     apiKey: process.env.FIREBASE_API_KEY,
@@ -2026,7 +1825,6 @@ app.get('/config/firebase.json', (req, res) => {
   res.json(firebaseConfig);
 });
 
-// JS variant to initialize Firebase synchronously in script order
 app.get('/config/firebase.js', (req, res) => {
   const firebaseConfig = {
     apiKey: process.env.FIREBASE_API_KEY,
@@ -2050,10 +1848,8 @@ app.get('/config/firebase.js', (req, res) => {
   res.send(body);
 });
 
-// Serve static files from public directory with proper headers
 app.use(express.static('public', {
   setHeaders: (res, path) => {
-    // Set proper MIME types for video files
     if (path.endsWith('.mp4')) {
       res.setHeader('Content-Type', 'video/mp4');
       res.setHeader('Accept-Ranges', 'bytes');
@@ -2066,7 +1862,6 @@ app.use(express.static('public', {
       res.setHeader('Cache-Control', 'public, max-age=3600');
     }
     
-    // CORS headers for static files
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Range, Origin, X-Requested-With, Content-Type, Accept, Authorization');

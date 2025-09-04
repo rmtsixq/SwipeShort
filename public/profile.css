@@ -1,11 +1,9 @@
-/* Profile Page Styles */
 .profile-page {
     padding: 2rem;
     max-width: 1200px;
     margin: 0 auto;
 }
 
-/* Profile Header */
 .profile-header {
     background: rgba(255, 255, 255, 0.05);
     border-radius: 20px;
@@ -96,7 +94,6 @@
     font-size: 0.9rem;
 }
 
-/* Profile Content */
 .profile-content {
     display: grid;
     gap: 2rem;
@@ -115,7 +112,6 @@
     font-size: 1.5rem;
 }
 
-/* Profile Settings Form */
 .profile-settings-form {
     display: grid;
     gap: 1.5rem;
@@ -164,7 +160,6 @@
     transform: translateY(-2px);
 }
 
-/* Movies Grid */
 .liked-movies-grid {
     display: flex;
     flex-direction: row;
@@ -236,7 +231,6 @@
     margin-bottom: 10px;
 }
 
-/* Responsive Design */
 @media (max-width: 768px) {
     .profile-page {
         padding: 1rem;

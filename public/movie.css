@@ -204,7 +204,6 @@
     }
 }
 
-/* Share Button Styles */
 .share-button {
     position: absolute;
     top: 50%;
@@ -232,7 +231,6 @@
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
 }
 
-/* Share Duration Modal Styles */
 .share-duration-modal {
     position: fixed;
     top: 0;
@@ -387,7 +385,6 @@
     outline: none;
 }
 
-/* Hero section with dark overlay */
 .movie-hero {
     width: 100%;
     height: 440px;
@@ -406,13 +403,11 @@
     position: absolute;
     left: 0; right: 0; top: 0; bottom: 0;
     background: rgba(10,10,20,0.68);
-    /* Optional: blur for more modern look */
     backdrop-filter: blur(2px);
     border-radius: 0 0 32px 32px;
     z-index: 1;
 }
 
-/* Card overlaps hero */
 .movie-details-flex {
     position: relative;
     z-index: 2;
@@ -537,7 +532,6 @@
     }
 }
 
-/* Start Movie Button */
 .start-movie-btn {
     display: inline-block;
     margin-top: 18px;
@@ -577,7 +571,6 @@
     }
 } 
 
-/* --- Improved TV Episode Card Styles (Larger) --- */
 .episode-card {
     display: flex;
     background: #18181c;
@@ -720,7 +713,6 @@
     }
 }
 
-/* --- Improved Season Select Styles (English) --- */
 .tv-episodes-section {
     max-width: 750px;
     margin: 0 auto 32px auto;

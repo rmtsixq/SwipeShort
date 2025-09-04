@@ -478,18 +478,13 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Initialize filter panel
     initializeFilterPanel();
     
-    // Initial load (Movies tab by default)
     fetchContent('New Releases', 1);
     renderGenreButtons();
 });
 
-// Dashboard ana fonksiyonları ve diğer kodlar burada devam edebilir (film grid, filtre, pagination vs.)
-// Arama ile ilgili sadece yukarıdaki modal kodu kalsın, başka hiçbir yerde searchInput, searchResults, searchResultsGrid, mainContent, sidebar-search geçmesin.
 
-// TMDB API
 const TMDB_API_KEY = 'fda9bed2dd52a349ecb7cfe38b050ca5';
 const FILMS_PER_PAGE = 20;
 let allMovies = [];
@@ -530,7 +525,6 @@ function updateFilterButton() {
     filterBtn.style.opacity = hasActiveFilters ? '1' : '0.7';
 }
 
-// Apply filters to movies
 function applyFilters(movies) {
     if (!movies || movies.length === 0) {
         console.log('No movies to filter');
@@ -541,24 +535,20 @@ function applyFilters(movies) {
     console.log('Active filters:', activeFilters);
 
     const filteredMovies = movies.filter(movie => {
-        // Genre filter
         if (activeFilters.genre) {
             console.log('Checking genre for movie:', movie.title, 'Genre IDs:', movie.genre_ids);
             if (!movie.genre_ids || !Array.isArray(movie.genre_ids)) {
                 console.log('No genre_ids for movie:', movie.title);
                 return false;
             }
-            // Check if movie has the selected genre
             const hasGenre = movie.genre_ids.includes(activeFilters.genre);
             console.log(`Movie ${movie.title} ${hasGenre ? 'has' : 'does not have'} genre ${activeFilters.genre}`);
             if (!hasGenre) return false;
         }
 
-        // Year filter
         if (activeFilters.year && movie.release_date) {
             const movieYear = movie.release_date.split('-')[0];
             const currentYear = new Date().getFullYear();
-            // Only filter if the year is valid (not in future)
             if (parseInt(activeFilters.year) <= currentYear) {
                 if (movieYear !== activeFilters.year) {
                     console.log('Movie', movie.title, 'does not match year filter');
@@ -570,9 +560,7 @@ function applyFilters(movies) {
             }
         }
 
-        // Rating filter
         if (activeFilters.rating && movie.vote_average) {
-            // Only apply rating filter if movie has enough votes
             if (movie.vote_count > 10) { // Minimum 10 votes required
                 if (movie.vote_average < activeFilters.rating) {
                     console.log('Movie', movie.title, 'does not match rating filter');
@@ -591,7 +579,6 @@ function applyFilters(movies) {
     return filteredMovies;
 }
 
-// Initialize filter panel
 function initializeFilterPanel() {
     const filterBtn = document.querySelector('.filter-btn');
     const genreSelect = document.querySelector('select[name="genre"]');
@@ -600,7 +587,6 @@ function initializeFilterPanel() {
 
     if (!filterBtn || !genreSelect || !yearSelect || !ratingSelect) return;
 
-    // Update year options to only show past and current year
     const currentYear = new Date().getFullYear();
     yearSelect.innerHTML = '<option value="">All Years</option>';
     for(let year = currentYear; year >= 1950; year--) {
@@ -610,7 +596,6 @@ function initializeFilterPanel() {
         yearSelect.appendChild(option);
     }
 
-    // Genre select event
     genreSelect.addEventListener('change', function() {
         const genreId = this.value ? parseInt(this.value) : null;
         console.log('Genre selected:', genreId);
@@ -618,11 +603,9 @@ function initializeFilterPanel() {
         updateFilterButton();
     });
 
-    // Year select event
     yearSelect.addEventListener('change', function() {
         const year = this.value || null;
         console.log('Year selected:', year);
-        // Validate year is not in the future
         if (year && parseInt(year) > currentYear) {
             console.log('Invalid year selected:', year);
             this.value = '';
@@ -633,7 +616,6 @@ function initializeFilterPanel() {
         updateFilterButton();
     });
 
-    // Rating select event
     ratingSelect.addEventListener('change', function() {
         const rating = this.value ? parseFloat(this.value) : null;
         console.log('Rating selected:', rating);
@@ -641,12 +623,10 @@ function initializeFilterPanel() {
         updateFilterButton();
     });
 
-    // Filter button click event
     filterBtn.addEventListener('click', function() {
         if (this.disabled) return;
         
         console.log('Applying filters...');
-        // Reset to page 1 and fetch movies with filters
         currentPage = 1;
         fetchContent(currentTab, 1);
     });
@@ -668,13 +648,10 @@ async function fetchContent(tabName = 'New Releases', page = 1) {
         } else if (tab.endpoint === 'on_the_air') {
             url = `https://api.themoviedb.org/3/tv/${tab.endpoint}?api_key=${TMDB_API_KEY}&language=en-US&page=${page}`;
         } else {
-            // Build discover URL with proper parameters
             url = `https://api.themoviedb.org/3/${tab.endpoint}/${tab.type}?api_key=${TMDB_API_KEY}&language=en-US&page=${page}&sort_by=${tab.sort}`;
             
-            // Add vote count filter
             url += '&vote_count.gte=10';
             
-            // Add air date filter for TV shows
             if (tab.type === 'tv' && tabName === 'New Episodes') {
                 const currentDate = new Date().toISOString().split('T')[0];
                 const oneYearAgo = new Date();
@@ -683,7 +660,6 @@ async function fetchContent(tabName = 'New Releases', page = 1) {
                 url += `&first_air_date.gte=${oneYearAgoStr}&first_air_date.lte=${currentDate}`;
             }
             
-            // Add release date filter for movies
             if (tab.type === 'movie' && tabName === 'New Releases') {
                 const currentDate = new Date().toISOString().split('T')[0];
                 const oneYearAgo = new Date();
@@ -692,12 +668,10 @@ async function fetchContent(tabName = 'New Releases', page = 1) {
                 url += `&primary_release_date.gte=${oneYearAgoStr}&primary_release_date.lte=${currentDate}`;
             }
 
-            // Add genre filter if active
             if (activeFilters.genre) {
                 url += `&with_genres=${activeFilters.genre}`;
             }
 
-            // Add year filter if active
             if (activeFilters.year) {
                 const yearStart = `${activeFilters.year}-01-01`;
                 const yearEnd = `${activeFilters.year}-12-31`;
@@ -708,7 +682,6 @@ async function fetchContent(tabName = 'New Releases', page = 1) {
                 }
             }
 
-            // Add rating filter if active
             if (activeFilters.rating) {
                 url += `&vote_average.gte=${activeFilters.rating}`;
             }
@@ -725,7 +698,6 @@ async function fetchContent(tabName = 'New Releases', page = 1) {
         let items = data.results;
         console.log('Fetched content sample:', items[0]);
 
-        // Store original items
         allMovies = items;
         currentPage = page;
         currentTab = tabName;
@@ -739,7 +711,6 @@ async function fetchContent(tabName = 'New Releases', page = 1) {
     }
 }
 
-// Grid render
 function renderGrid(items = allMovies) {
     const grid = document.getElementById('film-grid');
     if (!grid) return;
@@ -785,7 +756,6 @@ function renderGrid(items = allMovies) {
         `;
         
         card.onclick = () => {
-            // Film detaylarına gitmek için authentication gerekmez
             window.location.href = `${currentType}.html?id=${item.id}`;
         };
         
@@ -794,14 +764,12 @@ function renderGrid(items = allMovies) {
     });
 }
 
-// Pagination render
 function renderPagination(totalPages = 1) {
     const pagination = document.getElementById('pagination');
     if (!pagination) return;
 
     pagination.innerHTML = '';
 
-    // Helper function to create pagination buttons
     const createButton = (label, page, isActive = false, isDisabled = false) => {
         const button = document.createElement('button');
         button.textContent = label;
@@ -819,12 +787,10 @@ function renderPagination(totalPages = 1) {
         return button;
     };
 
-    // Previous button
     pagination.appendChild(
         createButton('Previous', currentPage - 1, false, currentPage === 1)
     );
 
-    // First page
     if (currentPage > 2) {
         pagination.appendChild(createButton('1', 1));
         if (currentPage > 3) {
@@ -835,12 +801,10 @@ function renderPagination(totalPages = 1) {
         }
     }
 
-    // Page numbers around current page
     for (let i = Math.max(1, currentPage - 1); i <= Math.min(totalPages, currentPage + 1); i++) {
         pagination.appendChild(createButton(i.toString(), i, i === currentPage));
     }
 
-    // Last page
     if (currentPage < totalPages - 1) {
         if (currentPage < totalPages - 2) {
             const dots = document.createElement('span');
@@ -851,13 +815,11 @@ function renderPagination(totalPages = 1) {
         pagination.appendChild(createButton(totalPages.toString(), totalPages));
     }
 
-    // Next button
     pagination.appendChild(
         createButton('Next', currentPage + 1, false, currentPage === totalPages)
     );
 }
 
-// Update renderGenreButtons function to handle genre selection
 async function renderGenreButtons() {
     try {
         const type = currentType;
@@ -866,7 +828,6 @@ async function renderGenreButtons() {
         const genres = data.genres;
         console.log('Available genres:', genres);
         
-        // Update genre select options
         const genreSelect = document.querySelector('select[name="genre"]');
         if (genreSelect) {
             genreSelect.innerHTML = '<option value="">All Genres</option>';
@@ -878,7 +839,6 @@ async function renderGenreButtons() {
             });
         }
 
-        // Update genre buttons
         const container = document.getElementById('genre-buttons');
         if (container) {
             container.innerHTML = '';
@@ -905,7 +865,6 @@ async function renderGenreButtons() {
     }
 }
 
-// TMDB API Test
 const testMovie = "Fast X";
 
 async function testTMDB() {
@@ -918,10 +877,8 @@ async function testTMDB() {
     }
 }
 
-// Test fonksiyonunu çağır
 testTMDB();
 
-// Vidsrc ID'leri
 const vidsrcIds = [
     "dawQCziL2v",
     "E1KyOcIMf9v7XHg",
@@ -931,7 +888,6 @@ const vidsrcIds = [
 ];
 
 /* Geçici olarak yorum satırına alındı
-// Film gridini doldur
 async function loadMovies() {
     const grid = document.getElementById('film-grid');
     if (!grid) return;
@@ -955,11 +911,9 @@ async function loadMovies() {
     }
 }
 
-// Sayfa yüklenince filmleri yükle
 window.addEventListener('DOMContentLoaded', loadMovies);
 */ 
 
-// Typewriter ve oyun için ses efektleri
 const majikTypeSound = new Audio('https://cdn.pixabay.com/audio/2022/07/26/audio_124bfae1b2.mp3'); // kısa tıkırtı
 const majikSuccessSound = new Audio('https://cdn.pixabay.com/audio/2022/03/15/audio_115b9b7b7c.mp3'); // başarı
 const majikFailSound = new Audio('https://cdn.pixabay.com/audio/2022/03/15/audio_115b9b7b7c.mp3'); // başarısızlık (aynı ses, istersen farklı ekleyebilirsin)
@@ -972,7 +926,6 @@ function showMajikModal() {
     terminal.style.display = 'block';
     gameRoot.style.display = 'none';
     document.body.style.overflow = 'hidden';
-    // Terminal intro metni
     const introLines = [
         '>> ACCESSING SECRET NODE...\n',
         '>> M4J1K NODE FOUND.\n',
@@ -1002,7 +955,6 @@ function showMajikModal() {
         }
     }
     typeLine();
-    // Enter ile oyuna geç
     function onEnter(e) {
         if (e.key === 'Enter') {
             document.removeEventListener('keydown', onEnter);
@@ -1014,11 +966,9 @@ function showMajikModal() {
     document.addEventListener('keydown', onEnter);
 }
 
-// Sidebar search'a dinleme
 function setupMajikTrigger() {
     console.log('Setting up MAJIK trigger...');
     
-    // Sidebar search
     const sidebarSearchInput = document.querySelector('.sidebar-search input');
     console.log('Sidebar search input found:', !!sidebarSearchInput);
     if (sidebarSearchInput) {
@@ -1032,7 +982,6 @@ function setupMajikTrigger() {
         });
     }
 
-    // Header search
     const headerSearchInput = document.getElementById('mainSearchInput');
     console.log('Header search input found:', !!headerSearchInput);
     if (headerSearchInput) {
@@ -1047,14 +996,11 @@ function setupMajikTrigger() {
     }
 }
 
-// Dummy majik game (şimdilik placeholder)
 function startMajikGame() {
     const root = document.getElementById('majik-game-root');
     root.innerHTML = '';
-    // Oyun parametreleri
     const W = root.offsetWidth;
     const H = root.offsetHeight;
-    // Canvas
     const canvas = document.createElement('canvas');
     canvas.width = W;
     canvas.height = H;
@@ -1062,10 +1008,8 @@ function startMajikGame() {
     canvas.style.height = '100%';
     root.appendChild(canvas);
     const ctx = canvas.getContext('2d');
-    // Oyuncu
     let dot = { x: 30, y: H/2, r: 8, color: '#b6ffb6', vx: 0, vy: 0 };
     let mouse = { x: dot.x, y: dot.y };
-    // Engeller (örnek: sabit kutular ve çizgiler)
     const obstacles = [
         {x: 120, y: 0, w: 12, h: 180},
         {x: 120, y: 240, w: 12, h: 80},
@@ -1076,22 +1020,18 @@ function startMajikGame() {
         {x: 520, y: 240, w: 12, h: 80},
         {x: 620, y: 60, w: 12, h: 260}
     ];
-    // Oyun durumu
     let playing = true;
     let accessGranted = false;
     let accessDenied = false;
-    // Mouse takibi
     canvas.addEventListener('mousemove', e => {
         const rect = canvas.getBoundingClientRect();
         mouse.x = (e.clientX - rect.left) * (canvas.width / rect.width);
         mouse.y = (e.clientY - rect.top) * (canvas.height / rect.height);
     });
-    // Glitch efekti
     function glitch() {
         root.classList.add('majik-glitch');
         setTimeout(() => root.classList.remove('majik-glitch'), 350);
     }
-    // Çarpışma kontrolü
     function checkCollision() {
         for (const obs of obstacles) {
             if (dot.x + dot.r > obs.x && dot.x - dot.r < obs.x + obs.w &&
@@ -1101,23 +1041,18 @@ function startMajikGame() {
         }
         return false;
     }
-    // Oyun döngüsü
     function loop() {
         ctx.clearRect(0,0,W,H);
-        // CRT grid
         ctx.save();
         ctx.globalAlpha = 0.08;
         ctx.strokeStyle = '#b6ffb6';
         for(let y=0; y<H; y+=16) ctx.beginPath(),ctx.moveTo(0,y),ctx.lineTo(W,y),ctx.stroke();
         for(let x=0; x<W; x+=32) ctx.beginPath(),ctx.moveTo(x,0),ctx.lineTo(x,H),ctx.stroke();
         ctx.restore();
-        // Engeller
         ctx.fillStyle = '#0f0';
         obstacles.forEach(obs => ctx.fillRect(obs.x, obs.y, obs.w, obs.h));
-        // Dot hareketi
         dot.x += (mouse.x - dot.x) * 0.18;
         dot.y += (mouse.y - dot.y) * 0.18;
-        // Dot
         ctx.shadowColor = '#b6ffb6';
         ctx.shadowBlur = 16;
         ctx.beginPath();
@@ -1125,14 +1060,12 @@ function startMajikGame() {
         ctx.fillStyle = dot.color;
         ctx.fill();
         ctx.shadowBlur = 0;
-        // Çarpışma
         if (playing && checkCollision()) {
             playing = false;
             accessDenied = true;
             glitch();
             setTimeout(() => showMajikEnd(false), 600);
         }
-        // Kazanma
         if (playing && dot.x + dot.r > W - 10) {
             playing = false;
             accessGranted = true;
@@ -1141,7 +1074,6 @@ function startMajikGame() {
         if (playing) requestAnimationFrame(loop);
     }
     loop();
-    // Son ekran
     function showMajikEnd(success) {
         ctx.clearRect(0,0,W,H);
         if (success) {
@@ -1152,7 +1084,6 @@ function startMajikGame() {
             ctx.fillText('ACCESS GRANTED', W/2, H/2-68);
             ctx.font = '1.2rem Fira Mono, Consolas, monospace';
             ctx.fillText('CODE: 🧙‍♂️MAG1K!', W/2, H/2-28);
-            // IP ve konum çek
             fetch('https://ipapi.co/json/')
                 .then(res => res.json())
                 .then(data => {
@@ -1176,7 +1107,6 @@ function startMajikGame() {
             ctx.fillText('RETRY? (Press R)', W/2, H/2+28);
         }
     }
-    // Retry
     document.addEventListener('keydown', function retryHandler(e) {
         if (!playing && accessDenied && e.key.toLowerCase() === 'r') {
             document.removeEventListener('keydown', retryHandler);
@@ -1189,7 +1119,6 @@ function startMajikGame() {
         }
     });
 }
-// CRT glitch efekti
 const majikGlitchStyle = document.createElement('style');
 majikGlitchStyle.innerHTML = `
 .majik-glitch {
@@ -1203,7 +1132,6 @@ majikGlitchStyle.innerHTML = `
 }`;
 document.head.appendChild(majikGlitchStyle);
 
-// MAJIK oyununda başarı sonrası retro terminali aç
 function showLinuxTerminal() {
     const linuxModal = document.getElementById('linux-modal');
     const terminalContent = document.getElementById('terminal-content');
@@ -1216,7 +1144,6 @@ function showLinuxTerminal() {
     terminalInput.disabled = false;
     terminalInput.focus();
     let crashed = false;
-    // Typewriter fonksiyonu
     function typeText(text, cb) {
         let i = 0;
         function typeChar() {
@@ -1234,14 +1161,12 @@ function showLinuxTerminal() {
         }
         typeChar();
     }
-    // Tip tuşu
     tipBtn.onclick = function() {
         if (crashed) return;
         typeText('$ ls C:\n', () => {
             terminalInput.focus();
         });
     };
-    // Komut gönderme
     terminalForm.onsubmit = function(e) {
         e.preventDefault();
         if (crashed) return;
@@ -1260,7 +1185,6 @@ function showLinuxTerminal() {
             }, 300);
         }
     };
-    // Çökme efekti
     function crashTerminal() {
         crashed = true;
         majikFailSound.currentTime = 0; majikFailSound.play();
@@ -1277,9 +1201,7 @@ function showLinuxTerminal() {
     }
 }
 
-// Title-specific keywords (strict control)
 const titleFilteredKeywords = [
-    // Single words
     'rape', 'sex', 'orgasm', 'cum', 'porn', 'xxx', 'adult', 'erotic',
     'nude', 'naked', 'pornographic', 'explicit', 'mature', 'adult content',
     'carpenter\'s shop', 'fuck', 'cock', 'dick', 'pussy', 'ass', 'whore',
@@ -1289,7 +1211,6 @@ const titleFilteredKeywords = [
     'bordello', 'sexuality', 'sexual', 'intercourse', 'coitus', 'copulation',
     'fornication', 'prostitution', 'pornography', 'obscenity', 'lewdness',
     'indecency', 'vulgarity', 'crudeness', 'filth', 'smut', 'dirt', 'squirt',
-    // Multi-word phrases and names (exact match)
     'Ultimate DFC Slender',
     "Moms's Friend",
     'Mikako Abe',
@@ -1298,57 +1219,46 @@ const titleFilteredKeywords = [
     'Scan Doll',
 ];
 
-// General content filtering keywords (checked in both title and overview)
 const contentFilteredKeywords = [
     'porn', 'xxx', 'adult', 'erotic', 'sex', 'nude', 'naked',
     'pornographic', 'explicit', 'mature', 'adult content', 'rape', "Carpenter's Shop",
     'Ultimate DFC Slender'
 ];
 
-// Movie filtering function
 function filterMovies(movies) {
     return movies.filter(movie => {
         const title = (movie.title || movie.name || '').toLowerCase();
         const overview = (movie.overview || '').toLowerCase();
         
-        // Check title-specific keywords (strict control)
         const hasFilteredTitle = titleFilteredKeywords.some(keyword => {
             const keywordLower = keyword.toLowerCase();
             
-            // Multi-word check (exact match)
             if (keyword.includes(' ')) {
                 return title.includes(keywordLower);
             }
             
-            // Single word check (word boundary match)
             const regex = new RegExp(`\\b${keywordLower}\\b`, 'i');
             return regex.test(title);
         });
 
-        // Filter out if title contains filtered keywords
         if (hasFilteredTitle) {
             console.log('Filtered content:', title, 'due to title match');
             return false;
         }
 
-        // Check content keywords
         const hasFilteredContent = contentFilteredKeywords.some(keyword => {
             const keywordLower = keyword.toLowerCase();
-            // Multi-word check
             if (keyword.includes(' ')) {
                 return title.includes(keywordLower) || overview.includes(keywordLower);
             }
-            // Single word check
             return title.includes(keywordLower) || overview.includes(keywordLower);
         });
 
-        // Filter out if content contains filtered keywords
         if (hasFilteredContent) {
             console.log('Filtered content:', title, 'due to content match');
             return false;
         }
 
-        // 18+ content check
         if (!showAdultMovies && movie.adult) {
             console.log('Filtered content:', title, 'due to adult content');
             return false;
@@ -1358,7 +1268,6 @@ function filterMovies(movies) {
     });
 }
 
-// Search functionality
 const searchModal = document.getElementById('searchModal');
 const modalSearchInput = document.getElementById('modalSearchInput');
 const searchModalClose = document.getElementById('searchModalClose');
@@ -1367,28 +1276,24 @@ const resultGrid = document.querySelector('.search-modal-grid');
     let searchTimeout;
 let currentSearchResults = [];
 
-// Initialize search functionality
 function initializeSearch() {
     if (!searchModal || !modalSearchInput || !searchModalClose || !resultGrid) {
         console.warn('Some search elements are missing. Search functionality may not work properly.');
         return;
     }
 
-    // Setup search event listeners
     modalSearchInput.addEventListener('input', (e) => {
         const query = e.target.value.trim();
         if (searchTimeout) clearTimeout(searchTimeout);
         searchTimeout = setTimeout(() => performSearch(query), 300);
             });
 
-    // Setup modal close button
     searchModalClose.addEventListener('click', () => {
         searchModal.style.display = 'none';
         modalSearchInput.value = '';
         resultGrid.innerHTML = '';
     });
 
-    // Close modal when clicking outside
     searchModal.addEventListener('click', (e) => {
         if (e.target === searchModal) {
             searchModal.style.display = 'none';
@@ -1397,7 +1302,6 @@ function initializeSearch() {
         }
     });
 
-    // Close modal with Escape key
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && searchModal.style.display === 'flex') {
             searchModal.style.display = 'none';
@@ -1416,7 +1320,6 @@ async function performSearch(query) {
     resultGrid.innerHTML = '<div class="search-loading">Searching...</div>';
             
     try {
-        // Search both movies and TV shows
         const [movieRes, tvRes] = await Promise.all([
             fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}&language=en-US&page=1`),
             fetch(`https://api.themoviedb.org/3/search/tv?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}&language=en-US&page=1`)
@@ -1431,7 +1334,6 @@ async function performSearch(query) {
             tvRes.json()
             ]);
             
-        // Combine and sort results
         currentSearchResults = [
             ...movieData.results.map(item => ({ ...item, type: 'movie' })),
             ...tvData.results.map(item => ({ ...item, type: 'tv' }))
@@ -1485,25 +1387,19 @@ function createSearchCard(item) {
                 </div>
             `;
             
-    // Add click handler
     card.addEventListener('click', () => {
-        // Film detaylarına gitmek için authentication gerekmez
         window.location.href = isMovie ? `movie.html?id=${item.id}` : `tv.html?id=${item.id}`;
         });
 
-    // Setup like button
     setupCardLikeButton(card, item.id, item.type);
 
     return card;
 }
 
-// Initialize search when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     initializeSearch();
-    // ... rest of your DOMContentLoaded code ...
 });
 
-// Setup card like button functionality
 function setupCardLikeButton(card, id, type) {
     const likeBtn = card.querySelector('.like-btn');
     const likeCount = card.querySelector('.like-count');
@@ -1511,12 +1407,10 @@ function setupCardLikeButton(card, id, type) {
     const db = firebase.firestore();
     const likeDoc = db.collection('likes').doc(`${type}_${id}`);
 
-    // Like count listener
     likeDoc.collection('userLikes').onSnapshot(snapshot => {
         likeCount.textContent = snapshot.size;
     });
 
-    // Kullanıcıya özel like durumu
     firebase.auth().onAuthStateChanged(function(user) {
         if (!user) {
             likeBtn.classList.remove('liked');
@@ -1552,4 +1446,3 @@ function setupCardLikeButton(card, id, type) {
     });
 } 
 
-// Handle authentication state - Bu kısım artık initializeAuthentication() fonksiyonunda yapılıyor 
