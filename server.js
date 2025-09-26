@@ -742,18 +742,76 @@ app.get('/api/cn-proxy', async (req, res) => {
   }
 });
 
-// Proxy listesi - buraya kendi proxy'lerinizi ekleyin
-const PROXY_LIST = [
-    // Örnek proxy'ler - gerçek proxy'lerle değiştirin
-    // 'http://username:password@proxy1.example.com:8080',
-    // 'http://username:password@proxy2.example.com:8080',
-    // 'http://username:password@proxy3.example.com:8080'
-];
+// Proxy kaynakları
+const PROXY_SOURCE_URL = process.env.PROXY_SOURCE_URL || 'https://raw.githubusercontent.com/TheSpeedX/SOCKS-List/master/http.txt';
+const PROXY_REFRESH_INTERVAL = Number(process.env.PROXY_REFRESH_INTERVAL || 1000 * 60 * 15); // 15 dakika
 
-// Proxy rotasyon fonksiyonu
-function getRandomProxy() {
-    if (PROXY_LIST.length === 0) return null;
-    return PROXY_LIST[Math.floor(Math.random() * PROXY_LIST.length)];
+let dynamicProxyList = [];
+let lastProxyRefresh = 0;
+let proxyRefreshPromise = null;
+
+async function refreshProxyList(force = false) {
+    const now = Date.now();
+
+    if (!force && dynamicProxyList.length > 0 && now - lastProxyRefresh < PROXY_REFRESH_INTERVAL) {
+        return dynamicProxyList;
+    }
+
+    if (proxyRefreshPromise) {
+        return proxyRefreshPromise;
+    }
+
+    proxyRefreshPromise = (async () => {
+        try {
+            console.log('Refreshing proxy list from source:', PROXY_SOURCE_URL);
+            const response = await fetch(PROXY_SOURCE_URL, { timeout: 10000 });
+
+            if (!response.ok) {
+                throw new Error(`Proxy list request failed: ${response.status} ${response.statusText}`);
+            }
+
+            const rawList = await response.text();
+            const proxies = rawList
+                .split('\n')
+                .map(line => line.trim())
+                .filter(line => line && !line.startsWith('#'))
+                .map(line => (line.includes('://') ? line : `http://${line}`));
+
+            if (proxies.length === 0) {
+                throw new Error('Proxy list fetched but no entries were parsed');
+            }
+
+            dynamicProxyList = proxies;
+            lastProxyRefresh = now;
+            console.log(`Loaded ${dynamicProxyList.length} proxies`);
+        } catch (error) {
+            console.error('Failed to refresh proxy list:', error.message);
+            if (dynamicProxyList.length === 0) {
+                throw error;
+            }
+        } finally {
+            proxyRefreshPromise = null;
+        }
+
+        return dynamicProxyList;
+    })();
+
+    return proxyRefreshPromise;
+}
+
+async function getRandomProxy() {
+    try {
+        await refreshProxyList();
+    } catch (error) {
+        console.warn('Using existing proxy list due to refresh error');
+    }
+
+    if (dynamicProxyList.length === 0) {
+        return null;
+    }
+
+    const selected = dynamicProxyList[Math.floor(Math.random() * dynamicProxyList.length)];
+    return selected;
 }
 
 // Proxy agent oluşturma fonksiyonu
@@ -785,7 +843,7 @@ async function getCloudnestraEmbedUrl(movieId) {
         await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
 
         // Proxy seçimi
-        const selectedProxy = getRandomProxy();
+        const selectedProxy = await getRandomProxy();
         const fetchOptions = {
             headers: {
                 'User-Agent': randomUserAgent,
@@ -952,7 +1010,7 @@ async function getTvCloudnestraEmbedUrl(tvId, season, episode) {
         await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
 
         // Proxy seçimi
-        const selectedProxy = getRandomProxy();
+        const selectedProxy = await getRandomProxy();
         const fetchOptions = {
             headers: {
                 'User-Agent': randomUserAgent,
