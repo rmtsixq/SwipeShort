@@ -8,6 +8,7 @@ const { exec } = require('child_process');
 const util = require('util');
 const execPromise = util.promisify(exec);
 const { v4: uuidv4 } = require('uuid');
+const { HttpsProxyAgent } = require('https-proxy-agent');
 const axios = require('axios');
 const cors = require('cors');
 const { HfInference } = require('@huggingface/inference');
@@ -741,16 +742,38 @@ app.get('/api/cn-proxy', async (req, res) => {
   }
 });
 
+// Proxy listesi - buraya kendi proxy'lerinizi ekleyin
+const PROXY_LIST = [
+    // Örnek proxy'ler - gerçek proxy'lerle değiştirin
+    // 'http://username:password@proxy1.example.com:8080',
+    // 'http://username:password@proxy2.example.com:8080',
+    // 'http://username:password@proxy3.example.com:8080'
+];
+
+// Proxy rotasyon fonksiyonu
+function getRandomProxy() {
+    if (PROXY_LIST.length === 0) return null;
+    return PROXY_LIST[Math.floor(Math.random() * PROXY_LIST.length)];
+}
+
+// Proxy agent oluşturma fonksiyonu
+function createProxyAgent(proxyUrl) {
+    if (!proxyUrl) return null;
+    return new HttpsProxyAgent(proxyUrl);
+}
+
 async function getCloudnestraEmbedUrl(movieId) {
     try {
         console.log('Getting Cloudnestra embed URL for movie ID:', movieId);
         
         const userAgents = [
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0'
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:132.0) Gecko/20100101 Firefox/132.0',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:132.0) Gecko/20100101 Firefox/132.0',
+            'Mozilla/5.0 (X11; Linux x86_64; rv:132.0) Gecko/20100101 Firefox/132.0'
         ];
         
         const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
@@ -759,13 +782,15 @@ async function getCloudnestraEmbedUrl(movieId) {
         console.log('Fetching from vidsrc API:', vidsrcApiUrl);
         console.log('Using User-Agent:', randomUserAgent);
 
-        await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 3000));
+        await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
 
-        const response = await fetch(vidsrcApiUrl, {
+        // Proxy seçimi
+        const selectedProxy = getRandomProxy();
+        const fetchOptions = {
             headers: {
                 'User-Agent': randomUserAgent,
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.9,tr-TR;q=0.8,tr;q=0.7',
+                'Accept-Language': 'en-US,en;q=0.9',
                 'Accept-Encoding': 'gzip, deflate, br',
                 'Connection': 'keep-alive',
                 'Referer': 'https://vidsrc.icu/',
@@ -778,12 +803,27 @@ async function getCloudnestraEmbedUrl(movieId) {
                 'Cache-Control': 'no-cache',
                 'Pragma': 'no-cache',
                 'DNT': '1',
-                'Sec-Ch-Ua': '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
+                'Sec-Ch-Ua': '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
                 'Sec-Ch-Ua-Mobile': '?0',
-                'Sec-Ch-Ua-Platform': '"Windows"'
+                'Sec-Ch-Ua-Platform': '"Windows"',
+                'Sec-Ch-Ua-Platform-Version': '"15.0.0"',
+                'Sec-Ch-Ua-Arch': '"x86"',
+                'Sec-Ch-Ua-Model': '""',
+                'Sec-Ch-Ua-Bitness': '"64"',
+                'Sec-Ch-Ua-Full-Version-List': '"Google Chrome";v="131.0.6778.85", "Chromium";v="131.0.6778.85", "Not_A Brand";v="24.0.0.0"'
             },
-            timeout: 15000
-        });
+            timeout: 20000
+        };
+
+        // Proxy kullanımı (eğer varsa)
+        if (selectedProxy) {
+            console.log('Using proxy:', selectedProxy);
+            fetchOptions.agent = createProxyAgent(selectedProxy);
+        } else {
+            console.log('No proxy configured, using direct connection');
+        }
+
+        const response = await fetch(vidsrcApiUrl, fetchOptions);
 
         if (response.status === 403) {
             throw new Error('Cloudflare protection detected');
@@ -894,11 +934,13 @@ async function getTvCloudnestraEmbedUrl(tvId, season, episode) {
         console.log('Getting Cloudnestra embed URL for TV series:', { tvId, season, episode });
         
         const userAgents = [
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0'
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:132.0) Gecko/20100101 Firefox/132.0',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:132.0) Gecko/20100101 Firefox/132.0',
+            'Mozilla/5.0 (X11; Linux x86_64; rv:132.0) Gecko/20100101 Firefox/132.0'
         ];
         
         const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
@@ -907,13 +949,15 @@ async function getTvCloudnestraEmbedUrl(tvId, season, episode) {
         console.log('Fetching from vidsrc API:', vidsrcApiUrl);
         console.log('Using User-Agent:', randomUserAgent);
 
-        await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 3000));
+        await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
 
-        const response = await fetch(vidsrcApiUrl, {
+        // Proxy seçimi
+        const selectedProxy = getRandomProxy();
+        const fetchOptions = {
             headers: {
                 'User-Agent': randomUserAgent,
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.9,tr-TR;q=0.8,tr;q=0.7',
+                'Accept-Language': 'en-US,en;q=0.9',
                 'Accept-Encoding': 'gzip, deflate, br',
                 'Connection': 'keep-alive',
                 'Referer': 'https://vidsrc.icu/',
@@ -926,12 +970,27 @@ async function getTvCloudnestraEmbedUrl(tvId, season, episode) {
                 'Cache-Control': 'no-cache',
                 'Pragma': 'no-cache',
                 'DNT': '1',
-                'Sec-Ch-Ua': '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
+                'Sec-Ch-Ua': '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
                 'Sec-Ch-Ua-Mobile': '?0',
-                'Sec-Ch-Ua-Platform': '"Windows"'
+                'Sec-Ch-Ua-Platform': '"Windows"',
+                'Sec-Ch-Ua-Platform-Version': '"15.0.0"',
+                'Sec-Ch-Ua-Arch': '"x86"',
+                'Sec-Ch-Ua-Model': '""',
+                'Sec-Ch-Ua-Bitness': '"64"',
+                'Sec-Ch-Ua-Full-Version-List': '"Google Chrome";v="131.0.6778.85", "Chromium";v="131.0.6778.85", "Not_A Brand";v="24.0.0.0"'
             },
-            timeout: 15000
-        });
+            timeout: 20000
+        };
+
+        // Proxy kullanımı (eğer varsa)
+        if (selectedProxy) {
+            console.log('Using proxy for TV:', selectedProxy);
+            fetchOptions.agent = createProxyAgent(selectedProxy);
+        } else {
+            console.log('No proxy configured for TV, using direct connection');
+        }
+
+        const response = await fetch(vidsrcApiUrl, fetchOptions);
 
         if (response.status === 403) {
             throw new Error('Cloudflare protection detected');
@@ -1183,11 +1242,29 @@ app.get('/api/smart-embed', async (req, res) => {
 
   } catch (error) {
     console.error('Smart embed error:', error);
-    res.status(500).json({
-      error: 'Smart embed failed',
-      details: error.message,
-      suggestion: 'Try refreshing the page or try a different movie'
-    });
+    
+    // Check if it's a Cloudflare protection error
+    if (error.message.includes('Cloudflare') || error.message.includes('403') || error.message.includes('verification')) {
+      res.status(503).json({
+        error: 'Video service temporarily unavailable',
+        details: 'Cloudflare protection is blocking our server. This is a temporary issue.',
+        suggestion: 'Please try again in a few minutes or try a different movie',
+        retryAfter: 300 // 5 minutes
+      });
+    } else if (error.message.includes('Rate limit') || error.message.includes('429')) {
+      res.status(429).json({
+        error: 'Too many requests',
+        details: 'Rate limit exceeded. Please wait before trying again.',
+        suggestion: 'Please wait a few minutes before trying again',
+        retryAfter: 600 // 10 minutes
+      });
+    } else {
+      res.status(500).json({
+        error: 'Smart embed failed',
+        details: error.message,
+        suggestion: 'Try refreshing the page or try a different movie'
+      });
+    }
   }
 });
 
