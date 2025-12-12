@@ -1,4 +1,4 @@
-# SwipeShort
+# CLOSED!!!!!!
 
 PLEASE READ FULLY ShortSwipe is a modern movie and series watching platform for free without any ads (EDUCATIONAL PURPOSES ONLY). Users can make friends on the site, message them, and even share the movies they like! The unique catch is this platform is designed for the ones who can't find what to watch; well... now it's EASY! Just go to the Discover section to scroll through film trailers and find one easily. Couldn't find it? Just use the movieBOT; it's a bot that finds the movies you like. Just tell him what you like! (He is shy a lil bit.) Before I explain, I want to be upfront:
 
@@ -139,6 +139,7 @@ This project is licensed under the terms specified in the LICENSE file.
 ---
 
 **Note**: This platform is designed for educational and personal use. Please ensure compliance with local laws and content provider terms of service.
+
 
 
 
